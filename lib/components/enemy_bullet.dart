@@ -13,7 +13,7 @@ enum EnemyBulletPattern {
   falling,
 }
 
-class EnemyBullet extends CircleComponent with HasGameRef<BossRushGame>, CollisionCallbacks {
+class EnemyBullet extends CircleComponent with HasGameReference<BossRushGame>, CollisionCallbacks {
   final Vector2 velocity;
   final EnemyBulletPattern pattern;
   double _lifetime = 0;
@@ -77,7 +77,7 @@ class EnemyBullet extends CircleComponent with HasGameRef<BossRushGame>, Collisi
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
     if (other is Player) {
-      gameRef.onPlayerHit();
+      game.onPlayerHit();
       removeFromParent();
     }
   }

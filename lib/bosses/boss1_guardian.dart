@@ -20,7 +20,7 @@ class Boss1Guardian extends BossBase {
   final double _originalY;
   final Random _rng = Random();
 
-  Boss1Guardian(BossRushGame gameRef)
+  Boss1Guardian(BossRushGame game)
       : _originalY = GameConstants.groundY - 120,
         super(
           bossName: 'Stone Guardian',
@@ -106,7 +106,7 @@ class Boss1Guardian extends BossBase {
   void _fireHorizontalShots(int count) {
     for (int i = 0; i < count; i++) {
       final yOffset = (i - (count - 1) / 2) * 25;
-      gameRef.world.add(EnemyBullet(
+      game.world.add(EnemyBullet(
         startPosition: Vector2(position.x, position.y + size.y / 2 + yOffset),
         velocity: Vector2(-200, 0),
         pattern: EnemyBulletPattern.straight,
@@ -115,11 +115,11 @@ class Boss1Guardian extends BossBase {
   }
 
   void _fireAimedShot() {
-    final playerPos = gameRef.player.position + gameRef.player.size / 2;
+    final playerPos = game.player.position + game.player.size / 2;
     final myCenter = position + size / 2;
     final direction = (playerPos - myCenter).normalized();
 
-    gameRef.world.add(EnemyBullet(
+    game.world.add(EnemyBullet(
       startPosition: Vector2(position.x, position.y + size.y / 2),
       velocity: direction * 180,
       pattern: EnemyBulletPattern.aimed,
@@ -164,7 +164,7 @@ class Boss1Guardian extends BossBase {
   void _createShockwave() {
     // Ground shockwave - multiple bullets traveling along the ground
     for (int i = 0; i < 4; i++) {
-      gameRef.world.add(EnemyBullet(
+      game.world.add(EnemyBullet(
         startPosition: Vector2(
           position.x + size.x / 2 - (i + 1) * 40,
           GameConstants.groundY - 15,

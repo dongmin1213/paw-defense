@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../game/boss_rush_game.dart';
 import '../components/player.dart';
 
-abstract class BossBase extends PositionComponent with HasGameRef<BossRushGame>, CollisionCallbacks {
+abstract class BossBase extends PositionComponent with HasGameReference<BossRushGame>, CollisionCallbacks {
   final String bossName;
   final double maxHp;
   late double currentHp;
@@ -46,7 +46,7 @@ abstract class BossBase extends PositionComponent with HasGameRef<BossRushGame>,
       currentHp = 0;
       isDefeated = true;
       onDefeat();
-      gameRef.onBossDefeated();
+      game.onBossDefeated();
     }
   }
 
@@ -74,7 +74,7 @@ abstract class BossBase extends PositionComponent with HasGameRef<BossRushGame>,
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
     if (other is Player) {
-      gameRef.onPlayerHit();
+      game.onPlayerHit();
     }
   }
 

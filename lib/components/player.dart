@@ -5,7 +5,7 @@ import '../game/boss_rush_game.dart';
 import '../utils/constants.dart';
 import 'bullet.dart';
 
-class Player extends RectangleComponent with HasGameRef<BossRushGame>, CollisionCallbacks {
+class Player extends RectangleComponent with HasGameReference<BossRushGame>, CollisionCallbacks {
   double velocityY = 0;
   bool isOnGround = false;
   bool isDashing = false;
@@ -125,12 +125,12 @@ class Player extends RectangleComponent with HasGameRef<BossRushGame>, Collision
         position.y + size.y / 2 - 3,
       ),
     );
-    gameRef.world.add(bullet);
+    game.world.add(bullet);
   }
 
   void _handleSpecial() {
     if (wantsSpecial) {
-      if (gameRef.useSpecialAttack()) {
+      if (game.useSpecialAttack()) {
         _fireSpecialAttack();
       }
       wantsSpecial = false;
@@ -147,7 +147,7 @@ class Player extends RectangleComponent with HasGameRef<BossRushGame>, Collision
       ),
       isSpecial: true,
     );
-    gameRef.world.add(bullet);
+    game.world.add(bullet);
   }
 
   void startInvincibility() {

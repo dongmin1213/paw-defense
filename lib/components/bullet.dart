@@ -5,7 +5,7 @@ import '../game/boss_rush_game.dart';
 import '../bosses/boss_base.dart';
 import '../utils/constants.dart';
 
-class Bullet extends RectangleComponent with HasGameRef<BossRushGame>, CollisionCallbacks {
+class Bullet extends RectangleComponent with HasGameReference<BossRushGame>, CollisionCallbacks {
   final int direction;
   final bool isSpecial;
   final double damage;
@@ -46,7 +46,7 @@ class Bullet extends RectangleComponent with HasGameRef<BossRushGame>, Collision
     super.onCollisionStart(intersectionPoints, other);
     if (other is BossBase) {
       other.takeDamage(damage);
-      gameRef.addSpecialGauge(GameConstants.specialGaugePerHit);
+      game.addSpecialGauge(GameConstants.specialGaugePerHit);
       removeFromParent();
     }
   }
