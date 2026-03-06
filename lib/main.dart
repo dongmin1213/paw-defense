@@ -1,6 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'classes/player_class.dart';
 import 'game/boss_rush_game.dart';
 import 'ui/game_overlay.dart';
 import 'ui/main_menu.dart';
@@ -21,7 +22,7 @@ class BossRushApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Boss Rush',
+      title: "The Bichon's Odyssey",
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
@@ -31,14 +32,37 @@ class BossRushApp extends StatelessWidget {
   }
 }
 
-class GameScreen extends StatelessWidget {
-  final int bossIndex;
+class GameScreen extends StatefulWidget {
+  final int stageIndex;
+  final PlayerClassType playerClass;
+  final bool bossRushMode;
 
-  const GameScreen({super.key, required this.bossIndex});
+  const GameScreen({
+    super.key,
+    required this.stageIndex,
+    required this.playerClass,
+    this.bossRushMode = false,
+  });
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  late BossRushGame game;
+
+  @override
+  void initState() {
+    super.initState();
+    game = BossRushGame(
+      stageIndex: widget.stageIndex,
+      playerClass: widget.playerClass,
+      bossRushMode: widget.bossRushMode,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final game = BossRushGame(bossIndex: bossIndex);
     return Scaffold(
       body: Stack(
         children: [
@@ -52,7 +76,10 @@ class GameScreen extends StatelessWidget {
                 return _GameOverScreen(game: game);
               },
               'Victory': (context, BossRushGame game) {
-                return _VictoryScreen(game: game, bossIndex: bossIndex);
+                return _VictoryScreen(
+                  game: game,
+                  stageIndex: widget.stageIndex,
+                );
               },
             },
           ),
@@ -102,10 +129,8 @@ class _GameOverScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('BACK TO MENU', style: TextStyle(color: Colors.white70)),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('BACK TO MAP', style: TextStyle(color: Colors.white70)),
             ),
           ],
         ),
@@ -116,9 +141,9 @@ class _GameOverScreen extends StatelessWidget {
 
 class _VictoryScreen extends StatelessWidget {
   final BossRushGame game;
-  final int bossIndex;
+  final int stageIndex;
 
-  const _VictoryScreen({required this.game, required this.bossIndex});
+  const _VictoryScreen({required this.game, required this.stageIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -141,12 +166,18 @@ class _VictoryScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              StageThemes.getStageName(stageIndex),
+              style: const TextStyle(color: Colors.white60, fontSize: 16),
+            ),
             const SizedBox(height: 24),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('BACK TO MENU', style: TextStyle(color: Colors.white70, fontSize: 18)),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'CONTINUE',
+                style: TextStyle(color: Colors.amber, fontSize: 18),
+              ),
             ),
           ],
         ),

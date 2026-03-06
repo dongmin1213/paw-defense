@@ -11,14 +11,12 @@ class GameOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Top HUD
         Positioned(
           top: 8,
           left: 16,
           right: 16,
           child: _TopHud(game: game),
         ),
-        // Control buttons
         Positioned(
           bottom: 0,
           left: 0,
@@ -55,30 +53,48 @@ class _TopHudState extends State<_TopHud> {
 
   @override
   Widget build(BuildContext context) {
+    final isBossPhase = widget.game.currentPhase == GamePhase.boss;
+
     return Row(
       children: [
-        // Player HP
         _buildPlayerHp(),
         const SizedBox(width: 12),
-        // Special gauge
         _buildSpecialGauge(),
+        const SizedBox(width: 8),
+        // Phase indicator
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: isBossPhase
+                ? Colors.red.withValues(alpha: 0.3)
+                : Colors.green.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            isBossPhase ? 'BOSS' : 'EXPLORE',
+            style: TextStyle(
+              color: isBossPhase ? Colors.red : Colors.greenAccent,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
         const Spacer(),
-        // Boss HP
-        Expanded(flex: 3, child: _buildBossHp()),
+        if (isBossPhase) Expanded(flex: 3, child: _buildBossHp()),
       ],
     );
   }
 
   Widget _buildPlayerHp() {
     return Row(
-      children: List.generate(GameConstants.playerMaxHp, (i) {
+      children: List.generate(widget.game.classData.maxHp, (i) {
         final isFilled = i < widget.game.playerHp;
         return Padding(
-          padding: const EdgeInsets.only(right: 4),
+          padding: const EdgeInsets.only(right: 3),
           child: Icon(
             isFilled ? Icons.favorite : Icons.favorite_border,
             color: isFilled ? Colors.red : Colors.red.shade900,
-            size: 24,
+            size: 20,
           ),
         );
       }),
@@ -89,14 +105,14 @@ class _TopHudState extends State<_TopHud> {
     final percentage = widget.game.specialGauge / GameConstants.specialGaugeMax;
     final isFull = widget.game.specialGauge >= GameConstants.specialGaugeMax;
     return Container(
-      width: 60,
-      height: 10,
+      width: 50,
+      height: 8,
       decoration: BoxDecoration(
         border: Border.all(
           color: isFull ? Colors.amber : Colors.white30,
           width: 1,
         ),
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: FractionallySizedBox(
         alignment: Alignment.centerLeft,
@@ -104,7 +120,7 @@ class _TopHudState extends State<_TopHud> {
         child: Container(
           decoration: BoxDecoration(
             color: isFull ? Colors.amber : GameConstants.specialGaugeColor.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
       ),
@@ -167,9 +183,7 @@ class _ControlButtonsState extends State<_ControlButtons> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left side: D-pad
           _buildDPad(),
-          // Right side: Action buttons
           _buildActionButtons(),
         ],
       ),
@@ -205,31 +219,35 @@ class _ControlButtonsState extends State<_ControlButtons> {
   Widget _buildActionButtons() {
     final isSpecialReady =
         widget.game.specialGauge >= GameConstants.specialGaugeMax;
+    final classColor = widget.game.classData.accentColor;
+
     return Row(
       children: [
-        // Shoot (hold)
         _ActionButton(
-          label: 'SHOOT',
-          color: Colors.amber.shade700,
+          label: 'ATK',
+          color: classColor,
           onPressed: () => widget.game.player.wantsShoot = true,
           onReleased: () => widget.game.player.wantsShoot = false,
         ),
-        const SizedBox(width: 8),
-        // Jump
+        const SizedBox(width: 6),
         _ActionButton(
           label: 'JUMP',
           color: Colors.blue.shade700,
           onTap: () => widget.game.player.wantsJump = true,
         ),
-        const SizedBox(width: 8),
-        // Dash
+        const SizedBox(width: 6),
         _ActionButton(
           label: 'DASH',
           color: Colors.cyan.shade700,
           onTap: () => widget.game.player.wantsDash = true,
         ),
-        const SizedBox(width: 8),
-        // Special
+        const SizedBox(width: 6),
+        _ActionButton(
+          label: 'SKILL',
+          color: classColor.withValues(alpha: 0.7),
+          onTap: () => widget.game.player.wantsSkill = true,
+        ),
+        const SizedBox(width: 6),
         _ActionButton(
           label: 'SP',
           color: isSpecialReady ? Colors.orange : Colors.grey.shade700,
@@ -258,14 +276,14 @@ class _DirectionButton extends StatelessWidget {
       onTapUp: (_) => onReleased(),
       onTapCancel: () => onReleased(),
       child: Container(
-        width: 56,
-        height: 56,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white24),
         ),
-        child: Icon(icon, color: Colors.white70, size: 32),
+        child: Icon(icon, color: Colors.white70, size: 28),
       ),
     );
   }
@@ -296,10 +314,10 @@ class _ActionButton extends StatelessWidget {
       onTapUp: (_) => onReleased?.call(),
       onTapCancel: () => onReleased?.call(),
       child: Container(
-        width: 52,
-        height: 52,
+        width: 46,
+        height: 46,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.6),
+          color: color.withValues(alpha: 0.5),
           shape: BoxShape.circle,
           border: Border.all(color: color, width: 2),
         ),
@@ -308,7 +326,7 @@ class _ActionButton extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../game/boss_rush_game.dart';
 import '../bosses/boss_base.dart';
 import '../utils/constants.dart';
+import 'enemy.dart';
 
 class Bullet extends RectangleComponent with HasGameReference<BossRushGame>, CollisionCallbacks {
   final int direction;
@@ -47,6 +48,9 @@ class Bullet extends RectangleComponent with HasGameReference<BossRushGame>, Col
     if (other is BossBase) {
       other.takeDamage(damage);
       game.addSpecialGauge(GameConstants.specialGaugePerHit);
+      removeFromParent();
+    } else if (other is Enemy) {
+      other.takeDamage(damage);
       removeFromParent();
     }
   }

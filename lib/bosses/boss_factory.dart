@@ -1,20 +1,33 @@
 import '../game/boss_rush_game.dart';
 import 'boss_base.dart';
 import 'boss1_guardian.dart';
+import 'boss2_shadow_dasher.dart';
+import 'boss3_bullet_witch.dart';
+import 'boss4_iron_colossus.dart';
+import 'boss5_mirror_trickster.dart';
+import 'boss6_hive_queen.dart';
+import 'boss7_storm_elemental.dart';
+import 'boss8_overlord.dart';
 
 class BossFactory {
   static BossBase createBoss(int index, BossRushGame gameRef) {
     switch (index) {
       case 0:
         return Boss1Guardian(gameRef);
-      // Future bosses will be added here:
-      // case 1: return Boss2Speedster(gameRef);
-      // case 2: return Boss3BulletHell(gameRef);
-      // case 3: return Boss4Colossus(gameRef);
-      // case 4: return Boss5Trickster(gameRef);
-      // case 5: return Boss6Swarm(gameRef);
-      // case 6: return Boss7Elemental(gameRef);
-      // case 7: return Boss8Final(gameRef);
+      case 1:
+        return Boss2ShadowDasher(gameRef);
+      case 2:
+        return Boss3BulletWitch(gameRef);
+      case 3:
+        return Boss4IronColossus(gameRef);
+      case 4:
+        return Boss5MirrorTrickster(gameRef);
+      case 5:
+        return Boss6HiveQueen(gameRef);
+      case 6:
+        return Boss7StormElemental(gameRef);
+      case 7:
+        return Boss8Overlord(gameRef);
       default:
         return Boss1Guardian(gameRef);
     }
@@ -35,7 +48,6 @@ class BossFactory {
   }
 
   static bool isBossAvailable(int index) {
-    // For now only boss 0 is implemented
-    return index == 0;
+    return index < 8;
   }
 }

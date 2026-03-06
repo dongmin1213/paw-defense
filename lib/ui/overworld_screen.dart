@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import '../classes/player_class.dart';
+import '../game/boss_rush_game.dart';
+import '../bosses/boss_factory.dart';
+import '../main.dart';
+
+class OverworldScreen extends StatelessWidget {
+  final PlayerClassType playerClass;
+
+  const OverworldScreen({super.key, required this.playerClass});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A1A0A), Color(0xFF1A2A1A), Color(0xFF0A1A2E)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white54),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'WORLD MAP',
+                      style: TextStyle(
+                        color: Colors.amber.shade200,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Class indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: PlayerClassData.get(playerClass).accentColor,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        PlayerClassData.get(playerClass).name,
+                        style: TextStyle(
+                          color: PlayerClassData.get(playerClass).accentColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Stage map
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    child: Row(
+                      children: List.generate(8, (index) {
+                        return Row(
+                          children: [
+                            _StageNode(
+                              stageIndex: index,
+                              playerClass: playerClass,
+                            ),
+                            if (index < 7)
+                              Container(
+                                width: 40,
+                                height: 2,
+                                color: Colors.white24,
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                              ),
+                          ],
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StageNode extends StatelessWidget {
+  final int stageIndex;
+  final PlayerClassType playerClass;
+
+  const _StageNode({
+    required this.stageIndex,
+    required this.playerClass,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final stageName = StageThemes.getStageName(stageIndex);
+    final bossName = BossFactory.getBossName(stageIndex);
+    final bgColor = StageThemes.getBackgroundColor(stageIndex);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GameScreen(
+              stageIndex: stageIndex,
+              playerClass: playerClass,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.amber.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: bgColor.withValues(alpha: 0.4),
+              blurRadius: 8,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${stageIndex + 1}',
+              style: const TextStyle(
+                color: Colors.amber,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              stageName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              bossName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
