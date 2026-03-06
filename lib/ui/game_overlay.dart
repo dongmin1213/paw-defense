@@ -191,28 +191,13 @@ class _ControlButtonsState extends State<_ControlButtons> {
   }
 
   Widget _buildDPad() {
-    return Row(
-      children: [
-        _DirectionButton(
-          icon: Icons.chevron_left,
-          onPressed: () => widget.game.player.moveDirection = -1,
-          onReleased: () {
-            if (widget.game.player.moveDirection == -1) {
-              widget.game.player.moveDirection = 0;
-            }
-          },
-        ),
-        const SizedBox(width: 8),
-        _DirectionButton(
-          icon: Icons.chevron_right,
-          onPressed: () => widget.game.player.moveDirection = 1,
-          onReleased: () {
-            if (widget.game.player.moveDirection == 1) {
-              widget.game.player.moveDirection = 0;
-            }
-          },
-        ),
-      ],
+    return _Joystick(
+      onDirectionChanged: (dx) {
+        widget.game.player.moveDirection = dx;
+        if (dx != 0) {
+          widget.game.player.facingDirection = dx > 0 ? 1 : -1;
+        }
+      },
     );
   }
 
@@ -258,35 +243,148 @@ class _ControlButtonsState extends State<_ControlButtons> {
   }
 }
 
-class _DirectionButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-  final VoidCallback onReleased;
+class _Joystick extends StatefulWidget {
+  final ValueChanged<double> onDirectionChanged;
 
-  const _DirectionButton({
-    required this.icon,
-    required this.onPressed,
-    required this.onReleased,
-  });
+  const _Joystick({required this.onDirectionChanged});
+
+  @override
+  State<_Joystick> createState() => _JoystickState();
+}
+
+class _JoystickState extends State<_Joystick> {
+  static const double _baseRadius = 50;
+  static const double _knobRadius = 20;
+  static const double _deadZone = 0.15;
+
+  Offset _knobOffset = Offset.zero;
+  bool _isDragging = false;
+
+  void _updateKnob(Offset localPosition) {
+    final center = const Offset(_baseRadius, _baseRadius);
+    var delta = localPosition - center;
+    final distance = delta.distance;
+    final maxDist = _baseRadius - _knobRadius;
+
+    if (distance > maxDist) {
+      delta = delta / distance * maxDist;
+    }
+
+    setState(() {
+      _knobOffset = delta;
+    });
+
+    // Normalize x to -1..1
+    final nx = delta.dx / maxDist;
+    if (nx.abs() < _deadZone) {
+      widget.onDirectionChanged(0);
+    } else {
+      widget.onDirectionChanged(nx.clamp(-1, 1));
+    }
+  }
+
+  void _resetKnob() {
+    setState(() {
+      _knobOffset = Offset.zero;
+      _isDragging = false;
+    });
+    widget.onDirectionChanged(0);
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => onPressed(),
-      onTapUp: (_) => onReleased(),
-      onTapCancel: () => onReleased(),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24),
+      onPanStart: (details) {
+        _isDragging = true;
+        _updateKnob(details.localPosition);
+      },
+      onPanUpdate: (details) {
+        _updateKnob(details.localPosition);
+      },
+      onPanEnd: (_) => _resetKnob(),
+      onPanCancel: () => _resetKnob(),
+      child: SizedBox(
+        width: _baseRadius * 2,
+        height: _baseRadius * 2,
+        child: CustomPaint(
+          painter: _JoystickPainter(
+            knobOffset: _knobOffset,
+            baseRadius: _baseRadius,
+            knobRadius: _knobRadius,
+            isDragging: _isDragging,
+          ),
         ),
-        child: Icon(icon, color: Colors.white70, size: 28),
       ),
     );
   }
+}
+
+class _JoystickPainter extends CustomPainter {
+  final Offset knobOffset;
+  final double baseRadius;
+  final double knobRadius;
+  final bool isDragging;
+
+  _JoystickPainter({
+    required this.knobOffset,
+    required this.baseRadius,
+    required this.knobRadius,
+    required this.isDragging,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Base circle
+    final basePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.08)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, baseRadius - 2, basePaint);
+
+    // Base ring
+    final ringPaint = Paint()
+      ..color = Colors.white.withValues(alpha: isDragging ? 0.3 : 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, baseRadius - 2, ringPaint);
+
+    // Direction indicators (L/R arrows)
+    final arrowPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+    // Left arrow
+    final leftArrow = Path()
+      ..moveTo(center.dx - baseRadius + 14, center.dy)
+      ..lineTo(center.dx - baseRadius + 22, center.dy - 6)
+      ..lineTo(center.dx - baseRadius + 22, center.dy + 6)
+      ..close();
+    canvas.drawPath(leftArrow, arrowPaint);
+    // Right arrow
+    final rightArrow = Path()
+      ..moveTo(center.dx + baseRadius - 14, center.dy)
+      ..lineTo(center.dx + baseRadius - 22, center.dy - 6)
+      ..lineTo(center.dx + baseRadius - 22, center.dy + 6)
+      ..close();
+    canvas.drawPath(rightArrow, arrowPaint);
+
+    // Knob
+    final knobCenter = center + knobOffset;
+    final knobPaint = Paint()
+      ..color = Colors.white.withValues(alpha: isDragging ? 0.5 : 0.25);
+    canvas.drawCircle(knobCenter, knobRadius, knobPaint);
+
+    // Knob border
+    final knobBorder = Paint()
+      ..color = Colors.white.withValues(alpha: isDragging ? 0.6 : 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(knobCenter, knobRadius, knobBorder);
+  }
+
+  @override
+  bool shouldRepaint(covariant _JoystickPainter old) =>
+      old.knobOffset != knobOffset || old.isDragging != isDragging;
 }
 
 class _ActionButton extends StatelessWidget {
