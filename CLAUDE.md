@@ -24,15 +24,20 @@ lib/
 ├── data/                         # ★ 데이터 정의 (컨텐츠 추가 = 여기만 수정)
 │   ├── balance_config.dart       # 밸런스 수치 전부
 │   ├── enemy_data.dart           # 적 스탯/드랍/출현율
-│   └── region_data.dart          # 지역별 배경/몬스터풀/배율
+│   ├── region_data.dart          # 지역별 배경/몬스터풀/배율
+│   └── upgrade_data.dart         # 업그레이드 정의 (비용/효과/최대레벨)
 ├── renderers/                    # ★ 렌더링 분리 (에셋 교체 = 여기만)
 │   ├── player_renderer.dart      # 비숏 프로시저럴 렌더링
 │   ├── enemy_renderer.dart       # 적 프로시저럴 렌더링
 │   └── coin_renderer.dart        # 코인 프로시저럴 렌더링
 ├── systems/
-│   └── level_generator.dart      # 절차적 적/코인/장애물 배치
+│   ├── level_generator.dart      # 절차적 적/코인/장애물 배치
+│   ├── upgrade_manager.dart      # 업글 레벨/구매/효과 계산
+│   └── save_manager.dart         # SharedPreferences 저장/로드
 ├── ui/
-│   └── runner_hud.dart           # HUD (거리, 코인, 콤보)
+│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 상점버튼)
+│   ├── upgrade_shop.dart         # 업그레이드 상점 오버레이
+│   └── main_menu.dart            # 타이틀 화면 + 시작
 └── utils/
     └── constants.dart            # 월드 크기, 물리 상수
 ```
@@ -55,11 +60,12 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 
 ## Current State
 - **Phase 1 완료**: 핵심 달리기 + 몬스터 + 코인 + 장애물 + 콤보 + HUD
-- **다음**: Phase 2 (업그레이드 + 저장)
+- **Phase 2 완료**: 업그레이드 7종 + SharedPreferences 저장 + 상점 UI + 메인 메뉴
+- **다음**: Phase 3 (초월 + 영구 업글 + 지역)
 
 ## 전체 로드맵
 - Phase 1: ✅ 핵심 달리기
-- Phase 2: 업그레이드 + 저장 (SharedPreferences)
+- Phase 2: ✅ 업그레이드 + 저장 (SharedPreferences)
 - Phase 3: 초월 + 영구 업글 + 지역
 - Phase 4: 동료 + 보스 + 미니이벤트
 - Phase 5: 날씨/시간 + 광고 (google_mobile_ads)
@@ -109,22 +115,22 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 - RunnerGame.resetGame() 미구현 → 메인 메뉴 추가 시 필요
 - enemy_data.dart에 초원(meadow) 적만 정의됨 → Phase 3에서 지역별 적 추가
 
-## Phase 2 시작 가이드
+## Phase 3 시작 가이드
 
-Phase 2 구현 순서:
-1. `data/upgrade_data.dart` — UpgradeData 클래스 + 일반 업그레이드 8종 정의 (balance_config.dart의 비용 공식 사용)
-2. `systems/upgrade_manager.dart` — 업글 레벨 관리, 구매, 효과 계산. RunnerGame에서 참조
-3. `systems/save_manager.dart` — SharedPreferences 래퍼. 코인/업글레벨/거리/통계 저장·로드
-4. `ui/upgrade_shop.dart` — Flutter 위젯 오버레이 (GameWidget overlay). 업글 목록 + 구매 버튼
-5. `ui/main_menu.dart` — 타이틀 화면 + "탭하여 시작" + 최고기록 표시
-6. **연동**: runner_player.dart에서 upgrade_manager 참조하여 속도/공격력/점프력 효과 적용
-7. `pubspec.yaml`에 `shared_preferences: ^2.2.0` 추가
+Phase 3 구현 순서:
+1. `systems/ascension_manager.dart` — 초월 조건 체크, 실행, 소울 계산, 리셋 처리
+2. `ui/soul_shop.dart` — 영구 업글 UI (소울 소비, 지역/장비 해금)
+3. 초월 연출 (화면 화이트아웃 → "초월 N회차" → 메인 메뉴)
+4. `components/parallax_layer.dart` — 지역별 3레이어 프로시저럴 배경
+5. 지역별 몬스터 풀 확장 (enemy_data.dart에 숲/사막/설산/화산 적 추가)
+6. 장비 시스템 기본 (data/equipment_data.dart + 검 기본 + 활/장갑/망토)
 
 핵심 연결 포인트:
-- `RunnerGame`에 `UpgradeManager upgradeManager` 필드 추가
-- `RunnerPlayer`에서 `game.upgradeManager.getSpeedMultiplier()` 등 참조
-- `addCoins()`에서 `upgradeManager.getCoinMultiplier()` 반영
-- 상점은 `GameWidget.overlayBuilderMap`에 'shop' 키로 등록
+- `RunnerGame`에 `AscensionManager ascensionManager` 필드 추가
+- 초월 시 `upgradeManager.resetAll()` + `saveManager.resetForAscension()` 호출
+- 소울 업글은 별도 데이터 구조 (soul_upgrade_data.dart)
+- 지역 변경: `game.currentRegionId` 변경 → 배경색/몬스터풀 자동 전환
+- SaveManager에 소울/초월 횟수/영구업글 저장 추가
 
 ## Important Notes
 - `HasGameRef` deprecated → `HasGameReference` 사용 (`.game`으로 접근)

@@ -27,7 +27,8 @@ class RunnerPlayer extends PositionComponent
   double get currentSpeed {
     final baseSpeed = GameConstants.basePlayerSpeed;
     final distanceMultiplier = BalanceConfig.speedMultiplier(game.distance);
-    return baseSpeed * distanceMultiplier * _slowdownFactor;
+    final upgradeMultiplier = game.upgradeManager.speedMultiplier;
+    return baseSpeed * distanceMultiplier * upgradeMultiplier * _slowdownFactor;
   }
 
   RunnerPlayer()
@@ -82,11 +83,12 @@ class RunnerPlayer extends PositionComponent
   }
 
   void jump() {
+    final jumpForce = GameConstants.baseJumpForce * game.upgradeManager.jumpMultiplier;
     if (_isOnGround) {
-      velocityY = GameConstants.baseJumpForce;
+      velocityY = jumpForce;
       _isOnGround = false;
     } else if (_canDoubleJump && !_hasDoubleJumped) {
-      velocityY = GameConstants.baseJumpForce * 0.85;
+      velocityY = jumpForce * 0.85;
       _hasDoubleJumped = true;
     }
   }

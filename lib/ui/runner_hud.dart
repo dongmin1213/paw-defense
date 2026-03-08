@@ -127,6 +127,44 @@ class _RunnerHudState extends State<RunnerHud> {
               ),
             ),
           ),
+
+          // Shop button (bottom right)
+          Positioned(
+            bottom: 12,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => game.toggleShop(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.indigo.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.shopping_cart, color: Colors.white, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      '상점',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

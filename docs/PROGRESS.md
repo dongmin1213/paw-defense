@@ -24,16 +24,20 @@ Core auto-runner with enemies, coins, combo, and obstacles.
 - [x] `docs/PROGRESS.md` — 진행 상황 트래커
 - [x] `docs/ARCHITECTURE.md` — 코드 아키텍처 문서
 
-## Phase 2: 업그레이드 + 저장 ⬜
+## Phase 2: 업그레이드 + 저장 ✅
 Coin → upgrade → growth loop with persistent save.
 
-- [ ] `pubspec.yaml` — shared_preferences 추가
-- [ ] `systems/save_manager.dart` — SharedPreferences 저장/로드
-- [ ] `systems/upgrade_manager.dart` — 일반 업글 데이터 + 비용 + 효과
-- [ ] `data/upgrade_data.dart` — 업그레이드 정의
-- [ ] `ui/upgrade_shop.dart` — 업글 상점 UI
-- [ ] `ui/main_menu.dart` — 타이틀 + 시작 + 통계
-- [ ] runner_player에 업그레이드 효과 연동
+- [x] `pubspec.yaml` — shared_preferences 추가
+- [x] `data/upgrade_data.dart` — 7종 업그레이드 정의 (이동속도/코인/공격력/점프력/더블점프/자석/콤보유지)
+- [x] `systems/upgrade_manager.dart` — 업글 레벨/구매/비용계산/효과 멀티플라이어
+- [x] `systems/save_manager.dart` — SharedPreferences 저장/로드 (코인/업글/통계/자동저장)
+- [x] `ui/upgrade_shop.dart` — 업글 상점 오버레이 (구매/MAX 표시)
+- [x] `ui/main_menu.dart` — 타이틀 화면 + 통계 + 시작 버튼
+- [x] `ui/runner_hud.dart` — 상점 버튼 추가
+- [x] `main.dart` — SaveManager 초기화, 3개 오버레이 등록, 앱 라이프사이클 저장
+- [x] `runner_game.dart` — 업글 연동 (코인배율, 콤보유지, 자동저장 30초, 상점 토글)
+- [x] `runner_player.dart` — 속도/점프력 업글 적용
+- [x] `enemy.dart` — 공격력 업글 적용 (데미지 = attackMultiplier.ceil())
 
 ## Phase 3: 초월 + 영구 업글 + 지역 ⬜
 Full growth loop: coins → upgrades → ascension → souls → permanent upgrades.
@@ -80,4 +84,4 @@ Offline rewards, particles, sound, polish.
 ---
 
 ## 다음 세션에서 할 일
-- Phase 2 구현 시작: upgrade_data → upgrade_manager → save_manager → upgrade_shop → main_menu
+- Phase 3 구현 시작: ascension_manager → soul_shop → 초월 연출 → parallax → 지역별 적 확장 → 장비

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'game/runner_game.dart';
+import 'systems/save_manager.dart';
 import 'ui/runner_hud.dart';
+import 'ui/upgrade_shop.dart';
+import 'ui/main_menu.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,11 +20,17 @@ void main() async {
   // Immersive fullscreen
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-  runApp(const BichonRunApp());
+  // Initialize save manager
+  final saveManager = SaveManager();
+  await saveManager.init();
+
+  runApp(BichonRunApp(saveManager: saveManager));
 }
 
 class BichonRunApp extends StatelessWidget {
-  const BichonRunApp({super.key});
+  final SaveManager saveManager;
+
+  const BichonRunApp({super.key, required this.saveManager});
 
   @override
   Widget build(BuildContext context) {
@@ -31,25 +40,45 @@ class BichonRunApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: const GameScreen(),
+      home: GameScreen(saveManager: saveManager),
     );
   }
 }
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final SaveManager saveManager;
+
+  const GameScreen({super.key, required this.saveManager});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late RunnerGame _game;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _game = RunnerGame();
+    _game.initSaveManager(widget.saveManager);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_game.isPlaying) {
+        _game.saveGame();
+      }
+    }
   }
 
   @override
@@ -58,7 +87,9 @@ class _GameScreenState extends State<GameScreen> {
       body: GameWidget(
         game: _game,
         overlayBuilderMap: {
+          'MainMenu': (context, game) => MainMenu(game: game as RunnerGame),
           'RunnerHud': (context, game) => RunnerHud(game: game as RunnerGame),
+          'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
         },
       ),
     );

@@ -62,7 +62,8 @@ class Enemy extends PositionComponent
   }
 
   void onHit(RunnerPlayer player) {
-    currentHp -= 1;
+    final damage = game.upgradeManager.attackMultiplier.ceil();
+    currentHp -= damage;
     _isHit = true;
     _hitFlashTimer = 0.15;
 
