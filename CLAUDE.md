@@ -20,23 +20,28 @@ lib/
 │   ├── ground_segment.dart       # 무한 반복 바닥
 │   ├── enemy.dart                # 몬스터 (바닥/공중, HP, 코인 드랍)
 │   ├── coin.dart                 # 수집 코인 (호버, 팝업)
-│   └── obstacle.dart             # 장애물 (속도 감소)
+│   ├── obstacle.dart             # 장애물 (속도 감소)
+│   └── parallax_layer.dart       # 3레이어 패럴랙스 배경
 ├── data/                         # ★ 데이터 정의 (컨텐츠 추가 = 여기만 수정)
 │   ├── balance_config.dart       # 밸런스 수치 전부
-│   ├── enemy_data.dart           # 적 스탯/드랍/출현율
+│   ├── enemy_data.dart           # 적 스탯/드랍/출현율 (5지역 20종)
 │   ├── region_data.dart          # 지역별 배경/몬스터풀/배율
-│   └── upgrade_data.dart         # 업그레이드 정의 (비용/효과/최대레벨)
+│   ├── upgrade_data.dart         # 일반 업그레이드 정의
+│   └── soul_upgrade_data.dart    # 영구 업그레이드 정의 (소울)
 ├── renderers/                    # ★ 렌더링 분리 (에셋 교체 = 여기만)
 │   ├── player_renderer.dart      # 비숏 프로시저럴 렌더링
 │   ├── enemy_renderer.dart       # 적 프로시저럴 렌더링
 │   └── coin_renderer.dart        # 코인 프로시저럴 렌더링
 ├── systems/
 │   ├── level_generator.dart      # 절차적 적/코인/장애물 배치
-│   ├── upgrade_manager.dart      # 업글 레벨/구매/효과 계산
+│   ├── upgrade_manager.dart      # 일반 업글 레벨/구매/효과
+│   ├── ascension_manager.dart    # 초월 + 소울 + 영구 업글
 │   └── save_manager.dart         # SharedPreferences 저장/로드
 ├── ui/
-│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 상점버튼)
-│   ├── upgrade_shop.dart         # 업그레이드 상점 오버레이
+│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 상점/소울/초월 버튼)
+│   ├── upgrade_shop.dart         # 일반 업그레이드 상점
+│   ├── soul_shop.dart            # 영구 업그레이드 상점 (소울)
+│   ├── ascension_screen.dart     # 초월 연출 화면
 │   └── main_menu.dart            # 타이틀 화면 + 시작
 └── utils/
     └── constants.dart            # 월드 크기, 물리 상수
@@ -61,12 +66,13 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 ## Current State
 - **Phase 1 완료**: 핵심 달리기 + 몬스터 + 코인 + 장애물 + 콤보 + HUD
 - **Phase 2 완료**: 업그레이드 7종 + SharedPreferences 저장 + 상점 UI + 메인 메뉴
-- **다음**: Phase 3 (초월 + 영구 업글 + 지역)
+- **Phase 3 완료**: 초월 + 소울 + 영구 업글 13종 + 5개 지역 적 20종 + 패럴랙스 배경
+- **다음**: Phase 4 (동료 + 보스 + 미니이벤트)
 
 ## 전체 로드맵
 - Phase 1: ✅ 핵심 달리기
 - Phase 2: ✅ 업그레이드 + 저장 (SharedPreferences)
-- Phase 3: 초월 + 영구 업글 + 지역
+- Phase 3: ✅ 초월 + 영구 업글 + 지역
 - Phase 4: 동료 + 보스 + 미니이벤트
 - Phase 5: 날씨/시간 + 광고 (google_mobile_ads)
 - Phase 6: 오프라인 + 폴리시
@@ -115,22 +121,23 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 - RunnerGame.resetGame() 미구현 → 메인 메뉴 추가 시 필요
 - enemy_data.dart에 초원(meadow) 적만 정의됨 → Phase 3에서 지역별 적 추가
 
-## Phase 3 시작 가이드
+## Phase 4 시작 가이드
 
-Phase 3 구현 순서:
-1. `systems/ascension_manager.dart` — 초월 조건 체크, 실행, 소울 계산, 리셋 처리
-2. `ui/soul_shop.dart` — 영구 업글 UI (소울 소비, 지역/장비 해금)
-3. 초월 연출 (화면 화이트아웃 → "초월 N회차" → 메인 메뉴)
-4. `components/parallax_layer.dart` — 지역별 3레이어 프로시저럴 배경
-5. 지역별 몬스터 풀 확장 (enemy_data.dart에 숲/사막/설산/화산 적 추가)
-6. 장비 시스템 기본 (data/equipment_data.dart + 검 기본 + 활/장갑/망토)
+Phase 4 구현 순서:
+1. `data/companion_data.dart` — 동료 10종 데이터 (희귀도/출현율/효과)
+2. `systems/companion_manager.dart` — 동료 수집/장착(슬롯)/레벨업/버프 계산
+3. `renderers/companion_renderer.dart` — 동료 프로시저럴 렌더링
+4. `components/companion_pickup.dart` — 필드에 동료 등장 (2분 평균, 적극 플레이 시만)
+5. `ui/companion_screen.dart` — 장착/도감/레벨업 UI
+6. `components/boss.dart` + `renderers/boss_renderer.dart` — 500m 보스 (HP바, 자동공격, 탭 가속)
+7. 미니이벤트: 보물상자, 코인 러시, 황금 적
 
 핵심 연결 포인트:
-- `RunnerGame`에 `AscensionManager ascensionManager` 필드 추가
-- 초월 시 `upgradeManager.resetAll()` + `saveManager.resetForAscension()` 호출
-- 소울 업글은 별도 데이터 구조 (soul_upgrade_data.dart)
-- 지역 변경: `game.currentRegionId` 변경 → 배경색/몬스터풀 자동 전환
-- SaveManager에 소울/초월 횟수/영구업글 저장 추가
+- `RunnerGame`에 `CompanionManager companionManager` 필드 추가
+- 동료 버프는 `companionManager.totalCoinBonus()` 등으로 addCoins()에 연동
+- 동료는 초월해도 유지 → SaveManager에 별도 저장
+- 보스는 `distance % 5000 == 0` 시 LevelGenerator에서 스폰
+- 황금 적: enemy 생성 시 BalanceConfig.goldenEnemyChance로 판정
 
 ## Important Notes
 - `HasGameRef` deprecated → `HasGameReference` 사용 (`.game`으로 접근)

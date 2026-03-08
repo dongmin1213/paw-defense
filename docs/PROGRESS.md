@@ -39,15 +39,22 @@ Coin → upgrade → growth loop with persistent save.
 - [x] `runner_player.dart` — 속도/점프력 업글 적용
 - [x] `enemy.dart` — 공격력 업글 적용 (데미지 = attackMultiplier.ceil())
 
-## Phase 3: 초월 + 영구 업글 + 지역 ⬜
+## Phase 3: 초월 + 영구 업글 + 지역 ✅
 Full growth loop: coins → upgrades → ascension → souls → permanent upgrades.
 
-- [ ] `systems/ascension_manager.dart` — 초월 조건/실행/소울 계산
-- [ ] `ui/soul_shop.dart` — 영구 업글 UI
-- [ ] 초월 연출 (화이트아웃 + "초월 N회차")
-- [ ] `components/parallax_layer.dart` — 지역별 3레이어 배경
-- [ ] 지역별 몬스터 풀 + 코인 배율 적용
-- [ ] 장비 시스템 (검 기본 + 활/장갑/망토)
+- [x] `data/soul_upgrade_data.dart` — 영구 업그레이드 13종 (코인배율/시작속도/오프라인/지역해금4/장비해금3/자동/콤보)
+- [x] `systems/ascension_manager.dart` — 초월 조건/실행/소울 계산/영구 업글 관리
+- [x] `ui/soul_shop.dart` — 3탭(강화/지역/장비) 소울 상점 + 지역 변경
+- [x] `ui/ascension_screen.dart` — 초월 연출 (화이트아웃 애니메이션 + 소울 보상 표시)
+- [x] `components/parallax_layer.dart` — 3레이어 프로시저럴 패럴랙스 (산/언덕/수풀)
+- [x] `data/enemy_data.dart` — 5개 지역 적 20종 (초원4/숲4/사막4/설산4/화산4)
+- [x] `renderers/enemy_renderer.dart` — 20종 적 프로시저럴 렌더링 추가
+- [x] `runner_game.dart` — 초월/소울 연동, 지역변경, 패럴랙스, 소울 코인배율
+- [x] `save_manager.dart` — 소울/초월/영구업글/지역 저장·로드
+- [x] `main.dart` — SoulShop, AscensionScreen 오버레이 등록
+- [x] `runner_hud.dart` — 초월 버튼(조건 충족 시) + 소울 상점 버튼(초월 후)
+- [x] `main_menu.dart` — 영구 업그레이드 버튼(초월 후)
+- [ ] 장비 시스템 실제 효과 구현 (활/장갑/망토 — Phase 4+에서 구현)
 
 ## Phase 4: 동료 + 보스 + 미니이벤트 ⬜
 Collection mechanics, milestone bosses, variety events.
@@ -84,4 +91,4 @@ Offline rewards, particles, sound, polish.
 ---
 
 ## 다음 세션에서 할 일
-- Phase 3 구현 시작: ascension_manager → soul_shop → 초월 연출 → parallax → 지역별 적 확장 → 장비
+- Phase 4 구현 시작: companion_data → companion_manager → companion_pickup → companion_screen → boss → 미니이벤트

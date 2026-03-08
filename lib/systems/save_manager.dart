@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upgrade_manager.dart';
+import 'ascension_manager.dart';
 import '../data/upgrade_data.dart';
+import '../data/soul_upgrade_data.dart';
 
 class SaveManager {
   static const String _keyCoins = 'coins';
@@ -9,7 +11,9 @@ class SaveManager {
   static const String _keySouls = 'souls';
   static const String _keyAscensionCount = 'ascension_count';
   static const String _keyLastOnline = 'last_online_time';
+  static const String _keyCurrentRegion = 'current_region';
   static const String _upgradePrefix = 'upgrade_';
+  static const String _soulUpgradePrefix = 'soul_upgrade_';
 
   late SharedPreferences _prefs;
 
@@ -35,11 +39,15 @@ class SaveManager {
   int get ascensionCount => _prefs.getInt(_keyAscensionCount) ?? 0;
   set ascensionCount(int v) => _prefs.setInt(_keyAscensionCount, v);
 
-  // === Last Online (for offline rewards) ===
+  // === Region ===
+  String get currentRegion => _prefs.getString(_keyCurrentRegion) ?? 'meadow';
+  set currentRegion(String v) => _prefs.setString(_keyCurrentRegion, v);
+
+  // === Last Online ===
   int get lastOnlineTime => _prefs.getInt(_keyLastOnline) ?? 0;
   set lastOnlineTime(int v) => _prefs.setInt(_keyLastOnline, v);
 
-  // === Upgrades ===
+  // === Regular Upgrades ===
   void saveUpgrades(UpgradeManager manager) {
     final map = manager.toMap();
     for (final entry in map.entries) {
@@ -51,33 +59,58 @@ class SaveManager {
     final map = <String, int>{};
     for (final id in UpgradeId.values) {
       final val = _prefs.getInt('$_upgradePrefix${id.name}');
-      if (val != null) {
-        map[id.name] = val;
-      }
+      if (val != null) map[id.name] = val;
     }
     manager.loadFromMap(map);
   }
 
-  // === Save All Game State ===
+  // === Ascension / Soul Upgrades ===
+  void saveAscension(AscensionManager manager) {
+    souls = manager.souls;
+    ascensionCount = manager.ascensionCount;
+    final map = manager.toMap();
+    for (final entry in map.entries) {
+      _prefs.setInt('$_soulUpgradePrefix${entry.key}', entry.value);
+    }
+  }
+
+  void loadAscension(AscensionManager manager) {
+    manager.souls = souls;
+    manager.ascensionCount = ascensionCount;
+    final map = <String, int>{};
+    for (final id in SoulUpgradeId.values) {
+      final val = _prefs.getInt('$_soulUpgradePrefix${id.name}');
+      if (val != null) map[id.name] = val;
+    }
+    manager.loadFromMap(map);
+  }
+
+  // === Save All ===
   void saveGameState({
     required double coins,
     required double totalCoinsEarned,
     required double highScore,
     required UpgradeManager upgradeManager,
+    required AscensionManager ascensionManager,
+    required String currentRegion,
   }) {
     this.coins = coins;
     this.totalCoinsEarned = totalCoinsEarned;
     if (highScore > this.highScore) {
       this.highScore = highScore;
     }
+    this.currentRegion = currentRegion;
     saveUpgrades(upgradeManager);
+    saveAscension(ascensionManager);
     lastOnlineTime = DateTime.now().millisecondsSinceEpoch;
   }
 
   // === Reset on Ascension ===
   void resetForAscension() {
     coins = 0;
-    // Note: totalCoinsEarned and highScore persist
-    // Upgrades are reset by UpgradeManager.resetAll()
+    totalCoinsEarned = 0;
+    for (final id in UpgradeId.values) {
+      _prefs.remove('$_upgradePrefix${id.name}');
+    }
   }
 }

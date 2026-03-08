@@ -93,6 +93,25 @@ class MainMenu extends StatelessWidget {
                 ),
               ),
             ),
+            // Soul shop button (after first ascension)
+            if (game.ascensionManager.ascensionCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: GestureDetector(
+                  onTap: () => game.openSoulShop(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9C27B0).withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      '영구 업그레이드',
+                      style: TextStyle(color: Color(0xFFCE93D8), fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 20),
             Text(
               '달리는 동안 화면을 탭하면 점프!',
