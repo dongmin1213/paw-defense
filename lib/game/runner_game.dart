@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -7,11 +9,17 @@ import '../components/runner_player.dart';
 import '../components/ground_segment.dart';
 import '../components/parallax_layer.dart';
 import '../components/boss.dart';
+import '../components/coin.dart';
+import '../components/weather_effect.dart';
+import '../components/particle_effect.dart';
 import '../systems/level_generator.dart';
 import '../systems/upgrade_manager.dart';
 import '../systems/ascension_manager.dart';
 import '../systems/companion_manager.dart';
+import '../systems/weather_manager.dart';
+import '../systems/ad_manager.dart';
 import '../systems/save_manager.dart';
+import '../systems/offline_reward.dart';
 import '../data/balance_config.dart';
 import '../data/region_data.dart';
 import '../utils/constants.dart';
@@ -22,7 +30,10 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   final UpgradeManager upgradeManager = UpgradeManager();
   final AscensionManager ascensionManager = AscensionManager();
   final CompanionManager companionManager = CompanionManager();
+  final WeatherManager weatherManager = WeatherManager();
+  final AdManager adManager = AdManager();
   late final SaveManager saveManager;
+  late ParticleEffect particleEffect;
 
   // Game state
   double coins = 0;
@@ -36,9 +47,23 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   double _lastTapTime = 0;
   double _gameTime = 0;
   double _saveTimer = 0;
+  double _dustTimer = 0;
 
   // Boss
   Boss? activeBoss;
+
+  // Special events
+  bool isGoldenHour = false;
+  double _goldenHourTimer = 0;
+  bool isMeteorShower = false;
+  double _meteorTimer = 0;
+  bool isCompanionRally = false;
+  double _companionRallyTimer = 0;
+  double _specialEventCooldown = 0;
+  final Random _eventRng = Random();
+
+  // Offline reward pending
+  OfflineRewardResult? pendingOfflineReward;
 
   // Current region
   String currentRegionId = 'meadow';
@@ -57,6 +82,21 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     saveManager.loadAscension(ascensionManager);
     saveManager.loadCompanions(companionManager);
     currentRegionId = saveManager.currentRegion;
+
+    // Initialize ad manager
+    await adManager.init();
+
+    // Calculate offline reward
+    final reward = OfflineReward.calculate(
+      lastOnlineTime: saveManager.lastOnlineTime,
+      upgradeManager: upgradeManager,
+      ascensionManager: ascensionManager,
+      companionManager: companionManager,
+      regionCoinMultiplier: currentRegion.coinMultiplier,
+    );
+    if (reward.coins > 0) {
+      pendingOfflineReward = reward;
+    }
   }
 
   @override
@@ -74,6 +114,11 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void startGame() {
     overlays.remove('MainMenu');
 
+    // Show offline reward popup if pending
+    if (pendingOfflineReward != null) {
+      overlays.add('OfflinePopup');
+    }
+
     // Add parallax background layers
     world.add(ParallaxLayer(scrollFactor: 0.1, layerIndex: 0));
     world.add(ParallaxLayer(scrollFactor: 0.3, layerIndex: 1));
@@ -89,6 +134,13 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     // Level generator
     levelGenerator = LevelGenerator();
     world.add(levelGenerator);
+
+    // Weather visual effect
+    world.add(WeatherEffect());
+
+    // Particle effect system
+    particleEffect = ParticleEffect();
+    world.add(particleEffect);
 
     // Apply saved upgrades
     applyUpgrades();
@@ -114,6 +166,9 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     if (!isPlaying) return;
 
     _gameTime += dt;
+
+    // Update weather system
+    weatherManager.update(dt);
 
     // Update camera to follow player
     camera.viewfinder.position = Vector2(
@@ -147,11 +202,81 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       levelGenerator.onBossComplete();
     }
 
+    // Dust trail particles (only when on ground)
+    _dustTimer += dt;
+    if (_dustTimer > 0.08 && !player.isJumping) {
+      _dustTimer = 0;
+      particleEffect.spawnDustTrail(
+        player.position.x,
+        player.position.y + player.size.y,
+      );
+    }
+
+    // Special events
+    _updateSpecialEvents(dt);
+
     // Auto-save every 30 seconds
     _saveTimer += dt;
     if (_saveTimer >= 30.0) {
       _saveTimer = 0;
       saveGame();
+    }
+  }
+
+  void _updateSpecialEvents(double dt) {
+    // Cooldown between events
+    if (_specialEventCooldown > 0) {
+      _specialEventCooldown -= dt;
+    }
+
+    // Random event trigger (average every 10 minutes)
+    if (_specialEventCooldown <= 0 && !isGoldenHour && !isMeteorShower && !isCompanionRally) {
+      if (_eventRng.nextDouble() < dt / 600.0) {
+        final roll = _eventRng.nextInt(3);
+        _specialEventCooldown = 300; // 5 min cooldown after event
+        switch (roll) {
+          case 0:
+            isGoldenHour = true;
+            _goldenHourTimer = 20;
+            break;
+          case 1:
+            isMeteorShower = true;
+            _meteorTimer = 30;
+            break;
+          case 2:
+            isCompanionRally = true;
+            _companionRallyTimer = 60;
+            break;
+        }
+      }
+    }
+
+    // Golden hour (all enemies golden, coins x5)
+    if (isGoldenHour) {
+      _goldenHourTimer -= dt;
+      if (_goldenHourTimer <= 0) isGoldenHour = false;
+    }
+
+    // Meteor shower (coins rain from sky)
+    if (isMeteorShower) {
+      _meteorTimer -= dt;
+      if (_meteorTimer <= 0) {
+        isMeteorShower = false;
+      } else if (_eventRng.nextDouble() < dt * 3) {
+        // Spawn falling coins
+        final cameraX = camera.viewfinder.position.x;
+        final x = cameraX + _eventRng.nextDouble() * GameConstants.worldWidth;
+        world.add(Coin(
+          spawnPosition: Vector2(x, -10),
+          value: 3,
+        ));
+      }
+    }
+
+    // Companion rally (5x spawn rate)
+    if (isCompanionRally) {
+      _companionRallyTimer -= dt;
+      if (_companionRallyTimer <= 0) isCompanionRally = false;
     }
   }
 
@@ -177,7 +302,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     final upgradeMult = upgradeManager.coinMultiplier;
     final soulMult = ascensionManager.soulCoinMultiplier;
     final companionMult = companionManager.coinMultiplier;
-    final total = amount * comboMult * regionMult * activeBonus * upgradeMult * soulMult * companionMult;
+    final weatherCoinMult = weatherManager.weatherCoinMultiplier;
+    final timeCoinMult = weatherManager.timeCoinMultiplier;
+    final goldenMult = isGoldenHour ? 5.0 : 1.0;
+    final rainbowMult = weatherManager.currentWeather == WeatherType.rainbow ? 2.0 : 1.0;
+    final total = amount * comboMult * regionMult * activeBonus * upgradeMult
+        * soulMult * companionMult * weatherCoinMult * timeCoinMult * goldenMult * rainbowMult;
 
     coins += total;
     totalCoinsEarned += total;
@@ -292,6 +422,32 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       player.enableDoubleJump();
     }
   }
+
+  // === Offline Popup ===
+
+  void closeOfflinePopup() {
+    overlays.remove('OfflinePopup');
+    pendingOfflineReward = null;
+  }
+
+  // === Active event display ===
+
+  String? get activeEventName {
+    if (isGoldenHour) return '골든 아워';
+    if (isMeteorShower) return '유성우';
+    if (isCompanionRally) return '동료 집회';
+    return null;
+  }
+
+  double get activeEventTimeLeft {
+    if (isGoldenHour) return _goldenHourTimer;
+    if (isMeteorShower) return _meteorTimer;
+    if (isCompanionRally) return _companionRallyTimer;
+    return 0;
+  }
+
+  /// Companion rally multiplier for level_generator
+  double get companionSpawnMultiplier => isCompanionRally ? 5.0 : 1.0;
 
   // === Save ===
 

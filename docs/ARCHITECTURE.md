@@ -89,16 +89,29 @@ RunnerGame (FlameGame)
 │   └── 충돌: Enemy → triggerAttack(), Coin → collect(), Obstacle → slowdown()
 ├── GroundSegment[] (PositionComponent)
 │   └── 카메라 뒤 → 앞으로 재배치 (무한 스크롤)
+├── ParallaxLayer[3] (PositionComponent) — 배경 패럴랙스
 ├── Enemy[] (PositionComponent)
-│   ├── HP, hitFlash, EnemyData 참조
+│   ├── HP, hitFlash, EnemyData 참조, isGolden
 │   ├── 바닥적: 플레이어 접촉 → 자동 피격
 │   └── 공중적: 점프 접촉 → 피격 (x3 코인)
 ├── Coin[] (PositionComponent)
-│   └── 수집 → game.addCoins() + "+N" 팝업
+│   └── 수집 → game.addCoins() + "+N" 팝업 + 파티클
 ├── Obstacle[] (PositionComponent)
 │   └── 충돌 → player.applySlowdown()
-└── LevelGenerator (Component)
-    └── 카메라 앞 300px 세그먼트 생성, 뒤 컴포넌트 제거
+├── Boss (PositionComponent) — 500m마다
+│   └── 자동공격 + 탭공격, 10초 제한, 코인 폭발
+├── CompanionPickup[] (PositionComponent) — 필드 동료
+│   └── 수집 → CompanionManager.addCompanion()
+├── WeatherEffect (PositionComponent) — 날씨 파티클 + 시간대 오버레이
+├── ParticleEffect (PositionComponent) — FX 파티클
+├── LevelGenerator (Component)
+│   └── 적/코인/장애물/동료/보스 배치 + 이벤트 영향
+├── WeatherManager — 시간대(4) + 날씨(5) 관리 + 보너스
+├── UpgradeManager — 일반 업글
+├── AscensionManager — 초월 + 소울 + 영구 업글
+├── CompanionManager — 동료 수집/장착/버프
+├── AdManager — 광고 (스텁)
+└── SaveManager — SharedPreferences 저장/로드
 ```
 
 ## 카메라 시스템
@@ -131,12 +144,19 @@ class RunnerGame extends FlameGame with TapCallbacks {
 
 ## 코인 경제
 ```dart
-void addCoins(double base, {bool isAirKill = false}) {
-  final multiplier = currentRegion.coinMultiplier
-    * comboMultiplier          // 1 + combo * 0.05
-    * (isActiveMode ? 1.5 : 1.0)
-    * (isAirKill ? 3.0 : 1.0);
-  coins += (base * multiplier).round();
+void addCoins(double amount) {
+  final total = amount
+    * comboMult          // 1 + combo * 0.05
+    * regionMult         // 지역별 배율
+    * activeBonus        // 적극 플레이 1.5x
+    * upgradeMult        // 코인 업글
+    * soulMult           // 소울 영구 배율
+    * companionMult      // 동료 버프
+    * weatherCoinMult    // 날씨 배율 (비+30%, 폭풍x2)
+    * timeCoinMult       // 시간대 배율 (저녁+20%)
+    * goldenMult         // 골든 아워 x5
+    * rainbowMult;       // 무지개 x2
+  coins += total;
 }
 ```
 
@@ -156,8 +176,9 @@ void addCoins(double base, {bool isAirKill = false}) {
 
 ### 알려진 기술 부채
 - HUD 100ms Timer 폴링 → 상태 관리 패턴으로 개선 필요
-- RunnerGame.resetGame() 미구현
-- enemy_data에 초원 적만 있음 (Phase 3에서 지역별 추가)
+- 광고는 스텁 — 실제 google_mobile_ads SDK 연동 필요
+- 장비 효과(활/장갑/망토) 미구현
+- 사운드 미구현
 - 빌드 검증은 CI(GitHub Actions)로만 가능 (로컬 flutter 없음)
 
 ---

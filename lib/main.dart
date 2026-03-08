@@ -10,6 +10,7 @@ import 'ui/main_menu.dart';
 import 'ui/soul_shop.dart';
 import 'ui/ascension_screen.dart';
 import 'ui/companion_screen.dart';
+import 'ui/offline_popup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
           'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
           'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
+          'OfflinePopup': (context, game) {
+            final g = game as RunnerGame;
+            return OfflinePopup(
+              game: g,
+              reward: g.pendingOfflineReward!,
+            );
+          },
         },
       ),
     );

@@ -12,9 +12,9 @@ Idle Slayer 스타일 반방치 오토러너 게임. 비숏(Bichon Frisé)이 �
 ## Project Structure
 ```
 lib/
-├── main.dart                     # 앱 진입점 (6개 오버레이 등록)
+├── main.dart                     # 앱 진입점 (7개 오버레이 등록)
 ├── game/
-│   └── runner_game.dart          # FlameGame 메인 (카메라, 입력, 게임 상태)
+│   └── runner_game.dart          # FlameGame 메인 (카메라, 입력, 게임 상태, 이벤트)
 ├── components/
 │   ├── runner_player.dart        # 자동 달리기 비숏 (점프, 공격, 충돌)
 │   ├── ground_segment.dart       # 무한 반복 바닥
@@ -23,7 +23,9 @@ lib/
 │   ├── obstacle.dart             # 장애물 (속도 감소)
 │   ├── parallax_layer.dart       # 3레이어 패럴랙스 배경
 │   ├── companion_pickup.dart     # 필드 동료 픽업 (희귀도 글로우)
-│   └── boss.dart                 # 500m마다 보스 (HP바, 시간제한)
+│   ├── boss.dart                 # 500m마다 보스 (HP바, 시간제한)
+│   ├── weather_effect.dart       # 날씨 파티클 (비/눈/폭풍/무지개) + 시간대 오버레이
+│   └── particle_effect.dart      # 파티클 FX (코인수집/적처치/보스폭발/먼지)
 ├── data/                         # ★ 데이터 정의 (컨텐츠 추가 = 여기만 수정)
 │   ├── balance_config.dart       # 밸런스 수치 전부
 │   ├── enemy_data.dart           # 적 스탯/드랍/출현율 (5지역 20종)
@@ -42,13 +44,17 @@ lib/
 │   ├── upgrade_manager.dart      # 일반 업글 레벨/구매/효과
 │   ├── ascension_manager.dart    # 초월 + 소울 + 영구 업글
 │   ├── companion_manager.dart    # 동료 수집/장착/레벨업/버프
+│   ├── weather_manager.dart      # 날씨(5종) + 시간대(4종) 관리
+│   ├── ad_manager.dart           # 광고 스텁 (보상형/인터스티셜)
+│   ├── offline_reward.dart       # CpS 기반 오프라인 보상 계산
 │   └── save_manager.dart         # SharedPreferences 저장/로드 (동료 JSON)
 ├── ui/
-│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 보스HP, 버튼들)
+│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 보스HP, 날씨, 이벤트, 버튼들)
 │   ├── upgrade_shop.dart         # 일반 업그레이드 상점
 │   ├── soul_shop.dart            # 영구 업그레이드 상점 (소울)
 │   ├── ascension_screen.dart     # 초월 연출 화면
 │   ├── companion_screen.dart     # 동료 장착/도감/레벨업
+│   ├── offline_popup.dart        # 오프라인 보상 팝업 (수령/x2)
 │   └── main_menu.dart            # 타이틀 화면 + 시작
 └── utils/
     └── constants.dart            # 월드 크기, 물리 상수
@@ -75,15 +81,17 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 - **Phase 2 완료**: 업그레이드 7종 + SharedPreferences 저장 + 상점 UI + 메인 메뉴
 - **Phase 3 완료**: 초월 + 소울 + 영구 업글 13종 + 5개 지역 적 20종 + 패럴랙스 배경
 - **Phase 4 완료**: 동료 10종 + 보스 5종 + 황금 적 + 동료 장착/도감
-- **다음**: Phase 5 (날씨/시간 + 광고)
+- **Phase 5 완료**: 날씨/시간(4시간대+5날씨) + 광고 스텁
+- **Phase 6 완료**: 오프라인 보상 + 파티클 FX + 특수 이벤트 3종
+- **다음**: 장비 효과(활/장갑/망토), 사운드, 실제 광고 SDK 연동
 
 ## 전체 로드맵
 - Phase 1: ✅ 핵심 달리기
 - Phase 2: ✅ 업그레이드 + 저장 (SharedPreferences)
 - Phase 3: ✅ 초월 + 영구 업글 + 지역
 - Phase 4: ✅ 동료 + 보스 + 황금 적
-- Phase 5: 날씨/시간 + 광고 (google_mobile_ads)
-- Phase 6: 오프라인 + 폴리시
+- Phase 5: ✅ 날씨/시간 + 광고 스텁
+- Phase 6: ✅ 오프라인 + 파티클 + 특수 이벤트
 
 ## 설계 문서
 - `docs/GAME_DESIGN.md` — 전체 게임 설계 (시스템, 밸런스, 경제)
@@ -132,24 +140,25 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 ### 알려진 한계/이슈
 - 로컬에 flutter SDK 없음 → CI(GitHub Actions)로만 빌드 검증
 - HUD 100ms 폴링 비효율 → 상태 관리 도입 시 개선 가능
-- 장비 효과(활/장갑/망토) 미구현 → Phase 5+에서
-- 보물상자/코인 러시 미니이벤트 미구현 → Phase 5+에서
+- 장비 효과(활/장갑/망토) 미구현 → 별도 세션에서
+- 보물상자/코인 러시 미니이벤트 미구현 → 별도 세션에서
+- 광고는 스텁(placeholder) — 실제 google_mobile_ads SDK는 AndroidManifest 설정 필요
+- 사운드 미구현 → 별도 세션에서 flame_audio 추가
 
-## Phase 5 시작 가이드
+## 날씨/시간 시스템 가이드
 
-Phase 5 구현 순서:
-1. `systems/weather_manager.dart` — DateTime 기반 시간대 + 랜덤 날씨 (3~5분 주기)
-2. `components/weather_effect.dart` — 비/눈/폭풍 파티클
-3. 시간대별 배경색 변화 + 보너스 효과 연동
-4. `systems/ad_manager.dart` — google_mobile_ads 초기화/보상형/인터스티셜
-5. 광고 연동: 오프라인 x2, 코인 부스트, 보스 보상, 초월 보너스
-6. `pubspec.yaml`에 `google_mobile_ads` 추가
+- `WeatherManager`는 `runner_game.dart`에서 `update(dt)`로 갱신
+- 시간대: 기기 시간 기반 (6~18 낮, 18~22 저녁, 22~4 밤, 4~6 새벽)
+- 날씨: 3~5분 주기 랜덤 (맑음50%/비20%/눈15%/폭풍10%/무지개5%)
+- `addCoins()`에서 `weatherCoinMultiplier * timeCoinMultiplier * goldenMult * rainbowMult` 적용
+- `WeatherEffect`가 시각적 파티클 + 시간대 오버레이 렌더링
 
-핵심 연결 포인트:
-- `RunnerGame`에 `WeatherManager` 추가, update()에서 시간/날씨 보너스 적용
-- addCoins()에 날씨/시간 배율 추가
-- 패럴랙스 배경색을 시간대에 따라 변경
-- 광고는 상점/초월/보스/오프라인 복귀 등 자연스러운 전환점에서만
+## 특수 이벤트 가이드
+
+- 평균 10분마다 랜덤 발생 (5분 쿨다운)
+- 골든 아워(20초): 모든 적 황금, 코인x5
+- 유성우(30초): 하늘에서 코인 비
+- 동료 집회(60초): 동료 출현율 5배
 
 ## Important Notes
 - `HasGameRef` deprecated → `HasGameReference` 사용 (`.game`으로 접근)

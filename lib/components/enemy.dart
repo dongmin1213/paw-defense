@@ -101,6 +101,13 @@ class Enemy extends PositionComponent
         : BalanceConfig.groundKillComboBonus;
     game.addCombo(comboAmount);
 
+    // Death particles
+    game.particleEffect.spawnEnemyDeath(
+      position.x + size.x / 2,
+      position.y + size.y / 2,
+      isGolden: isGolden,
+    );
+
     removeFromParent();
   }
 

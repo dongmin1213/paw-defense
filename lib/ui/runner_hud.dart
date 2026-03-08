@@ -185,6 +185,63 @@ class _RunnerHudState extends State<RunnerHud> {
               ),
             ),
 
+          // Weather/time info (bottom left)
+          Positioned(
+            bottom: 12,
+            left: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Weather + time
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        game.weatherManager.weatherEmoji,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${game.weatherManager.timeDisplayName} · ${game.weatherManager.weatherDisplayName}',
+                        style: TextStyle(
+                          color: Colors.grey.shade300,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Special event banner
+                if (game.activeEventName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${game.activeEventName} ${game.activeEventTimeLeft.toStringAsFixed(0)}s',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
           // Bottom right buttons
           Positioned(
             bottom: 12,

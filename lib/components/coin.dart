@@ -67,6 +67,9 @@ class Coin extends PositionComponent
 
     game.addCoins(value);
 
+    // Collect particles
+    game.particleEffect.spawnCoinCollect(position.x, position.y);
+
     // Remove hitbox
     removeAll(children.whereType<CircleHitbox>());
   }

@@ -37,9 +37,9 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
       _generationCursorX += GameConstants.segmentWidth;
     }
 
-    // Companion spawn (only in active mode)
+    // Companion spawn (only in active mode, affected by rally event)
     if (game.isActiveMode) {
-      _companionTimer += dt;
+      _companionTimer += dt * game.companionSpawnMultiplier;
       if (_companionTimer >= _nextCompanionTime) {
         _companionTimer = 0;
         _nextCompanionTime = 90 + _rng.nextDouble() * 60; // 90-150s
@@ -92,8 +92,8 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
           ? GameConstants.groundY - 80 - _rng.nextDouble() * 60
           : GameConstants.groundY - data.height;
 
-      // Golden enemy chance (2%)
-      final isGolden = _rng.nextDouble() < BalanceConfig.goldenEnemyChance;
+      // Golden enemy chance (2%, or 100% during golden hour)
+      final isGolden = game.isGoldenHour || _rng.nextDouble() < BalanceConfig.goldenEnemyChance;
 
       game.world.add(Enemy(
         data: data,
@@ -145,7 +145,8 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   }
 
   void _spawnObstaclesInSegment(double startX) {
-    if (_rng.nextDouble() > BalanceConfig.obstacleSpawnChance) return;
+    final stormMult = game.weatherManager.obstacleMultiplier;
+    if (_rng.nextDouble() > BalanceConfig.obstacleSpawnChance * stormMult) return;
 
     final x = startX + _rng.nextDouble() * GameConstants.segmentWidth * 0.6 + 60;
     if (x - _lastObstacleX < 200) return;

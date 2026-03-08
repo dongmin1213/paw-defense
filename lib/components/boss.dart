@@ -161,6 +161,12 @@ class Boss extends PositionComponent
 
     // Combo bonus
     game.addCombo(5);
+
+    // Boss explosion particles
+    game.particleEffect.spawnBossExplosion(
+      position.x + size.x / 2,
+      position.y + size.y / 2,
+    );
   }
 
   void _escape() {

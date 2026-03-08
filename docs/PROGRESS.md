@@ -75,28 +75,36 @@ Collection mechanics, milestone bosses, golden enemies.
 - [x] `main.dart` — CompanionScreen 오버레이 등록
 - [x] `runner_hud.dart` — 동료 버튼 + 보스 HP/타이머 바
 
-## Phase 5: 날씨/시간 + 광고 ⬜
+## Phase 5: 날씨/시간 + 광고 ✅
 Atmosphere and monetization.
 
-- [ ] `systems/weather_manager.dart` — 날씨/시간 관리
-- [ ] `components/weather_effect.dart` — 비/눈/폭풍 파티클
-- [ ] 시간대별 배경색 변화 + 보너스
-- [ ] `systems/ad_manager.dart` — google_mobile_ads
-- [ ] 광고 연동 (오프라인 x2, 코인 부스트, 보스 보상, 초월)
-- [ ] `pubspec.yaml` — google_mobile_ads 추가
+- [x] `systems/weather_manager.dart` — 날씨/시간 관리 (4시간대 + 5날씨 + 3~5분 주기)
+- [x] `components/weather_effect.dart` — 비/눈/폭풍/무지개 파티클 + 시간대 오버레이
+- [x] 시간대별 배경색 변화 + 보너스 (저녁 코인+20%, 밤 소울+50%, 새벽 전설 2x)
+- [x] 날씨 보너스 (비 코인+30%, 눈 희귀적+50%, 폭풍 전체x2, 무지개 전부x2)
+- [x] `systems/ad_manager.dart` — 광고 스텁 (실제 SDK 없이 API만 준비)
+- [x] 광고 연동 구조 (오프라인 x2, 보상형/인터스티셜 일일 제한)
 
-## Phase 6: 오프라인 + 폴리시 ⬜
-Offline rewards, particles, sound, polish.
+## Phase 6: 오프라인 + 폴리시 ✅
+Offline rewards, particles, special events.
 
-- [ ] `systems/offline_reward.dart` — CpS 기반 오프라인 보상
-- [ ] `ui/offline_popup.dart` — 복귀 팝업
-- [ ] `components/particle_effect.dart` — 파티클 이펙트
-- [ ] 달리기/공격 애니메이션 개선
-- [ ] 특수 이벤트 (유성우, 골든 아워, 동료 집회)
-- [ ] 사운드 (flame_audio)
-- [ ] 장비 효과 구현 (활/장갑/망토)
+- [x] `systems/offline_reward.dart` — CpS 기반 오프라인 보상 (최소 60초, 최대 24시간)
+- [x] `ui/offline_popup.dart` — 복귀 팝업 (수령 / 광고x2 수령)
+- [x] `components/particle_effect.dart` — 코인수집/적처치/보스폭발/먼지/콤보 파티클
+- [x] 특수 이벤트 (유성우 30초, 골든 아워 20초, 동료 집회 60초) — 평균 10분마다
+- [x] `runner_game.dart` — 날씨/파티클/이벤트/오프라인 통합
+- [x] `level_generator.dart` — 골든 아워(적 100% 황금), 동료 집회(5x 스폰), 폭풍(장애물x2)
+- [x] `runner_hud.dart` — 날씨/시간 표시 + 특수 이벤트 배너
+- [x] `main.dart` — OfflinePopup 오버레이 등록 (총 7개 오버레이)
+- [ ] 장비 효과 구현 (활/장갑/망토) — 별도 세션에서
+- [ ] 사운드 (flame_audio) — 별도 세션에서
+- [ ] 달리기/공격 애니메이션 개선 — 별도 세션에서
 
 ---
 
 ## 다음 세션에서 할 일
-- Phase 5 구현 시작: weather_manager → weather_effect → 시간대별 배경 → ad_manager
+- 장비 시스템 효과 구현 (활=자동 공중 처치, 장갑=추가 코인, 망토=대시)
+- 사운드 효과 추가 (flame_audio)
+- 실제 google_mobile_ads SDK 연동 (AndroidManifest 설정 필요)
+- 온보딩 튜토리얼 (말풍선 안내)
+- 업적/퀘스트 시스템
