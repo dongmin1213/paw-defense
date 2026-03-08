@@ -1,170 +1,225 @@
 # The Bichon's Run — 반방치 오토러너
 
-## Project Overview
-Idle Slayer 스타일 반방치 오토러너 게임. 비숏(Bichon Frisé)이 끝없이 달리며 몬스터를 처치하고 코인을 모은다. 직접 플레이(탭=점프)하면 효율적이지만 방치해도 코인이 모이는 구조. 동료 시스템 + 날씨/시간 시스템으로 차별화.
+## 한 줄 요약
+Idle Slayer 스타일 반방치 오토러너. 비숏(Bichon Frise)이 자동으로 달리며 적을 처치하고 코인을 모은다. 탭(점프)하면 효율적이지만 방치해도 코인이 모이는 구조.
 
 ## Tech Stack
 - **Framework**: Flutter 3.27.4 / Dart 3.6.2
-- **Game Engine**: Flame 1.14.0+ (flame_audio 2.1.0)
+- **Game Engine**: Flame 1.14.0 (flame_audio 2.1.0)
+- **저장**: shared_preferences 2.2.0
 - **Target**: Android (landscape, immersive mode)
-- **CI/CD**: GitHub Actions → APK 빌드 및 artifact 업로드
+- **CI/CD**: GitHub Actions → APK 빌드 (`.github/workflows/build-apk.yml`)
+- **로컬 빌드**: flutter SDK 미설치 — CI로만 빌드 검증
 
-## Project Structure
-```
-lib/
-├── main.dart                     # 앱 진입점 (7개 오버레이 등록)
-├── game/
-│   └── runner_game.dart          # FlameGame 메인 (카메라, 입력, 게임 상태, 이벤트)
-├── components/
-│   ├── runner_player.dart        # 자동 달리기 비숏 (점프, 공격, 충돌)
-│   ├── ground_segment.dart       # 무한 반복 바닥
-│   ├── enemy.dart                # 몬스터 (바닥/공중, HP, 코인 드랍, 황금 적)
-│   ├── coin.dart                 # 수집 코인 (호버, 팝업)
-│   ├── obstacle.dart             # 장애물 (속도 감소)
-│   ├── parallax_layer.dart       # 3레이어 패럴랙스 배경
-│   ├── companion_pickup.dart     # 필드 동료 픽업 (희귀도 글로우)
-│   ├── boss.dart                 # 500m마다 보스 (HP바, 시간제한)
-│   ├── weather_effect.dart       # 날씨 파티클 (비/눈/폭풍/무지개) + 시간대 오버레이
-│   └── particle_effect.dart      # 파티클 FX (코인수집/적처치/보스폭발/먼지)
-├── data/                         # ★ 데이터 정의 (컨텐츠 추가 = 여기만 수정)
-│   ├── balance_config.dart       # 밸런스 수치 전부
-│   ├── enemy_data.dart           # 적 스탯/드랍/출현율 (5지역 20종)
-│   ├── region_data.dart          # 지역별 배경/몬스터풀/배율
-│   ├── upgrade_data.dart         # 일반 업그레이드 정의
-│   ├── soul_upgrade_data.dart    # 영구 업그레이드 정의 (소울)
-│   └── companion_data.dart       # 동료 10종 (희귀도/출현율/버프)
-├── renderers/                    # ★ 렌더링 분리 (에셋 교체 = 여기만)
-│   ├── player_renderer.dart      # 비숏 프로시저럴 렌더링
-│   ├── enemy_renderer.dart       # 적 프로시저럴 렌더링 (20종 + 황금)
-│   ├── coin_renderer.dart        # 코인 프로시저럴 렌더링
-│   ├── companion_renderer.dart   # 동료 10종 프로시저럴 렌더링
-│   └── boss_renderer.dart        # 보스 5종 프로시저럴 렌더링
-├── systems/
-│   ├── level_generator.dart      # 절차적 적/코인/장애물/동료/보스 배치
-│   ├── upgrade_manager.dart      # 일반 업글 레벨/구매/효과
-│   ├── ascension_manager.dart    # 초월 + 소울 + 영구 업글
-│   ├── companion_manager.dart    # 동료 수집/장착/레벨업/버프
-│   ├── weather_manager.dart      # 날씨(5종) + 시간대(4종) 관리
-│   ├── ad_manager.dart           # 광고 스텁 (보상형/인터스티셜)
-│   ├── offline_reward.dart       # CpS 기반 오프라인 보상 계산
-│   └── save_manager.dart         # SharedPreferences 저장/로드 (동료 JSON)
-├── ui/
-│   ├── runner_hud.dart           # HUD (거리, 코인, 콤보, 보스HP, 날씨, 이벤트, 버튼들)
-│   ├── upgrade_shop.dart         # 일반 업그레이드 상점
-│   ├── soul_shop.dart            # 영구 업그레이드 상점 (소울)
-│   ├── ascension_screen.dart     # 초월 연출 화면
-│   ├── companion_screen.dart     # 동료 장착/도감/레벨업
-│   ├── offline_popup.dart        # 오프라인 보상 팝업 (수령/x2)
-│   └── main_menu.dart            # 타이틀 화면 + 시작
-└── utils/
-    └── constants.dart            # 월드 크기, 물리 상수
-```
-
-## Key Architecture
-- **Data-Driven**: 적/업글/지역/동료 등 모든 컨텐츠가 `data/` 디렉토리에 데이터로 정의. 새 컨텐츠 = 데이터 추가만.
-- **Renderer 분리**: `renderers/`에서 렌더링 전담. 프로시저럴 → 스프라이트 교체 시 여기만 수정.
-- **밸런스 집중**: `balance_config.dart`에 모든 수치 (비용, 드랍률, 속도 커브 등).
-- **카메라**: `FixedResolutionViewport(800x600)`, 플레이어 X 추적.
-- **입력**: 화면 탭 = 점프 + 보스 공격. TapCallbacks mixin.
-- **충돌**: Flame `CollisionCallbacks` + `RectangleHitbox`/`CircleHitbox`.
-- **방치/적극 모드**: 5초 무입력 시 방치 모드 (장애물 미생성, 공중 적 미생성, 동료 미출현).
-
-## Build & CI
+## 빌드
 ```bash
 flutter pub get
 flutter build apk --release
 ```
-GitHub Actions: `.github/workflows/build-apk.yml`
 
-## Current State
-- **Phase 1 완료**: 핵심 달리기 + 몬스터 + 코인 + 장애물 + 콤보 + HUD
-- **Phase 2 완료**: 업그레이드 7종 + SharedPreferences 저장 + 상점 UI + 메인 메뉴
-- **Phase 3 완료**: 초월 + 소울 + 영구 업글 13종 + 5개 지역 적 20종 + 패럴랙스 배경
-- **Phase 4 완료**: 동료 10종 + 보스 5종 + 황금 적 + 동료 장착/도감
-- **Phase 5 완료**: 날씨/시간(4시간대+5날씨) + 광고 스텁
-- **Phase 6 완료**: 오프라인 보상 + 파티클 FX + 특수 이벤트 3종
-- **다음**: 장비 효과(활/장갑/망토), 사운드, 실제 광고 SDK 연동
+---
 
-## 전체 로드맵
-- Phase 1: ✅ 핵심 달리기
-- Phase 2: ✅ 업그레이드 + 저장 (SharedPreferences)
-- Phase 3: ✅ 초월 + 영구 업글 + 지역
-- Phase 4: ✅ 동료 + 보스 + 황금 적
-- Phase 5: ✅ 날씨/시간 + 광고 스텁
-- Phase 6: ✅ 오프라인 + 파티클 + 특수 이벤트
+## 프로젝트 구조 (40개 파일, ~7000줄)
 
-## 설계 문서
-- `docs/GAME_DESIGN.md` — 전체 게임 설계 (시스템, 밸런스, 경제)
-- `docs/PROGRESS.md` — 구현 진행 상황
-- `docs/ARCHITECTURE.md` — 코드 아키텍처, 확장 가이드
+```
+lib/
+├── main.dart                     # 앱 진입점, 7개 오버레이 등록
+├── game/
+│   └── runner_game.dart          # FlameGame 메인 (466줄) — 게임 상태, 카메라, 입력, 이벤트
+├── components/                   # 게임 엔티티 (Flame PositionComponent)
+│   ├── runner_player.dart        # 비숏 — 자동 달리기, 점프, 자동 공격, 충돌
+│   ├── ground_segment.dart       # 무한 반복 바닥 블록 (400px 단위)
+│   ├── enemy.dart                # 몬스터 — 바닥/공중, HP, 코인 드랍, 황금 적
+│   ├── coin.dart                 # 코인 — 호버 애니, 수집 팝업 "+N"
+│   ├── obstacle.dart             # 바위 장애물 — 충돌 시 2초간 속도 50%
+│   ├── parallax_layer.dart       # 3레이어 프로시저럴 패럴랙스 배경
+│   ├── companion_pickup.dart     # 필드 동료 픽업 — 희귀도 글로우, 수집 팝업
+│   ├── boss.dart                 # 보스 — 500m마다, HP바, 자동+탭 공격, 10초 제한
+│   ├── weather_effect.dart       # 날씨 파티클 — 비/눈/폭풍/무지개 + 시간대 오버레이
+│   └── particle_effect.dart      # FX 파티클 — 코인수집/적처치/보스폭발/먼지
+├── data/                         # ★ 데이터 정의 — 컨텐츠 추가 시 여기만 수정
+│   ├── balance_config.dart       # ★ 모든 밸런스 수치 한 곳 (비용공식, 드랍률, 속도커브)
+│   ├── enemy_data.dart           # 적 20종 (5지역 x 바닥2+공중2)
+│   ├── region_data.dart          # 5개 지역 (초원/숲/사막/설산/화산)
+│   ├── upgrade_data.dart         # 일반 업그레이드 7종
+│   ├── soul_upgrade_data.dart    # 영구 업그레이드 13종
+│   └── companion_data.dart       # 동료 10종 (일반3/레어3/에픽2/전설2)
+├── renderers/                    # ★ 렌더링 분리 — 스프라이트 교체 시 여기만 수정
+│   ├── player_renderer.dart      # 비숏 Canvas 드로잉
+│   ├── enemy_renderer.dart       # 적 20종 + 황금 적 Canvas 드로잉
+│   ├── coin_renderer.dart        # 코인 Canvas 드로잉
+│   ├── companion_renderer.dart   # 동료 10종 Canvas 드로잉
+│   └── boss_renderer.dart        # 보스 5종 Canvas 드로잉
+├── systems/                      # 게임 시스템 (매니저 패턴)
+│   ├── level_generator.dart      # 절차적 레벨 생성 — 적/코인/장애물/동료/보스 배치
+│   ├── upgrade_manager.dart      # 일반 업글 — 레벨/구매/비용계산/배율 getter
+│   ├── ascension_manager.dart    # 초월 — 소울 계산, 영구 업글, 지역/장비 해금
+│   ├── companion_manager.dart    # 동료 — 수집/장착(1~4슬롯)/레벨업/버프 계산
+│   ├── weather_manager.dart      # 날씨(5종) + 시간대(4종) — 3~5분 주기 + 보너스
+│   ├── ad_manager.dart           # 광고 스텁 — 실제 SDK 없이 API만 준비
+│   ├── offline_reward.dart       # 오프라인 보상 — CpS 기반, 최소60초~최대24시간
+│   └── save_manager.dart         # SharedPreferences 저장/로드 (동료는 JSON)
+├── ui/                           # Flutter 위젯 오버레이 (GameWidget overlayBuilderMap)
+│   ├── runner_hud.dart           # HUD — 거리, 코인, 콤보, 보스HP, 날씨, 이벤트, 버튼
+│   ├── upgrade_shop.dart         # 일반 업그레이드 상점 (pauseEngine)
+│   ├── soul_shop.dart            # 영구 업그레이드 상점 — 3탭(강화/지역/장비)
+│   ├── ascension_screen.dart     # 초월 연출 — 화이트아웃 + 소울 보상
+│   ├── companion_screen.dart     # 동료 관리 — 장착/도감/레벨업
+│   ├── offline_popup.dart        # 오프라인 복귀 팝업 — 수령/x2 광고
+│   └── main_menu.dart            # 타이틀 화면 — 시작, 통계, 소울상점
+└── utils/
+    └── constants.dart            # 월드크기(800x600), 물리(중력980, 점프-420)
+```
 
-## 코드 컨벤션 & 패턴
+---
+
+## 핵심 게임 루프
+
+```
+달리기 → 적 처치 → 코인 획득 → 업그레이드 구매 → 더 빠르게/강하게
+    ↓ (누적코인 달성)
+  초월 → 소울 획득 → 영구 업그레이드 → 지역/장비 해금 → 재성장
+    ↓ (동료는 유지)
+  반복 (∞)
+```
+
+---
+
+## 코인 배율 스택 (addCoins)
+
+```dart
+total = amount
+  * (1 + combo * 0.05)     // 콤보 (20콤보 = x2.0)
+  * regionMultiplier        // 지역 (초원x1 ~ 화산x100)
+  * activeBonus             // 적극 플레이 x1.5
+  * upgradeMultiplier       // 코인 업글 (lv25 = x3.0)
+  * soulCoinMultiplier      // 영구 코인배율 (+25%/lv)
+  * companionMultiplier     // 동료 버프
+  * weatherCoinMultiplier   // 날씨 (비+30%, 폭풍x2)
+  * timeCoinMultiplier      // 시간대 (저녁+20%)
+  * goldenHourMultiplier    // 골든아워 이벤트 x5
+  * rainbowMultiplier       // 무지개 날씨 x2
+```
+
+---
+
+## 주요 상수 (balance_config.dart + constants.dart)
+
+| 상수 | 값 | 설명 |
+|------|-----|------|
+| 월드 크기 | 800x600 | FixedResolutionViewport |
+| 바닥 Y | 500 | 지면 높이 |
+| 기본 속도 | 120px/s | 플레이어 이동 속도 |
+| 중력 | 980 | 낙하 가속도 |
+| 점프력 | -420 | 점프 초기 속도 |
+| 업글 비용배율 | 1.15^lv | 레벨당 15% 증가 |
+| 공중적 코인 | x3 | 점프 처치 보너스 |
+| 콤보 리셋 | 3초 | 미처치 시 리셋 |
+| 방치 판정 | 5초 | 무입력 시 방치 모드 |
+| 적극 코인 | x1.5 | 적극 플레이 보너스 |
+| 황금적 확률 | 2% | 황금 적 스폰 확률 |
+| 초월 임계값 | 10000 * 3^n | n번째 초월 필요 코인 |
+
+---
+
+## 현재 구현 상태 (Phase 1~6 완료)
+
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| 1 | 핵심 달리기 + 적 + 코인 + 콤보 + 장애물 | ✅ |
+| 2 | 업그레이드 7종 + SharedPreferences 저장 + 상점 | ✅ |
+| 3 | 초월 + 소울 + 영구업글 13종 + 5지역 적 20종 + 패럴랙스 | ✅ |
+| 4 | 동료 10종 + 보스 5종 + 황금 적 + 동료 장착/도감 | ✅ |
+| 5 | 날씨/시간(4시간대+5날씨) + 광고 스텁 | ✅ |
+| 6 | 오프라인 보상 + 파티클 FX + 특수 이벤트 3종 | ✅ |
+
+## 미구현 (TODO)
+
+- **장비 효과**: 활(자동 공중 처치)/장갑(추가 코인)/망토(대시) — 해금 구조만 있고 실제 효과 없음
+- **사운드**: flame_audio 의존성은 있으나 사용 안 함
+- **실제 광고**: google_mobile_ads SDK 미연동 (스텁만)
+- **온보딩**: 말풍선 튜토리얼 없음
+- **업적/퀘스트**: 미구현
+- **보물상자/코인 러시**: 미니이벤트 미구현
+- **자동 공중적 처치/자동 업글**: 소울 해금은 있지만 실제 로직 미구현
+
+---
+
+## 코드 패턴 & 컨벤션
 
 ### Component 패턴
-- 모든 게임 컴포넌트는 `PositionComponent` + `HasGameReference<RunnerGame>` mixin
-- `.game`으로 RunnerGame 접근 (`.gameRef` deprecated)
-- 충돌: `CollisionCallbacks` mixin + `RectangleHitbox` 또는 `CircleHitbox`
-- 카메라 뒤 컴포넌트 자동 정리: `if (position.x < game.camera.viewfinder.position.x - 200) removeFromParent()`
+```dart
+class Enemy extends PositionComponent
+    with HasGameReference<RunnerGame>, CollisionCallbacks {
+  // .game 으로 RunnerGame 접근
+  // CollisionCallbacks + add(RectangleHitbox()) 로 충돌
+  // 카메라 뒤 → removeFromParent()
+}
+```
 
-### 렌더러 패턴
-- `renderers/` 내 모든 클래스는 **static 메서드**만 가짐 (인스턴스 없음)
-- `render(Canvas canvas, Size size, ...)` 시그니처 통일
-- 현재 전부 Canvas API 프로시저럴 드로잉, 나중에 스프라이트 교체 시 렌더러만 수정
+### Renderer 패턴
+```dart
+class EnemyRenderer {
+  static void render(Canvas canvas, Size size, EnemyData data, {
+    required double animTimer, required bool isHit, required bool isGolden,
+  }) { /* Canvas API 프로시저럴 드로잉 */ }
+}
+```
+- 모든 렌더러는 **static 메서드**만. 인스턴스 없음.
+- 스프라이트 교체 시 렌더러 파일만 수정.
 
-### 데이터 패턴
-- `data/` 내 클래스는 `const` 생성자 + `static const List` 로 정의
-- `XxxDatabase` 클래스에 `static` 조회 메서드 제공
-- 새 컨텐츠 추가 = 리스트에 항목 추가 + 렌더러에 case 추가
+### Data 패턴
+```dart
+class EnemyData {
+  final String id, name;
+  final int hp;
+  const EnemyData({...});
+}
+class EnemyDatabase {
+  static const List<EnemyData> _all = [...];
+  static List<EnemyData> getGroundEnemies(String regionId) => ...;
+}
+```
+- `const` 생성자 + `static const List`
+- `XxxDatabase.getXxx()` static 조회
 
 ### 텍스트 렌더링 주의
-- coin.dart의 "+N" 팝업: `dart:ui`의 `ParagraphBuilder` + `ParagraphStyle` + `TextStyle` 사용
-- **flutter의 TextStyle과 dart:ui의 TextStyle은 다른 클래스** — Flame Component의 render()에서는 dart:ui만 사용 가능
-- `textStyle.getTextStyle()` 같은 혼용은 에러남
+- Flame `render(Canvas)` 안에서는 **`dart:ui`의 TextStyle**만 사용 가능
+- flutter의 TextStyle과 **다른 클래스**
+- `ParagraphBuilder` + `ParagraphStyle` + `dart:ui TextStyle` 조합 사용 (coin.dart 참고)
 
-### 동료 저장 패턴
-- 동료 데이터는 JSON으로 직렬화 → SharedPreferences에 문자열 저장
-- `CompanionManager.toMap()` → `jsonEncode()` → `_prefs.setString()`
-- 초월해도 동료는 리셋되지 않음 (장기 수집 동기)
+### 동료 저장
+- `CompanionManager.toMap()` → `jsonEncode()` → `SharedPreferences.setString()`
+- 초월해도 동료 데이터 리셋 안 됨
 
-## 기술적 결정사항
+---
 
-### 왜 이렇게 했는가
-1. **프로시저럴 렌더링**: 에셋 없이 빠르게 프로토타이핑. `renderers/` 분리로 나중에 스프라이트 교체 용이
-2. **FixedResolutionViewport(800x600)**: 모든 기기에서 동일한 게임 경험. 카메라가 player.x - 150 추적
-3. **방치/적극 모드 분리**: 방치 시 장애물·공중적 미생성으로 패널티 없는 방치 보장. `_lastTapTime` 기반 5초 판정
-4. **LevelGenerator가 Component**: `update(dt)`에서 카메라 위치 기반 자동 생성. `generationCursor`로 중복 방지
-5. **HUD는 Flutter 위젯 오버레이**: GameWidget의 overlayBuilder로 구현. 100ms Timer 폴링
-6. **enemy HP 시스템**: 공격력 업그레이드가 의미 있으려면 적에게 HP 필요
-7. **보스 자동공격+탭공격**: 방치해도 보스 진행 가능, 탭하면 2x DPS로 효율적
+## 새 컨텐츠 추가 가이드
 
-### 알려진 한계/이슈
-- 로컬에 flutter SDK 없음 → CI(GitHub Actions)로만 빌드 검증
-- HUD 100ms 폴링 비효율 → 상태 관리 도입 시 개선 가능
-- 장비 효과(활/장갑/망토) 미구현 → 별도 세션에서
-- 보물상자/코인 러시 미니이벤트 미구현 → 별도 세션에서
-- 광고는 스텁(placeholder) — 실제 google_mobile_ads SDK는 AndroidManifest 설정 필요
-- 사운드 미구현 → 별도 세션에서 flame_audio 추가
+### 새 적 추가
+1. `data/enemy_data.dart` — `EnemyData` 항목 추가
+2. `renderers/enemy_renderer.dart` — 렌더 case 추가
+3. `data/region_data.dart` — 해당 지역 몬스터풀에 포함
 
-## 날씨/시간 시스템 가이드
+### 새 업그레이드 추가
+1. `data/upgrade_data.dart` — `UpgradeId` enum + `UpgradeData` 추가
+2. `systems/upgrade_manager.dart` — getter/효과 로직 추가
+3. UI에 자동 표시 (데이터 기반)
 
-- `WeatherManager`는 `runner_game.dart`에서 `update(dt)`로 갱신
-- 시간대: 기기 시간 기반 (6~18 낮, 18~22 저녁, 22~4 밤, 4~6 새벽)
-- 날씨: 3~5분 주기 랜덤 (맑음50%/비20%/눈15%/폭풍10%/무지개5%)
-- `addCoins()`에서 `weatherCoinMultiplier * timeCoinMultiplier * goldenMult * rainbowMult` 적용
-- `WeatherEffect`가 시각적 파티클 + 시간대 오버레이 렌더링
+### 새 동료 추가
+1. `data/companion_data.dart` — `CompanionData` 추가
+2. `renderers/companion_renderer.dart` — 렌더 case 추가
+3. `systems/companion_manager.dart` — 버프 로직 추가
 
-## 특수 이벤트 가이드
+### 새 지역 추가
+1. `data/region_data.dart` — `RegionData` 추가
+2. `data/enemy_data.dart` — 해당 지역 적 추가
+3. `data/soul_upgrade_data.dart` — 지역 해금 소울 업글 추가
+4. `renderers/boss_renderer.dart` — 보스 렌더 추가
 
-- 평균 10분마다 랜덤 발생 (5분 쿨다운)
-- 골든 아워(20초): 모든 적 황금, 코인x5
-- 유성우(30초): 하늘에서 코인 비
-- 동료 집회(60초): 동료 출현율 5배
+---
 
-## Important Notes
-- `HasGameRef` deprecated → `HasGameReference` 사용 (`.game`으로 접근)
-- `FixedResolutionViewport`는 `package:flame/camera.dart`에서 import
-- assets 폴더(images/, audio/)는 비어있음 — 프로시저럴 렌더링
-- 모든 밸런스 수치는 `balance_config.dart`에서 관리
-- 새 적 추가: `enemy_data.dart`에 데이터 추가 + `enemy_renderer.dart`에 렌더 함수 추가
-- 새 동료 추가: `companion_data.dart`에 데이터 추가 + `companion_renderer.dart`에 case 추가 + `companion_manager.dart` 버프 로직 추가
-- 새 보스 추가: `boss_renderer.dart`에 지역별 렌더 추가
+## 설계 문서
+- `docs/GAME_DESIGN.md` — 전체 게임 설계 (시스템, 밸런스, 경제, 수익화)
+- `docs/PROGRESS.md` — Phase별 구현 진행 체크리스트
+- `docs/ARCHITECTURE.md` — 코드 아키텍처, 클래스 관계, 데이터 흐름, 확장 가이드
