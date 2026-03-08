@@ -6,9 +6,11 @@ import 'package:flutter/painting.dart';
 import '../components/runner_player.dart';
 import '../components/ground_segment.dart';
 import '../components/parallax_layer.dart';
+import '../components/boss.dart';
 import '../systems/level_generator.dart';
 import '../systems/upgrade_manager.dart';
 import '../systems/ascension_manager.dart';
+import '../systems/companion_manager.dart';
 import '../systems/save_manager.dart';
 import '../data/balance_config.dart';
 import '../data/region_data.dart';
@@ -19,6 +21,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   late LevelGenerator levelGenerator;
   final UpgradeManager upgradeManager = UpgradeManager();
   final AscensionManager ascensionManager = AscensionManager();
+  final CompanionManager companionManager = CompanionManager();
   late final SaveManager saveManager;
 
   // Game state
@@ -33,6 +36,9 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   double _lastTapTime = 0;
   double _gameTime = 0;
   double _saveTimer = 0;
+
+  // Boss
+  Boss? activeBoss;
 
   // Current region
   String currentRegionId = 'meadow';
@@ -49,6 +55,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     totalCoinsEarned = saveManager.totalCoinsEarned;
     saveManager.loadUpgrades(upgradeManager);
     saveManager.loadAscension(ascensionManager);
+    saveManager.loadCompanions(companionManager);
     currentRegionId = saveManager.currentRegion;
   }
 
@@ -118,13 +125,14 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     distance = player.position.x - GameConstants.playerStartX;
     if (distance < 0) distance = 0;
 
-    // Combo timer
+    // Combo timer (includes companion bonus)
     if (combo > 0) {
       comboTimer -= dt;
+      final comboTime = BalanceConfig.comboResetTime + companionManager.extraComboTime;
       if (comboTimer <= 0) {
         combo = upgradeManager.comboAfterTimeout(combo);
         if (combo > 0) {
-          comboTimer = BalanceConfig.comboResetTime;
+          comboTimer = comboTime;
         }
       }
     }
@@ -132,6 +140,11 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     // Active/idle mode detection
     if (_gameTime - _lastTapTime > BalanceConfig.idleDetectionTime) {
       isActiveMode = false;
+    }
+
+    // Boss completion check
+    if (activeBoss != null && activeBoss!.isDead) {
+      levelGenerator.onBossComplete();
     }
 
     // Auto-save every 30 seconds
@@ -147,6 +160,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     if (!isPlaying) return;
     _lastTapTime = _gameTime;
     isActiveMode = true;
+
+    // If boss is active, tap attacks boss
+    if (activeBoss != null && !activeBoss!.isDead) {
+      activeBoss!.onTapAttack();
+    }
+
     player.jump();
   }
 
@@ -157,7 +176,8 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     final activeBonus = isActiveMode ? BalanceConfig.activePlayCoinBonus : 1.0;
     final upgradeMult = upgradeManager.coinMultiplier;
     final soulMult = ascensionManager.soulCoinMultiplier;
-    final total = amount * comboMult * regionMult * activeBonus * upgradeMult * soulMult;
+    final companionMult = companionManager.coinMultiplier;
+    final total = amount * comboMult * regionMult * activeBonus * upgradeMult * soulMult * companionMult;
 
     coins += total;
     totalCoinsEarned += total;
@@ -165,7 +185,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
 
   void addCombo(int amount) {
     combo += amount;
-    comboTimer = BalanceConfig.comboResetTime;
+    comboTimer = BalanceConfig.comboResetTime + companionManager.extraComboTime;
   }
 
   double get comboMultiplier {
@@ -201,6 +221,18 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     resumeEngine();
   }
 
+  // === Companion Screen ===
+
+  void openCompanionScreen() {
+    overlays.add('CompanionScreen');
+    pauseEngine();
+  }
+
+  void closeCompanionScreen() {
+    overlays.remove('CompanionScreen');
+    resumeEngine();
+  }
+
   // === Ascension ===
 
   bool get canAscend => ascensionManager.canAscend(totalCoinsEarned);
@@ -230,6 +262,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     distance = 0;
     combo = 0;
     comboTimer = 0;
+    activeBoss = null;
 
     // Stop playing — will restart from menu
     isPlaying = false;
@@ -269,6 +302,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       highScore: distance,
       upgradeManager: upgradeManager,
       ascensionManager: ascensionManager,
+      companionManager: companionManager,
       currentRegion: currentRegionId,
     );
   }

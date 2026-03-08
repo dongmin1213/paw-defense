@@ -3,9 +3,9 @@ import 'dart:math';
 import '../data/enemy_data.dart';
 
 class EnemyRenderer {
-  static void render(Canvas canvas, Size size, EnemyData data, {required double animTimer, bool isHit = false}) {
-    final color = isHit ? const Color(0xFFFFFFFF) : data.color;
-    final accent = isHit ? const Color(0xFFFFFFFF) : data.accentColor;
+  static void render(Canvas canvas, Size size, EnemyData data, {required double animTimer, bool isHit = false, bool isGolden = false}) {
+    final color = isHit ? const Color(0xFFFFFFFF) : (isGolden ? const Color(0xFFFFD600) : data.color);
+    final accent = isHit ? const Color(0xFFFFFFFF) : (isGolden ? const Color(0xFFFFE082) : data.accentColor);
 
     switch (data.id) {
       // Meadow

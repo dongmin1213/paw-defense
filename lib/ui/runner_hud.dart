@@ -128,6 +128,63 @@ class _RunnerHudState extends State<RunnerHud> {
             ),
           ),
 
+          // Boss HP bar (top center, below mode indicator)
+          if (game.activeBoss != null && !game.activeBoss!.isDead)
+            Positioned(
+              top: 30,
+              left: 60,
+              right: 60,
+              child: Column(
+                children: [
+                  const Text(
+                    'BOSS',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade900,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: game.activeBoss!.hpPercent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  // Timer bar
+                  Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade900,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: (1.0 - game.activeBoss!.timePercent).clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: game.activeBoss!.timePercent < 0.5 ? Colors.green : Colors.orange,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Bottom right buttons
           Positioned(
             bottom: 12,
@@ -135,6 +192,32 @@ class _RunnerHudState extends State<RunnerHud> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Companion button (when has any companion)
+                if (game.companionManager.ownedCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => game.openCompanionScreen(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800).withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.pets, color: Colors.white, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${game.companionManager.equippedIds.length}/${game.companionManager.maxSlots}',
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 // Ascension button (visible when can ascend)
                 if (game.canAscend)
                   Padding(

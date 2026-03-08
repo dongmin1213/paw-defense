@@ -13,6 +13,7 @@ import 'coin.dart';
 class Enemy extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
   final EnemyData data;
+  final bool isGolden;
   int currentHp;
   double _animTimer = 0;
   bool _isHit = false;
@@ -20,9 +21,12 @@ class Enemy extends PositionComponent
   double _hoverOffset = 0;
   final double _hoverBaseY;
 
+  static const double goldenMultiplier = 10.0;
+
   Enemy({
     required this.data,
     required Vector2 spawnPosition,
+    this.isGolden = false,
   })  : currentHp = data.hp,
         _hoverBaseY = spawnPosition.y,
         super(
@@ -76,9 +80,14 @@ class Enemy extends PositionComponent
 
   void _die() {
     // Determine coin amount
-    final coinAmount = data.type == EnemyType.air
+    double coinAmount = data.type == EnemyType.air
         ? data.coinDrop * BalanceConfig.airEnemyCoinMultiplier
         : data.coinDrop;
+
+    // Golden enemy bonus
+    if (isGolden) {
+      coinAmount *= goldenMultiplier;
+    }
 
     // Spawn coin at enemy position
     game.world.add(Coin(
@@ -108,12 +117,20 @@ class Enemy extends PositionComponent
 
   @override
   void render(Canvas canvas) {
+    // Golden glow effect
+    if (isGolden) {
+      final glowPaint = Paint()
+        ..color = const Color(0xFFFFD600).withValues(alpha: ((_sin(_animTimer * 5) * 0.2 + 0.3).clamp(0.0, 1.0)));
+      canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.6, glowPaint);
+    }
+
     EnemyRenderer.render(
       canvas,
       size.toSize(),
       data,
       animTimer: _animTimer,
       isHit: _isHit,
+      isGolden: isGolden,
     );
   }
 }

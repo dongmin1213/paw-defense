@@ -9,6 +9,7 @@ import 'ui/upgrade_shop.dart';
 import 'ui/main_menu.dart';
 import 'ui/soul_shop.dart';
 import 'ui/ascension_screen.dart';
+import 'ui/companion_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +95,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
           'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
           'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
+          'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
         },
       ),
     );

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upgrade_manager.dart';
 import 'ascension_manager.dart';
+import 'companion_manager.dart';
 import '../data/upgrade_data.dart';
 import '../data/soul_upgrade_data.dart';
 
@@ -12,6 +14,7 @@ class SaveManager {
   static const String _keyAscensionCount = 'ascension_count';
   static const String _keyLastOnline = 'last_online_time';
   static const String _keyCurrentRegion = 'current_region';
+  static const String _keyCompanions = 'companions_data';
   static const String _upgradePrefix = 'upgrade_';
   static const String _soulUpgradePrefix = 'soul_upgrade_';
 
@@ -85,6 +88,22 @@ class SaveManager {
     manager.loadFromMap(map);
   }
 
+  // === Companions ===
+  void saveCompanions(CompanionManager manager) {
+    final data = manager.toMap();
+    _prefs.setString(_keyCompanions, jsonEncode(data));
+  }
+
+  void loadCompanions(CompanionManager manager) {
+    final jsonStr = _prefs.getString(_keyCompanions);
+    if (jsonStr != null) {
+      try {
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        manager.loadFromMap(data);
+      } catch (_) {}
+    }
+  }
+
   // === Save All ===
   void saveGameState({
     required double coins,
@@ -92,6 +111,7 @@ class SaveManager {
     required double highScore,
     required UpgradeManager upgradeManager,
     required AscensionManager ascensionManager,
+    required CompanionManager companionManager,
     required String currentRegion,
   }) {
     this.coins = coins;
@@ -102,6 +122,7 @@ class SaveManager {
     this.currentRegion = currentRegion;
     saveUpgrades(upgradeManager);
     saveAscension(ascensionManager);
+    saveCompanions(companionManager);
     lastOnlineTime = DateTime.now().millisecondsSinceEpoch;
   }
 
@@ -112,5 +133,6 @@ class SaveManager {
     for (final id in UpgradeId.values) {
       _prefs.remove('$_upgradePrefix${id.name}');
     }
+    // Note: companions are NOT reset on ascension
   }
 }

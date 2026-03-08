@@ -54,19 +54,26 @@ Full growth loop: coins → upgrades → ascension → souls → permanent upgra
 - [x] `main.dart` — SoulShop, AscensionScreen 오버레이 등록
 - [x] `runner_hud.dart` — 초월 버튼(조건 충족 시) + 소울 상점 버튼(초월 후)
 - [x] `main_menu.dart` — 영구 업그레이드 버튼(초월 후)
-- [ ] 장비 시스템 실제 효과 구현 (활/장갑/망토 — Phase 4+에서 구현)
+- [ ] 장비 시스템 실제 효과 구현 (활/장갑/망토 — Phase 5+에서 구현)
 
-## Phase 4: 동료 + 보스 + 미니이벤트 ⬜
-Collection mechanics, milestone bosses, variety events.
+## Phase 4: 동료 + 보스 + 미니이벤트 ✅
+Collection mechanics, milestone bosses, golden enemies.
 
-- [ ] `systems/companion_manager.dart` — 동료 수집/장착/버프
-- [ ] `data/companion_data.dart` — 동료 데이터
-- [ ] `components/companion_pickup.dart` — 필드 동료 등장
-- [ ] `renderers/companion_renderer.dart` — 동료 렌더링
-- [ ] `ui/companion_screen.dart` — 장착/도감 UI
-- [ ] `components/boss.dart` — 500m 보스
-- [ ] `renderers/boss_renderer.dart` — 보스 렌더링
-- [ ] 미니이벤트 (보물상자, 코인 러시, 황금 적)
+- [x] `data/companion_data.dart` — 동료 10종 (일반3/레어3/에픽2/전설2) + 희귀도/레벨업 비용
+- [x] `systems/companion_manager.dart` — 수집/장착(1~4슬롯)/레벨업/버프(코인/속도/점프/공격/소울/콤보/장애물무시)
+- [x] `renderers/companion_renderer.dart` — 10종 동료 프로시저럴 렌더링
+- [x] `components/companion_pickup.dart` — 필드 동료 등장 + 수집 팝업 + 희귀도 글로우
+- [x] `components/boss.dart` — 500m마다 보스 (HP바, 자동공격, 탭 추가공격, 10초 제한, 코인 폭발)
+- [x] `renderers/boss_renderer.dart` — 5개 지역별 보스 렌더링 (킹슬라임/트렌트/스핑크스/이무기/드래곤)
+- [x] `ui/companion_screen.dart` — 장착/해제 + 도감 그리드 + 레벨업
+- [x] `enemy.dart` — isGolden 플래그 + x10 보상 + 금색 글로우
+- [x] `renderers/enemy_renderer.dart` — isGolden 파라미터 (금색 팔레트)
+- [x] `level_generator.dart` — 동료 스폰(2분 평균, 적극 시만), 보스 스폰(500m마다), 황금 적(2%)
+- [x] `runner_game.dart` — CompanionManager 추가, 보스 연동, 동료 코인/콤보 버프
+- [x] `runner_player.dart` — CompanionPickup 충돌, 동료 속도 버프, 장애물 무시
+- [x] `save_manager.dart` — 동료 JSON 저장/로드 (초월해도 유지)
+- [x] `main.dart` — CompanionScreen 오버레이 등록
+- [x] `runner_hud.dart` — 동료 버튼 + 보스 HP/타이머 바
 
 ## Phase 5: 날씨/시간 + 광고 ⬜
 Atmosphere and monetization.
@@ -87,8 +94,9 @@ Offline rewards, particles, sound, polish.
 - [ ] 달리기/공격 애니메이션 개선
 - [ ] 특수 이벤트 (유성우, 골든 아워, 동료 집회)
 - [ ] 사운드 (flame_audio)
+- [ ] 장비 효과 구현 (활/장갑/망토)
 
 ---
 
 ## 다음 세션에서 할 일
-- Phase 4 구현 시작: companion_data → companion_manager → companion_pickup → companion_screen → boss → 미니이벤트
+- Phase 5 구현 시작: weather_manager → weather_effect → 시간대별 배경 → ad_manager

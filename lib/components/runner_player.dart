@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import 'enemy.dart';
 import 'obstacle.dart';
 import 'coin.dart';
+import 'companion_pickup.dart';
 
 class RunnerPlayer extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
@@ -28,7 +29,8 @@ class RunnerPlayer extends PositionComponent
     final baseSpeed = GameConstants.basePlayerSpeed;
     final distanceMultiplier = BalanceConfig.speedMultiplier(game.distance);
     final upgradeMultiplier = game.upgradeManager.speedMultiplier;
-    return baseSpeed * distanceMultiplier * upgradeMultiplier * _slowdownFactor;
+    final companionMultiplier = game.companionManager.speedMultiplier;
+    return baseSpeed * distanceMultiplier * upgradeMultiplier * companionMultiplier * _slowdownFactor;
   }
 
   RunnerPlayer()
@@ -128,8 +130,16 @@ class RunnerPlayer extends PositionComponent
     if (other is Enemy) {
       other.onHit(this);
     } else if (other is Obstacle) {
+      // Check companion obstacle ignore chance
+      if (game.companionManager.obstacleIgnoreChance > 0) {
+        // Simple random check without import (use hash-based pseudo-random)
+        final hash = (position.x * 1000).toInt() % 100;
+        if (hash < game.companionManager.obstacleIgnoreChance * 100) return;
+      }
       applySlowdown();
     } else if (other is Coin) {
+      other.collect();
+    } else if (other is CompanionPickup) {
       other.collect();
     }
   }
