@@ -70,6 +70,62 @@ GitHub Actions: `.github/workflows/build-apk.yml`
 - `docs/PROGRESS.md` — 구현 진행 상황
 - `docs/ARCHITECTURE.md` — 코드 아키텍처, 확장 가이드
 
+## 코드 컨벤션 & 패턴
+
+### Component 패턴
+- 모든 게임 컴포넌트는 `PositionComponent` + `HasGameReference<RunnerGame>` mixin
+- `.game`으로 RunnerGame 접근 (`.gameRef` deprecated)
+- 충돌: `CollisionCallbacks` mixin + `RectangleHitbox` 또는 `CircleHitbox`
+- 카메라 뒤 컴포넌트 자동 정리: `if (position.x < game.camera.viewfinder.position.x - 200) removeFromParent()`
+
+### 렌더러 패턴
+- `renderers/` 내 모든 클래스는 **static 메서드**만 가짐 (인스턴스 없음)
+- `render(Canvas canvas, Size size, ...)` 시그니처 통일
+- 현재 전부 Canvas API 프로시저럴 드로잉, 나중에 스프라이트 교체 시 렌더러만 수정
+
+### 데이터 패턴
+- `data/` 내 클래스는 `const` 생성자 + `static const List` 로 정의
+- `XxxDatabase` 클래스에 `static` 조회 메서드 제공
+- 새 컨텐츠 추가 = 리스트에 항목 추가 + 렌더러에 case 추가
+
+### 텍스트 렌더링 주의
+- coin.dart의 "+N" 팝업: `dart:ui`의 `ParagraphBuilder` + `ParagraphStyle` + `TextStyle` 사용
+- **flutter의 TextStyle과 dart:ui의 TextStyle은 다른 클래스** — Flame Component의 render()에서는 dart:ui만 사용 가능
+- `textStyle.getTextStyle()` 같은 혼용은 에러남
+
+## 기술적 결정사항
+
+### 왜 이렇게 했는가
+1. **프로시저럴 렌더링**: 에셋 없이 빠르게 프로토타이핑. `renderers/` 분리로 나중에 스프라이트 교체 용이
+2. **FixedResolutionViewport(800x600)**: 모든 기기에서 동일한 게임 경험. 카메라가 player.x - 150 추적
+3. **방치/적극 모드 분리**: 방치 시 장애물·공중적 미생성으로 패널티 없는 방치 보장. `_lastTapTime` 기반 5초 판정
+4. **LevelGenerator가 Component**: `update(dt)`에서 카메라 위치 기반 자동 생성. `generationCursor`로 중복 방지
+5. **HUD는 Flutter 위젯 오버레이**: GameWidget의 overlayBuilder로 구현. 100ms Timer 폴링 (리스너 패턴으로 개선 가능)
+6. **enemy HP 시스템**: 공격력 업그레이드가 의미 있으려면 적에게 HP 필요. `onHit()` → HP 감소 → 0이면 `_die()`
+
+### 알려진 한계/이슈
+- 로컬에 flutter SDK 없음 → CI(GitHub Actions)로만 빌드 검증
+- HUD 100ms 폴링 비효율 → Phase 2에서 상태 관리 도입 시 개선 가능
+- RunnerGame.resetGame() 미구현 → 메인 메뉴 추가 시 필요
+- enemy_data.dart에 초원(meadow) 적만 정의됨 → Phase 3에서 지역별 적 추가
+
+## Phase 2 시작 가이드
+
+Phase 2 구현 순서:
+1. `data/upgrade_data.dart` — UpgradeData 클래스 + 일반 업그레이드 8종 정의 (balance_config.dart의 비용 공식 사용)
+2. `systems/upgrade_manager.dart` — 업글 레벨 관리, 구매, 효과 계산. RunnerGame에서 참조
+3. `systems/save_manager.dart` — SharedPreferences 래퍼. 코인/업글레벨/거리/통계 저장·로드
+4. `ui/upgrade_shop.dart` — Flutter 위젯 오버레이 (GameWidget overlay). 업글 목록 + 구매 버튼
+5. `ui/main_menu.dart` — 타이틀 화면 + "탭하여 시작" + 최고기록 표시
+6. **연동**: runner_player.dart에서 upgrade_manager 참조하여 속도/공격력/점프력 효과 적용
+7. `pubspec.yaml`에 `shared_preferences: ^2.2.0` 추가
+
+핵심 연결 포인트:
+- `RunnerGame`에 `UpgradeManager upgradeManager` 필드 추가
+- `RunnerPlayer`에서 `game.upgradeManager.getSpeedMultiplier()` 등 참조
+- `addCoins()`에서 `upgradeManager.getCoinMultiplier()` 반영
+- 상점은 `GameWidget.overlayBuilderMap`에 'shop' 키로 등록
+
 ## Important Notes
 - `HasGameRef` deprecated → `HasGameReference` 사용 (`.game`으로 접근)
 - `FixedResolutionViewport`는 `package:flame/camera.dart`에서 import

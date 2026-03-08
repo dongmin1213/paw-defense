@@ -140,6 +140,28 @@ void addCoins(double base, {bool isAirKill = false}) {
 }
 ```
 
+## 기술적 결정 & 주의사항
+
+### dart:ui vs flutter 혼용 금지
+- Flame Component의 `render(Canvas)` 안에서는 `dart:ui` API만 사용
+- flutter `TextStyle`과 dart:ui `TextStyle`은 다른 클래스
+- 텍스트 렌더링: `ParagraphBuilder` + `ParagraphStyle` + dart:ui `TextStyle` 조합 사용
+- `textStyle.getTextStyle()` 같은 변환은 에러남 → coin.dart 참고
+
+### Flame 버전 API
+- `HasGameRef` → `HasGameReference<RunnerGame>` (`.gameRef` → `.game`)
+- `FixedResolutionViewport`는 `package:flame/camera.dart`에서 import
+- `camera.viewfinder.position` 으로 카메라 위치 제어 (anchor = topLeft)
+- `CollisionCallbacks` mixin + `add(RectangleHitbox())` 패턴
+
+### 알려진 기술 부채
+- HUD 100ms Timer 폴링 → 상태 관리 패턴으로 개선 필요
+- RunnerGame.resetGame() 미구현
+- enemy_data에 초원 적만 있음 (Phase 3에서 지역별 추가)
+- 빌드 검증은 CI(GitHub Actions)로만 가능 (로컬 flutter 없음)
+
+---
+
 ## 새 컨텐츠 추가 가이드
 
 ### 새 적 추가
