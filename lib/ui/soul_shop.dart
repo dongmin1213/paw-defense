@@ -2,127 +2,164 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../data/soul_upgrade_data.dart';
 import '../data/region_data.dart';
+import 'game_theme.dart';
 
 class SoulShop extends StatefulWidget {
   final RunnerGame game;
-
   const SoulShop({super.key, required this.game});
 
   @override
   State<SoulShop> createState() => _SoulShopState();
 }
 
-class _SoulShopState extends State<SoulShop> {
-  String _selectedTab = 'upgrades';
+class _SoulShopState extends State<SoulShop>
+    with SingleTickerProviderStateMixin {
+  int _tabIndex = 0;
+  late AnimationController _entryController;
+
+  final _tabs = const ['강화', '지역', '장비'];
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
     final manager = game.ascensionManager;
 
-    return Material(
-      color: Colors.black.withValues(alpha: 0.9),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AnimatedBuilder(
+      animation: _entryController,
+      builder: (context, _) {
+        final fade = _entryController.value;
+        return Material(
+          color: GameTheme.bgDeep.withValues(alpha: 0.94 * fade),
+          child: Opacity(
+            opacity: fade,
+            child: SafeArea(
+              child: Column(
                 children: [
-                  const Text(
-                    '영구 업그레이드',
-                    style: TextStyle(
-                      color: Color(0xFF9C27B0),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  // ── 헤더 ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: GameTheme.accentPurple.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.auto_awesome,
+                              color: GameTheme.accentPurple, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('영구 업그레이드',
+                                style: GameTheme.titleMedium.copyWith(
+                                    fontSize: 20,
+                                    color: GameTheme.accentPurple)),
+                            Text('초월해도 유지되는 영구 강화',
+                                style: GameTheme.bodySmall),
+                          ],
+                        ),
+                        const Spacer(),
+                        GameTheme.currencyDisplay(
+                          value: '${manager.souls}',
+                          isSoul: true,
+                        ),
+                        const SizedBox(width: 8),
+                        GameTheme.closeButton(
+                            onTap: () => game.closeSoulShop()),
+                      ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: Color(0xFF9C27B0), size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${manager.souls}',
-                        style: const TextStyle(
-                          color: Color(0xFFCE93D8),
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text('소울', style: TextStyle(color: Color(0xFFCE93D8), fontSize: 14)),
-                      const SizedBox(width: 16),
-                      _buildCloseButton(),
-                    ],
+
+                  // ── 탭 바 ──
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: GameTheme.bgCard,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: List.generate(_tabs.length, (i) {
+                        final isSelected = _tabIndex == i;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _tabIndex = i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? GameTheme.accentPurple.withValues(alpha: 0.2)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: GameTheme.accentPurple
+                                            .withValues(alpha: 0.4))
+                                    : null,
+                              ),
+                              child: Text(
+                                _tabs[i],
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? GameTheme.accentPurple
+                                      : GameTheme.textMuted,
+                                  fontSize: 13,
+                                  fontWeight:
+                                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
                   ),
+
+                  const SizedBox(height: 8),
+
+                  // ── 콘텐츠 ──
+                  Expanded(child: _buildContent()),
                 ],
               ),
             ),
-
-            // Tabs
-            Row(
-              children: [
-                _buildTab('upgrades', '강화'),
-                _buildTab('regions', '지역'),
-                _buildTab('equipment', '장비'),
-              ],
-            ),
-            const Divider(color: Colors.white24, height: 1),
-
-            // Content
-            Expanded(
-              child: _buildContent(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTab(String id, String label) {
-    final isSelected = _selectedTab == id;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = id),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected ? const Color(0xFF9C27B0) : Colors.transparent,
-                width: 2,
-              ),
-            ),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? const Color(0xFFCE93D8) : Colors.white54,
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildContent() {
-    switch (_selectedTab) {
-      case 'regions':
-        return _buildRegionsList();
-      case 'equipment':
-        return _buildEquipmentList();
+    switch (_tabIndex) {
+      case 1:
+        return _buildRegions();
+      case 2:
+        return _buildEquipment();
       default:
-        return _buildUpgradesList();
+        return _buildUpgrades();
     }
   }
 
-  Widget _buildUpgradesList() {
-    final upgradeIds = [
+  Widget _buildUpgrades() {
+    final ids = [
       SoulUpgradeId.coinMultiplier,
       SoulUpgradeId.startSpeed,
       SoulUpgradeId.offlineEfficiency,
@@ -130,15 +167,15 @@ class _SoulShopState extends State<SoulShop> {
       SoulUpgradeId.autoAirKill,
       SoulUpgradeId.autoUpgrade,
     ];
-
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: upgradeIds.length,
-      itemBuilder: (context, index) => _buildSoulUpgradeRow(upgradeIds[index]),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      itemCount: ids.length,
+      itemBuilder: (context, i) => _buildSoulCard(ids[i]),
     );
   }
 
-  Widget _buildRegionsList() {
+  Widget _buildRegions() {
+    final manager = widget.game.ascensionManager;
     final regionIds = [
       SoulUpgradeId.regionForest,
       SoulUpgradeId.regionDesert,
@@ -146,88 +183,49 @@ class _SoulShopState extends State<SoulShop> {
       SoulUpgradeId.regionVolcano,
     ];
 
-    final manager = widget.game.ascensionManager;
-
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
       children: [
-        // Current region selector
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              const Text('현재 지역: ', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              Text(
-                RegionDatabase.getRegion(widget.game.currentRegionId).name,
-                style: const TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        // Unlocked region buttons
+        // 현재 지역 + 해금된 지역 선택
+        GameTheme.sectionHeader(title: '지역 선택', color: GameTheme.accentPurple),
         ...manager.unlockedRegionIds.map((id) {
           final region = RegionDatabase.getRegion(id);
           final isCurrent = widget.game.currentRegionId == id;
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: GestureDetector(
-              onTap: isCurrent ? null : () {
-                widget.game.changeRegion(id);
-                setState(() {});
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isCurrent
-                      ? Colors.amber.withValues(alpha: 0.2)
-                      : Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isCurrent ? Colors.amber.withValues(alpha: 0.5) : Colors.transparent,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(region.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('x${region.coinMultiplier.toStringAsFixed(0)}', style: const TextStyle(color: Colors.amber, fontSize: 14)),
-                  ],
-                ),
-              ),
-            ),
+          return _RegionCard(
+            region: region,
+            isCurrent: isCurrent,
+            onTap: isCurrent
+                ? null
+                : () {
+                    widget.game.changeRegion(id);
+                    setState(() {});
+                  },
           );
         }),
-        const SizedBox(height: 12),
-        const Divider(color: Colors.white24),
-        const SizedBox(height: 8),
-        const Text('지역 해금', style: TextStyle(color: Colors.white70, fontSize: 13)),
-        const SizedBox(height: 8),
-        // Unlock upgrades
-        ...regionIds.map((id) => _buildSoulUpgradeRow(id)),
+
+        const SizedBox(height: 16),
+        GameTheme.sectionHeader(title: '지역 해금', color: GameTheme.accentPurple),
+        ...regionIds.map((id) => _buildSoulCard(id)),
       ],
     );
   }
 
-  Widget _buildEquipmentList() {
-    final equipIds = [
+  Widget _buildEquipment() {
+    final ids = [
       SoulUpgradeId.equipBow,
       SoulUpgradeId.equipGauntlet,
       SoulUpgradeId.equipCloak,
     ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: equipIds.length,
-      itemBuilder: (context, index) => _buildSoulUpgradeRow(equipIds[index]),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      children: [
+        GameTheme.sectionHeader(title: '장비', color: GameTheme.accentPurple),
+        ...ids.map((id) => _buildSoulCard(id)),
+      ],
     );
   }
 
-  Widget _buildSoulUpgradeRow(SoulUpgradeId id) {
+  Widget _buildSoulCard(SoulUpgradeId id) {
     final manager = widget.game.ascensionManager;
     final data = SoulUpgradeDatabase.get(id);
     final level = manager.getSoulLevel(id);
@@ -236,66 +234,121 @@ class _SoulShopState extends State<SoulShop> {
     final canBuy = manager.canAffordSoul(id);
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        color: isMaxed
+            ? GameTheme.accentPurple.withValues(alpha: 0.08)
+            : GameTheme.bgCard,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isMaxed
-              ? const Color(0xFF9C27B0).withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.1),
+              ? GameTheme.accentPurple.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.05),
         ),
+        boxShadow: isMaxed
+            ? [
+                BoxShadow(
+                  color: GameTheme.accentPurple.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                )
+              ]
+            : null,
       ),
       child: Row(
         children: [
+          // 아이콘
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: GameTheme.accentPurple.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getSoulIcon(id),
+              color: isMaxed
+                  ? GameTheme.accentPurple
+                  : GameTheme.textMuted,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // 정보
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(data.name, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
+                    Text(data.name, style: GameTheme.labelBold.copyWith(fontSize: 13)),
+                    const SizedBox(width: 6),
                     if (data.maxLevel > 1)
                       Text(
-                        'Lv.$level${isMaxed ? " (MAX)" : "/${data.maxLevel}"}',
-                        style: TextStyle(color: isMaxed ? const Color(0xFFCE93D8) : Colors.white70, fontSize: 12),
+                        isMaxed ? 'MAX' : 'Lv.$level/${data.maxLevel}',
+                        style: TextStyle(
+                          color: isMaxed
+                              ? GameTheme.accentPurple
+                              : GameTheme.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       )
                     else if (isMaxed)
-                      const Text('해금됨', style: TextStyle(color: Color(0xFFCE93D8), fontSize: 12)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: GameTheme.accentGreen.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('해금됨',
+                            style: TextStyle(
+                                color: GameTheme.accentGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600)),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '${data.description}  (${data.effectUnit})',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
-                ),
+                Text('${data.description}  (${data.effectUnit})',
+                    style: GameTheme.bodySmall.copyWith(fontSize: 11)),
               ],
             ),
           ),
+
+          // 구매 버튼
           if (!isMaxed)
             GestureDetector(
               onTap: canBuy ? () => _buySoul(id) : null,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: canBuy
-                      ? const Color(0xFF9C27B0).withValues(alpha: 0.8)
-                      : Colors.grey.withValues(alpha: 0.4),
+                  gradient: canBuy ? GameTheme.gradientPurple : null,
+                  color: canBuy ? null : GameTheme.bgCard,
                   borderRadius: BorderRadius.circular(8),
+                  border: canBuy
+                      ? null
+                      : Border.all(
+                          color: Colors.white.withValues(alpha: 0.06)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.auto_awesome, color: Color(0xFFCE93D8), size: 13),
+                    Icon(Icons.auto_awesome,
+                        color: canBuy
+                            ? Colors.white
+                            : GameTheme.textMuted,
+                        size: 13),
                     const SizedBox(width: 4),
                     Text(
                       '$cost',
                       style: TextStyle(
-                        color: canBuy ? Colors.white : Colors.white38,
+                        color: canBuy ? Colors.white : GameTheme.textMuted,
                         fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -304,30 +357,49 @@ class _SoulShopState extends State<SoulShop> {
             )
           else
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
+                color: GameTheme.accentPurple.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('MAX', style: TextStyle(color: Color(0xFFCE93D8), fontSize: 13, fontWeight: FontWeight.bold)),
+              child: Icon(Icons.check,
+                  color: GameTheme.accentPurple, size: 16),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildCloseButton() {
-    return GestureDetector(
-      onTap: () => widget.game.closeSoulShop(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text('닫기', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-      ),
-    );
+  IconData _getSoulIcon(SoulUpgradeId id) {
+    switch (id) {
+      case SoulUpgradeId.coinMultiplier:
+        return Icons.monetization_on;
+      case SoulUpgradeId.startSpeed:
+        return Icons.speed;
+      case SoulUpgradeId.offlineEfficiency:
+        return Icons.schedule;
+      case SoulUpgradeId.comboBooster:
+        return Icons.whatshot;
+      case SoulUpgradeId.autoAirKill:
+        return Icons.flight;
+      case SoulUpgradeId.autoUpgrade:
+        return Icons.smart_toy;
+      case SoulUpgradeId.regionForest:
+        return Icons.park;
+      case SoulUpgradeId.regionDesert:
+        return Icons.wb_sunny;
+      case SoulUpgradeId.regionSnowfield:
+        return Icons.ac_unit;
+      case SoulUpgradeId.regionVolcano:
+        return Icons.local_fire_department;
+      case SoulUpgradeId.equipBow:
+        return Icons.gps_fixed;
+      case SoulUpgradeId.equipGauntlet:
+        return Icons.front_hand;
+      case SoulUpgradeId.equipCloak:
+        return Icons.air;
+    }
   }
 
   void _buySoul(SoulUpgradeId id) {
@@ -336,5 +408,83 @@ class _SoulShopState extends State<SoulShop> {
       widget.game.saveGame();
       setState(() {});
     }
+  }
+}
+
+class _RegionCard extends StatelessWidget {
+  final RegionData region;
+  final bool isCurrent;
+  final VoidCallback? onTap;
+
+  const _RegionCard({
+    required this.region,
+    required this.isCurrent,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isCurrent
+              ? region.skyColor.withValues(alpha: 0.15)
+              : GameTheme.bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCurrent
+                ? GameTheme.accentGold.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.05),
+            width: isCurrent ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // 지역 색상 미리보기
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [region.skyColor, region.grassColor],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(region.name,
+                  style: GameTheme.labelBold.copyWith(fontSize: 14)),
+            ),
+            if (isCurrent)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: GameTheme.accentGold.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('현재',
+                    style: TextStyle(
+                        color: GameTheme.accentGold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+            const SizedBox(width: 8),
+            Text('x${region.coinMultiplier.toStringAsFixed(0)}',
+                style: TextStyle(
+                    color: GameTheme.accentGold,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
   }
 }

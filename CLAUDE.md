@@ -52,21 +52,23 @@ lib/
 │   └── boss_renderer.dart        # 보스 5종 픽셀아트 스프라이트
 ├── systems/                      # 게임 시스템 (매니저 패턴)
 │   ├── level_generator.dart      # 절차적 레벨 생성 — 적/코인/장애물/동료/보스 배치
-│   ├── upgrade_manager.dart      # 일반 업글 — 레벨/구매/비용계산/배율 getter
+│   ├── upgrade_manager.dart      # 일반 업글 — 레벨/구매/비용계산/배율 getter + upgradeIdFromName
 │   ├── ascension_manager.dart    # 초월 — 소울 계산, 영구 업글, 지역/장비 해금
 │   ├── companion_manager.dart    # 동료 — 수집/장착(1~4슬롯)/레벨업/버프 계산
 │   ├── weather_manager.dart      # 날씨(5종) + 시간대(4종) — 3~5분 주기 + 보너스
+│   ├── game_feel.dart            # ★ 게임필 — 스크린쉐이크/히트스탑/슬로모션/줌펀치/자동시스템
 │   ├── ad_manager.dart           # 광고 스텁 — 실제 SDK 없이 API만 준비
 │   ├── offline_reward.dart       # 오프라인 보상 — CpS 기반, 최소60초~최대24시간
 │   └── save_manager.dart         # SharedPreferences 저장/로드 (동료는 JSON)
-├── ui/                           # Flutter 위젯 오버레이 (GameWidget overlayBuilderMap)
-│   ├── runner_hud.dart           # HUD — 거리, 코인, 콤보, 보스HP, 날씨, 이벤트, 버튼
-│   ├── upgrade_shop.dart         # 일반 업그레이드 상점 (pauseEngine)
-│   ├── soul_shop.dart            # 영구 업그레이드 상점 — 3탭(강화/지역/장비)
-│   ├── ascension_screen.dart     # 초월 연출 — 화이트아웃 + 소울 보상
-│   ├── companion_screen.dart     # 동료 관리 — 장착/도감/레벨업
-│   ├── offline_popup.dart        # 오프라인 복귀 팝업 — 수령/x2 광고
-│   └── main_menu.dart            # 타이틀 화면 — 시작, 통계, 소울상점
+├── ui/                           # ★ Flutter 위젯 오버레이 — GameTheme 기반 통합 디자인 시스템
+│   ├── game_theme.dart           # ★ 통합 디자인 시스템 — 색상/타이포/버튼/패널/그라디언트/유틸
+│   ├── runner_hud.dart           # HUD — 부드러운 숫자롤링, 콤보미터(등급별), 보스HP, 글래스모피즘
+│   ├── upgrade_shop.dart         # 카드형 상점 — 아이콘+진행바+그라디언트 버튼+진입 애니메이션
+│   ├── soul_shop.dart            # 영구 상점 — 3탭(강화/지역/장비)+아이콘+지역 미리보기
+│   ├── ascension_screen.dart     # 초월 — 파티클 폭발+글로우 펄스+소울 카운트업+시네마틱 전환
+│   ├── companion_screen.dart     # 동료 — 리스트+상세패널 분할뷰/레어도 뱃지/글로우 아바타
+│   ├── offline_popup.dart        # 복귀 — 코인 카운트업 롤링+그라디언트 버튼+진입 애니메이션
+│   └── main_menu.dart            # 타이틀 — ShaderMask 그라디언트+파티클 배경+펄스 글로우 버튼
 └── utils/
     ├── constants.dart            # 월드크기(800x600), 물리(중력1100, 점프-520, 속도180)
     └── pixel_art.dart            # ★ 픽셀아트 유틸 — 문자맵 기반 스프라이트 렌더링
@@ -100,6 +102,7 @@ total = amount
   * timeCoinMultiplier      // 시간대 (저녁+20%)
   * goldenHourMultiplier    // 골든아워 이벤트 x5
   * rainbowMultiplier       // 무지개 날씨 x2
+  * gauntletMultiplier      // 장갑 장비 효과 x1.3
 ```
 
 ---
@@ -134,16 +137,49 @@ total = amount
 | 5 | 날씨/시간(4시간대+5날씨) + 광고 스텁 | ✅ |
 | 6 | 오프라인 보상 + 파티클 FX + 특수 이벤트 3종 | ✅ |
 | 7 | 픽셀아트 비주얼 전환 + 게임필 개선 | ✅ |
+| 8 | UI/UX 전면 리빌드 + 게임필 시스템 + 장비효과 + 자동시스템 | ✅ |
+
+## Phase 8 상세 (UI/UX/시스템 리빌드)
+
+### 새 파일
+- `ui/game_theme.dart` — 통합 디자인 시스템 (색상 팔레트, 타이포그래피, 버튼, 패널, 유틸)
+- `systems/game_feel.dart` — 스크린 쉐이크, 히트스탑, 슬로모션, 줌 펀치, 자동 업그레이드
+
+### UI 리빌드 (7개 전면 교체)
+- **MainMenu**: ShaderMask 그라디언트 타이틀, 파티클 배경, 펄스 글로우 버튼, 진입 애니메이션
+- **RunnerHud**: 부드러운 숫자 롤링, 콤보 등급(NICE/GREAT/EPIC/INSANE), 타이머 바, 글래스모피즘
+- **UpgradeShop**: 카드 레이아웃, 업그레이드별 아이콘+색상, 진행 바, 슬라이드업 진입 애니
+- **SoulShop**: 세그먼트 탭, 지역 색상 미리보기 카드, 아이콘 매핑, 퍼플 그라디언트 버튼
+- **CompanionScreen**: 리스트+상세패널 분할 뷰, 레어도 뱃지, 글로우 아바타, 장착 인디케이터
+- **AscensionScreen**: 초월 파티클 폭발, 글로우 펄스, 소울 카운트업, 시네마틱 전환
+- **OfflinePopup**: 코인 카운트업 롤링, 그라디언트 버튼, 스케일+페이드 진입 애니메이션
+
+### 게임필 시스템 (GameFeelSystem)
+- **스크린 쉐이크**: 적 처치(약), 보스 피격(중), 보스 처치(강), 장애물(강), 초월(극강)
+- **히트스탑**: 황금 적 처치 60ms, 보스 피격 30ms, 보스 처치 150ms 프레임 프리즈
+- **슬로모션**: 보스 처치 0.3x 0.8초, 초월 0.2x 1.5초
+- **줌 펀치**: 보스 처치/콤보 마일스톤(10단위)에서 미세 줌인+탄성 복귀
+- **콤보 마일스톤 피드백**: 10콤보 단위마다 쉐이크+줌펀치
+
+### 자동 시스템 (구현 완료)
+- **자동 업그레이드**: 소울 해금 시 2초마다 구매 가능한 업그레이드 자동 구매 (우선순위 기반)
+- **장갑 효과**: 장갑 해금 시 모든 코인 획득에 x1.3 배율 적용
+
+### 디자인 시스템 (GameTheme)
+- 색상: bgDeep→bgDark→bgPanel→bgCard 4단계 + accent 6색 + rarity 4색
+- 타이포: titleLarge/Medium/Small, bodyLarge/Small, labelBold, numberLarge
+- 위젯: gameButton(), infoChip(), progressBar(), sectionHeader(), closeButton(), currencyDisplay()
+- 장식: panelDecoration(), cardDecoration(), glassDecoration()
+- 그라디언트: Primary/Gold/Purple/Green/Red/Dark 6종
 
 ## 미구현 (TODO)
 
-- **장비 효과**: 활(자동 공중 처치)/장갑(추가 코인)/망토(대시) — 해금 구조만 있고 실제 효과 없음
+- **장비 효과 일부**: 활(자동 공중 처치 — 소울 해금 구조만 있음)/망토(대시 — 미구현)
 - **사운드**: flame_audio 의존성은 있으나 사용 안 함
 - **실제 광고**: google_mobile_ads SDK 미연동 (스텁만)
 - **온보딩**: 말풍선 튜토리얼 없음
 - **업적/퀘스트**: 미구현
 - **보물상자/코인 러시**: 미니이벤트 미구현
-- **자동 공중적 처치/자동 업글**: 소울 해금은 있지만 실제 로직 미구현
 
 ---
 
@@ -210,6 +246,28 @@ class EnemyDatabase {
 - Flame `render(Canvas)` 안에서는 **`dart:ui`의 TextStyle**만 사용 가능
 - flutter의 TextStyle과 **다른 클래스**
 - `ParagraphBuilder` + `ParagraphStyle` + `dart:ui TextStyle` 조합 사용 (coin.dart 참고)
+
+### UI 테마 패턴 (GameTheme)
+```dart
+// 모든 UI에서 GameTheme 정적 멤버 사용
+GameTheme.gameButton(label: '시작', onTap: () {}, gradient: GameTheme.gradientPrimary);
+GameTheme.progressBar(value: 0.7, fillColor: GameTheme.accentGold);
+GameTheme.currencyDisplay(value: '1.2K', isSoul: true);
+GameTheme.formatNumber(12345.0); // '12.3K'
+```
+- 모든 색상, 스타일, 위젯은 `GameTheme` 정적 멤버로 통일
+- 새 UI 추가 시 `game_theme.dart`의 패턴을 따를 것
+
+### 게임필 패턴 (GameFeelSystem)
+```dart
+// runner_game.dart에서 gameFeel 인스턴스로 접근
+game.gameFeel.onEnemyKill(isGolden: true);
+game.gameFeel.onBossKill();
+game.gameFeel.shake(intensity: 5, duration: 0.2);
+```
+- `GameFeelSystem`은 Flame `Component`로 world에 추가
+- 히트스탑 중에는 `update(dt)`가 스킵됨
+- 슬로모션은 `dt * gameFeel.timeScale`로 적용
 
 ### 동료 저장
 - `CompanionManager.toMap()` → `jsonEncode()` → `SharedPreferences.setString()`
