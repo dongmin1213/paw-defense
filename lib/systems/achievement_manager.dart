@@ -1,4 +1,5 @@
 import '../data/achievement_data.dart';
+import '../ui/ui_effects.dart';
 
 class AchievementManager {
   final Set<String> _completed = {};
@@ -102,6 +103,17 @@ class AchievementManager {
     if (condition && !_completed.contains(id)) {
       _completed.add(id);
       _recentlyUnlocked.add(id);
+
+      // 업적 달성 토스트 표시
+      final data = AchievementDatabase.get(id);
+      if (data != null) {
+        UIEffectManager.instance.showAchievementToast(
+          name: data.name,
+          description: data.description,
+          coinReward: data.coinReward,
+          soulReward: data.soulReward,
+        );
+      }
     }
   }
 

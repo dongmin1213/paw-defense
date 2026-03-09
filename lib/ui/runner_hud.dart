@@ -16,9 +16,11 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
   Timer? _updateTimer;
   late AnimationController _comboController;
   late AnimationController _comboPulse;
+  late AnimationController _coinFlash;
   int _prevCombo = 0;
   double _displayCoins = 0;
   double _displayDistance = 0;
+  double _prevCoins = 0;
 
   @override
   void initState() {
@@ -37,6 +39,10 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat(reverse: true);
+    _coinFlash = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
   }
 
   void _animateValues() {
@@ -49,6 +55,12 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       }
       _prevCombo = game.combo;
     }
+    // Coin flash on significant gain
+    final coinDelta = game.coins - _prevCoins;
+    if (coinDelta > 0 && coinDelta > game.coins * 0.02) {
+      _coinFlash.forward(from: 0);
+    }
+    _prevCoins = game.coins;
   }
 
   @override
@@ -56,6 +68,7 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
     _updateTimer?.cancel();
     _comboController.dispose();
     _comboPulse.dispose();
+    _coinFlash.dispose();
     super.dispose();
   }
 
@@ -95,6 +108,7 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
             icon: Icons.monetization_on,
             value: GameTheme.formatNumber(_displayCoins),
             color: GameTheme.accentGold,
+            flashAnimation: _coinFlash,
           ),
         ],
       ),
@@ -452,12 +466,17 @@ class _PixelHudChip extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-  const _PixelHudChip(
-      {required this.icon, required this.value, required this.color});
+  final AnimationController? flashAnimation;
+  const _PixelHudChip({
+    required this.icon,
+    required this.value,
+    required this.color,
+    this.flashAnimation,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: GameTheme.pixelCardDecoration(
         fillColor: GameTheme.bgDeep.withValues(alpha: 0.75),
@@ -475,10 +494,38 @@ class _PixelHudChip extends StatelessWidget {
         ],
       ),
     );
+
+    if (flashAnimation != null) {
+      return AnimatedBuilder(
+        animation: flashAnimation!,
+        builder: (context, _) {
+          final flash = (1.0 - flashAnimation!.value);
+          final glowAlpha = flash * 0.4;
+          return Container(
+            decoration: glowAlpha > 0.01
+                ? BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: glowAlpha),
+                        blurRadius: 12 * flash,
+                        spreadRadius: 2 * flash,
+                      ),
+                    ],
+                  )
+                : null,
+            child: Transform.scale(
+              scale: 1.0 + flash * 0.08,
+              child: chip,
+            ),
+          );
+        },
+      );
+    }
+    return chip;
   }
 }
 
-class _PixelActionButton extends StatelessWidget {
+class _PixelActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
@@ -493,29 +540,49 @@ class _PixelActionButton extends StatelessWidget {
   });
 
   @override
+  State<_PixelActionButton> createState() => _PixelActionButtonState();
+}
+
+class _PixelActionButtonState extends State<_PixelActionButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 5),
       child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: GameTheme.pixelCardDecoration(
-            fillColor: color.withValues(alpha: 0.12),
-            borderColor: color.withValues(alpha: 0.35),
-            glow: glow,
-            glowColor: color,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 12),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: GameTheme.pixel(fontSize: 6, color: color),
-              ),
-            ],
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.9 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: _pressed
+                  ? widget.color.withValues(alpha: 0.25)
+                  : widget.color.withValues(alpha: 0.12),
+              borderColor: _pressed
+                  ? widget.color.withValues(alpha: 0.6)
+                  : widget.color.withValues(alpha: 0.35),
+              glow: widget.glow || _pressed,
+              glowColor: widget.color,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, color: widget.color, size: 12),
+                const SizedBox(width: 4),
+                Text(
+                  widget.label,
+                  style: GameTheme.pixel(fontSize: 6, color: widget.color),
+                ),
+              ],
+            ),
           ),
         ),
       ),

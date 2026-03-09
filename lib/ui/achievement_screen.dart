@@ -25,6 +25,12 @@ class _AchievementScreenState extends State<AchievementScreen>
     )..forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.closeAchievementScreen();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -105,7 +111,7 @@ class _AchievementScreenState extends State<AchievementScreen>
                           const SizedBox(width: 12),
                           GameTheme.closeButton(
                             onTap: () =>
-                                widget.game.closeAchievementScreen(),
+                                _animatedClose(),
                           ),
                         ],
                       ),

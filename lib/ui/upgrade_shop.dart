@@ -34,6 +34,12 @@ class _UpgradeShopState extends State<UpgradeShop>
     _entryController.forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.toggleShop();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -96,7 +102,7 @@ class _UpgradeShopState extends State<UpgradeShop>
                             ),
                             const SizedBox(width: 8),
                             GameTheme.closeButton(
-                                onTap: () => game.toggleShop()),
+                                onTap: _animatedClose),
                           ],
                         ),
                       ),
@@ -166,10 +172,18 @@ class _UpgradeShopState extends State<UpgradeShop>
       game.saveGame();
       game.soundManager.playPurchase();
       UIEffectManager.instance.spawnParticleBurst(
-        position: const Offset(400, 300),
+        relX: 0.75,
+        relY: 0.5,
         color: const Color(0xFF66BB6A),
         count: 8,
         spread: 40,
+      );
+      UIEffectManager.instance.spawnCoinFly(
+        fromRelX: 0.75,
+        fromRelY: 0.5,
+        toRelX: 0.85,
+        toRelY: 0.03,
+        count: 4,
       );
       if (bought >= 10) {
         UIEffectManager.instance.spawnImpactText(

@@ -28,6 +28,12 @@ class _CompanionScreenState extends State<CompanionScreen>
     )..forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.closeCompanionScreen();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -101,7 +107,7 @@ class _CompanionScreenState extends State<CompanionScreen>
                           ),
                           const SizedBox(width: 8),
                           GameTheme.closeButton(
-                              onTap: () => game.closeCompanionScreen()),
+                              onTap: _animatedClose),
                         ],
                       ),
                     ),
@@ -394,7 +400,7 @@ class _CompanionScreenState extends State<CompanionScreen>
                   manager.equip(owned.id);
                   widget.game.soundManager.playEquip();
                   UIEffectManager.instance.spawnGlowRing(
-                    center: const Offset(600, 300),
+                    relX: 0.75, relY: 0.5,
                     color: rarityColor,
                   );
                 }
@@ -507,7 +513,7 @@ class _CompanionScreenState extends State<CompanionScreen>
       widget.game.saveGame();
       widget.game.soundManager.playLevelUp();
       UIEffectManager.instance.spawnParticleBurst(
-        position: const Offset(600, 250),
+        relX: 0.75, relY: 0.4,
         color: const Color(0xFFFF9800),
         count: 10,
         spread: 50,

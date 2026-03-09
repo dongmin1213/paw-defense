@@ -27,6 +27,12 @@ class _SoulShopState extends State<SoulShop>
     )..forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.closeSoulShop();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -86,7 +92,7 @@ class _SoulShopState extends State<SoulShop>
                           ),
                           const SizedBox(width: 8),
                           GameTheme.closeButton(
-                              onTap: () => game.closeSoulShop()),
+                              onTap: _animatedClose),
                         ],
                       ),
                     ),
@@ -556,13 +562,13 @@ class _SoulShopState extends State<SoulShop>
       widget.game.saveGame();
       widget.game.soundManager.playPurchase();
       UIEffectManager.instance.spawnParticleBurst(
-        position: const Offset(400, 300),
+        relX: 0.5, relY: 0.5,
         color: const Color(0xFFCE93D8),
         count: 12,
         spread: 50,
       );
       UIEffectManager.instance.spawnGlowRing(
-        center: const Offset(400, 300),
+        relX: 0.5, relY: 0.5,
         color: const Color(0xFFCE93D8),
       );
       setState(() {});

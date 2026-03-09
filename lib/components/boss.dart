@@ -182,7 +182,7 @@ class Boss extends PositionComponent
       game.ascensionManager.souls += soulReward.toInt();
       UIEffectManager.instance.spawnFloatingText(
         text: '+${soulReward.toInt()} SOUL',
-        position: Offset(position.x.toDouble(), position.y.toDouble() - 30),
+        relX: 0.5, relY: 0.25,
         color: const Color(0xFFCE93D8),
         fontSize: 14,
       );

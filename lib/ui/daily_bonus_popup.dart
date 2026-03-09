@@ -174,7 +174,11 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
                       else
                         GameTheme.pixelButton(
                           label: 'OK',
-                          onTap: () => widget.game.closeDailyBonus(),
+                          onTap: () {
+                            _controller.reverse().then((_) {
+                              if (mounted) widget.game.closeDailyBonus();
+                            });
+                          },
                           gradient: GameTheme.gradientPrimary,
                           fontSize: 10,
                           horizontalPad: 32,
@@ -283,7 +287,7 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
     // 사운드 + UI 이펙트
     widget.game.soundManager.playDailyClaim();
     UIEffectManager.instance.spawnParticleBurst(
-      position: const Offset(400, 300),
+      relX: 0.5, relY: 0.5,
       color: const Color(0xFFFFD54F),
       count: 16,
       spread: 60,

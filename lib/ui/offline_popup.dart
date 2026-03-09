@@ -200,12 +200,19 @@ class _OfflinePopupState extends State<OfflinePopup>
     widget.game.totalCoinsEarned += widget.reward.coins * multiplier;
     widget.game.soundManager.playCoinCollect(isBig: true);
     UIEffectManager.instance.spawnParticleBurst(
-      position: const Offset(400, 300),
+      relX: 0.5, relY: 0.5,
       color: const Color(0xFFFFD54F),
       count: 16,
       spread: 60,
     );
-    widget.game.closeOfflinePopup();
+    UIEffectManager.instance.spawnCoinFly(
+      fromRelX: 0.5, fromRelY: 0.45,
+      toRelX: 0.85, toRelY: 0.03,
+      count: 8,
+    );
+    _controller.reverse().then((_) {
+      if (mounted) widget.game.closeOfflinePopup();
+    });
   }
 
   void _collectWithAd() {

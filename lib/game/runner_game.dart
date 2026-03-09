@@ -128,6 +128,13 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void startGame() {
     overlays.remove('MainMenu');
 
+    // Screen transition flash
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFF000000),
+      duration: 0.5,
+      maxAlpha: 0.6,
+    );
+
     // Show offline reward popup if pending
     if (pendingOfflineReward != null) {
       overlays.add('OfflinePopup');
@@ -481,7 +488,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void closeAscensionScreen() {
     overlays.remove('AscensionScreen');
     if (!isPlaying) {
-      // After ascension, go to main menu
+      // After ascension, go to main menu with transition
+      UIEffectManager.instance.screenFlash(
+        color: const Color(0xFF000000),
+        duration: 0.4,
+        maxAlpha: 0.5,
+      );
       overlays.add('MainMenu');
     } else {
       resumeEngine();
