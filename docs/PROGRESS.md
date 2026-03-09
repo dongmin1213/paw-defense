@@ -1,6 +1,6 @@
 # Implementation Progress
 
-> 39개 Dart 파일, ~6900줄. Phase 1~6 모두 완료. 아래는 파일별 구현 상세 체크리스트.
+> 41개 Dart 파일, ~7200줄. Phase 1~7 모두 완료. 아래는 파일별 구현 상세 체크리스트.
 
 ---
 
@@ -8,13 +8,13 @@
 
 Core auto-runner: 자동 달리기, 적 처치, 코인 수집, 콤보, 장애물.
 
-- [x] `utils/constants.dart` — 월드(800x600), 물리(중력980, 점프-420), 바닥Y(500), 디스폰 거리
+- [x] `utils/constants.dart` — 월드(800x600), 물리(중력1100, 점프-520, 속도180), 바닥Y(500), 디스폰 거리
 - [x] `data/balance_config.dart` — 공중적 코인x3, 콤보 0.05/스택, 리셋3초, 적극x1.5, 속도 커브
 - [x] `data/enemy_data.dart` — EnemyData 클래스 + 초원 적 4종 (슬라임/버섯/새/나비)
 - [x] `data/region_data.dart` — 5개 지역 정의 (초원x1 ~ 화산x100 배율)
-- [x] `renderers/player_renderer.dart` — 비숏 Canvas 드로잉 (달리기/점프 애니)
-- [x] `renderers/enemy_renderer.dart` — 적 Canvas 드로잉 (4종 기본)
-- [x] `renderers/coin_renderer.dart` — 코인 Canvas 드로잉 (회전 애니)
+- [x] `renderers/player_renderer.dart` — 비숏 픽셀아트 스프라이트 (idle/run1/run2/jump/attack)
+- [x] `renderers/enemy_renderer.dart` — 적 픽셀아트 스프라이트 (20종, 2프레임 애니)
+- [x] `renderers/coin_renderer.dart` — 코인 픽셀아트 (12x12, 외곽선+하이라이트, 2프레임)
 - [x] `game/runner_game.dart` — FlameGame, FixedResolutionViewport(800x600), 카메라 추적, TapCallbacks, 방치/적극 모드 감지 (5초), addCoins(), addCombo()
 - [x] `components/runner_player.dart` — 자동 이동, 중력/점프, 더블점프, 자동공격 (적 충돌 시), 장애물 속도감소
 - [x] `components/ground_segment.dart` — 400px 바닥 블록, 카메라 뒤 → 앞 재배치 (무한 스크롤)
@@ -61,10 +61,10 @@ Core auto-runner: 자동 달리기, 적 처치, 코인 수집, 콤보, 장애물
 
 - [x] `data/companion_data.dart` — 동료 10종 (일반3/레어3/에픽2/전설2), 희귀도/레벨업 비용/버프 타입
 - [x] `systems/companion_manager.dart` — 수집/장착(1~4슬롯, 소울로 확장)/레벨업/7종 버프 계산
-- [x] `renderers/companion_renderer.dart` — 10종 동료 Canvas 드로잉
+- [x] `renderers/companion_renderer.dart` — 10종 동료 픽셀아트 스프라이트
 - [x] `components/companion_pickup.dart` — 필드 동료 (적극 플레이 시만, 평균 2분 주기), 희귀도별 글로우, 수집 팝업
 - [x] `components/boss.dart` — 500m마다 등장, HP 바 + 타이머 바, 자동공격(0.5초) + 탭 추가공격(x2 DPS), 10초 제한, 코인 폭발(8~12개), 지역별 HP/보상 스케일링
-- [x] `renderers/boss_renderer.dart` — 5지역 보스 렌더링 (킹슬라임/트렌트/스핑크스/이무기/드래곤)
+- [x] `renderers/boss_renderer.dart` — 5지역 보스 픽셀아트 렌더링 (킹슬라임/트렌트/스핑크스/이무기/드래곤)
 - [x] `ui/companion_screen.dart` — 장착/해제 + 도감 그리드 + 레벨업
 - [x] enemy.dart — isGolden 플래그, x10 보상, 금색 글로우 이펙트
 - [x] level_generator.dart — 동료 스폰(2분 평균, 적극 시만), 보스 스폰(500m마다), 황금 적(2%)
@@ -90,12 +90,30 @@ Core auto-runner: 자동 달리기, 적 처치, 코인 수집, 콤보, 장애물
 
 - [x] `systems/offline_reward.dart` — CpS 계산 (적출현율 × 코인 × 모든배율 × 0.3), 최소60초, 최대24시간
 - [x] `ui/offline_popup.dart` — 복귀 팝업 (경과시간/코인 표시, "수령" / "x2 수령" 버튼)
-- [x] `components/particle_effect.dart` — 5종 파티클: 코인수집(금색)/적처치(적 색상)/보스폭발(다색)/먼지(갈색)/콤보(황금)
+- [x] `components/particle_effect.dart` — 5종 픽셀 파티클: 코인수집(금색 10개)/적처치(적 색상)/보스폭발(다색)/먼지(갈색)/콤보(황금)
 - [x] 특수 이벤트 3종: 골든 아워(20초, 적 100%황금), 유성우(30초, 하늘 코인), 동료 집회(60초, 출현5x)
 - [x] runner_game.dart — 날씨/파티클/이벤트/오프라인 전체 통합, 이벤트 ~10분 평균 + 5분 쿨다운
 - [x] level_generator.dart — 골든아워(적 100% 황금), 동료집회(스폰 5x), 폭풍(장애물 x2)
 - [x] runner_hud.dart — 날씨/시간 좌하단 표시, 이벤트 배너(이름+카운트다운)
 - [x] main.dart — OfflinePopup 오버레이 등록 (총 7개 오버레이)
+
+## Phase 7: 픽셀아트 비주얼 + 게임필 개선 ✅
+
+프로시저럴 Canvas 드로잉 → 픽셀아트 스프라이트 전환. 속도/점프 체감 개선.
+
+- [x] `utils/pixel_art.dart` — PixelArt 유틸: 문자열 배열 + 색상 팔레트 맵 기반 블록 렌더링, drawCentered/drawGlow/drawShadow
+- [x] `renderers/player_renderer.dart` — 비숏 5프레임 픽셀아트 (idle/run1/run2/jump/attack), 검 포함
+- [x] `renderers/enemy_renderer.dart` — 20종 적 픽셀아트 (각 2프레임), 황금 팔레트 변환, 피격 시 흰색 팔레트
+- [x] `renderers/coin_renderer.dart` — 12x12 픽셀 코인 (외곽선O/골드Y/하이라이트s), 2프레임
+- [x] `renderers/companion_renderer.dart` — 10종 동료 픽셀아트 (각 2프레임)
+- [x] `renderers/boss_renderer.dart` — 5종 보스 픽셀아트 (각 2프레임)
+- [x] `components/parallax_layer.dart` — 배경 전면 개편: 밴드형 하늘 그라디언트, 픽셀 구름, 계단식 산 실루엣, 나무 실루엣, 풀잎 변색
+- [x] `components/ground_segment.dart` — 돌담 패턴 (벽돌 모르타르 + 하이라이트/그림자) + 풀잎 상단 스트립
+- [x] `components/particle_effect.dart` — 사각형 픽셀 파티클로 전환, 코인 수집 파티클 10개 + 3색
+- [x] `components/weather_effect.dart` — 날씨 파티클 사각형으로 전환 (isAntiAlias=false)
+- [x] `utils/constants.dart` — 기본 속도 120→180, 점프력 420→520, 중력 980→1100
+- [x] `data/balance_config.dart` — 속도 곡선 강화 (0.15→0.25, 200→150)
+- [x] `systems/level_generator.dart` — 공중적 스폰 Y 조정 (80-140→60-90, 점프로 확실히 도달 가능)
 
 ---
 
@@ -135,3 +153,4 @@ Core auto-runner: 자동 달리기, 적 처치, 코인 수집, 콤보, 장애물
 | `3863d54` | feat: Phase 3 — 초월, 소울, 5지역, 패럴랙스 |
 | `b937464` | feat: Phase 4 — 동료, 보스, 황금 적 |
 | `0a3fffe` | feat: Phase 5+6 — 날씨/시간, 오프라인, 파티클, 이벤트 |
+| `9808b07` | feat: Phase 7 — 픽셀아트 비주얼 전환 + 게임필 개선 |

@@ -11,7 +11,7 @@
 ## 디렉토리 구조
 
 ```
-lib/                              # ~6900줄, 39파일
+lib/                              # ~7200줄, 41파일
 ├── main.dart                     # 앱 진입점 — GameWidget + 7개 오버레이 등록
 ├── game/
 │   └── runner_game.dart          # FlameGame 메인 (466줄)
@@ -20,15 +20,15 @@ lib/                              # ~6900줄, 39파일
 │                                 #   모든 매니저 보유 (upgrade/ascension/companion/weather/ad/save)
 ├── components/                   # Flame PositionComponent 엔티티
 │   ├── runner_player.dart        # 비숏 — 자동 달리기, 중력/점프, 자동 공격, 충돌 핸들링
-│   ├── ground_segment.dart       # 400px 바닥 블록, 무한 재배치
+│   ├── ground_segment.dart       # 400px 바닥 블록, 무한 재배치, 픽셀아트 돌담+풀잎 폴백
 │   ├── enemy.dart                # 몬스터 — 바닥/공중, HP, 피격 플래시, 코인 스폰, 황금
 │   ├── coin.dart                 # 코인 — 호버 애니, 수집 "+N" 팝업 (ParagraphBuilder)
 │   ├── obstacle.dart             # 바위 — 적극 플레이 시만, 충돌→2초 속도 50%
-│   ├── parallax_layer.dart       # 3레이어 프로시저럴 패럴랙스 (지역별 색상)
+│   ├── parallax_layer.dart       # 3레이어 픽셀아트 패럴랙스 (구름/산/풀잎/나무)
 │   ├── companion_pickup.dart     # 필드 동료 — 희귀도 글로우, 수집 팝업
 │   ├── boss.dart                 # 보스 — HP바/타이머바, 자동+탭 공격, 10초 제한
 │   ├── weather_effect.dart       # 날씨 파티클 + 시간대 오버레이 (priority 50)
-│   └── particle_effect.dart      # FX 파티클 — 5종 이펙트 (priority 60)
+│   └── particle_effect.dart      # FX 사각 픽셀 파티클 — 5종 이펙트 (priority 60)
 ├── data/                         # ★ 데이터 정의 — 컨텐츠 추가 = 여기만 수정
 │   ├── balance_config.dart       # ★ 밸런스 수치 전부 한 곳
 │   ├── enemy_data.dart           # 적 20종 (EnemyData + EnemyDatabase)
@@ -36,12 +36,12 @@ lib/                              # ~6900줄, 39파일
 │   ├── upgrade_data.dart         # 일반 업그레이드 7종 (UpgradeData)
 │   ├── soul_upgrade_data.dart    # 영구 업그레이드 13종 (SoulUpgradeData)
 │   └── companion_data.dart       # 동료 10종 (CompanionData)
-├── renderers/                    # ★ 렌더링 분리 — 스프라이트 교체 = 여기만 수정
-│   ├── player_renderer.dart      # 비숏 Canvas 드로잉 (static 메서드)
-│   ├── enemy_renderer.dart       # 적 20종 + 황금 적 (static 메서드)
-│   ├── coin_renderer.dart        # 코인 회전 애니 (static 메서드)
-│   ├── companion_renderer.dart   # 동료 10종 (static 메서드)
-│   └── boss_renderer.dart        # 보스 5종 (static 메서드)
+├── renderers/                    # ★ 픽셀아트 렌더링 — 스프라이트 교체 = 여기만 수정
+│   ├── player_renderer.dart      # 비숏 픽셀아트 5프레임 (PixelArt 기반)
+│   ├── enemy_renderer.dart       # 적 20종 픽셀아트 + 황금/피격 팔레트 변환
+│   ├── coin_renderer.dart        # 코인 12x12 픽셀아트 2프레임
+│   ├── companion_renderer.dart   # 동료 10종 픽셀아트 2프레임
+│   └── boss_renderer.dart        # 보스 5종 픽셀아트 2프레임
 ├── systems/                      # 게임 시스템 매니저
 │   ├── level_generator.dart      # 절차적 배치 — 적/코인/장애물/동료/보스
 │   ├── upgrade_manager.dart      # 일반 업글 — 레벨/비용/배율 getter
@@ -59,6 +59,10 @@ lib/                              # ~6900줄, 39파일
     ├── companion_screen.dart     # 동료 관리 — 장착/도감/레벨업
     ├── offline_popup.dart        # 오프라인 복귀 팝업
     └── main_menu.dart            # 타이틀 화면 + 통계 + 시작
+└── utils/
+    ├── constants.dart            # 월드(800x600), 물리(중력1100, 점프-520, 속도180)
+    ├── pixel_art.dart            # ★ 픽셀아트 유틸 — 문자맵 스프라이트 블록 렌더링
+    └── sprite_loader.dart        # 이미지 로드 (폴백 → 픽셀아트 렌더러 사용)
 ```
 
 ---
@@ -79,20 +83,31 @@ EnemyData(
 ),
 ```
 
-### 2. 렌더러 분리
+### 2. 픽셀아트 렌더러 분리
 게임 오브젝트의 렌더링을 별도 static 클래스로 분리.
-현재는 Canvas API 프로시저럴 렌더링, 나중에 스프라이트로 교체 가능.
+`PixelArt` 유틸을 사용한 **문자맵 기반 픽셀아트 스프라이트** 렌더링.
 
 ```dart
-// 현재: 프로시저럴 (Canvas 도형)
-class EnemyRenderer {
-  static void render(Canvas canvas, Size size, EnemyData data, {
-    required double animTimer, required bool isHit, required bool isGolden,
-  }) { /* Canvas API 드로잉 */ }
-}
+// 스프라이트는 문자열 배열로 정의 ('.' = 투명)
+static const _sprite = [
+  '..OOO..',
+  '.OOEOO.',
+  '.OOOOO.',
+];
+static const _palette = {
+  'O': Color(0xFF4CAF50),
+  'E': Color(0xFF1A1A1A),
+};
 
-// 나중에: 렌더러 파일만 교체하면 스프라이트 적용 가능
+// 렌더링: PixelArt.drawCentered()
+class EnemyRenderer {
+  static void render(Canvas canvas, Size size, EnemyData data, {...}) {
+    PixelArt.drawCentered(canvas, sprite, palette, size, pixelSize: px);
+  }
+}
 ```
+- 스프라이트 추가 = 문자열 배열 + 팔레트 맵만 정의
+- 황금 적/피격 시 팔레트를 자동 변환하는 헬퍼 내장
 
 ### 3. 밸런스 중앙 관리
 `balance_config.dart`에 모든 게임 수치 집중. 밸런스 조정 = 이 파일만 수정.
