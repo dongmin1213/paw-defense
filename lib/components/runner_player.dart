@@ -70,9 +70,15 @@ class RunnerPlayer extends PositionComponent
 
     // Ground collision
     final groundLevel = GameConstants.groundY - size.y;
+    final wasAirborne = !_isOnGround;
     if (position.y >= groundLevel) {
       position.y = groundLevel;
       velocityY = 0;
+      if (wasAirborne) {
+        game.gameFeel.onLanding();
+        game.particleEffect.spawnDustTrail(position.x, position.y + size.y);
+        game.particleEffect.spawnDustTrail(position.x + 5, position.y + size.y);
+      }
       _isOnGround = true;
       _hasDoubleJumped = false;
     } else {
@@ -132,6 +138,7 @@ class RunnerPlayer extends PositionComponent
       animTimer: _animTimer,
       isJumping: !_isOnGround,
       isAttacking: _isAttacking,
+      combo: game.combo,
     );
   }
 
@@ -148,6 +155,8 @@ class RunnerPlayer extends PositionComponent
       }
       applySlowdown();
       game.gameFeel.onObstacleHit();
+      game.soundManager.playObstacleHit();
+      game.missionManager.onObstacleHit();
     } else if (other is Coin) {
       other.collect();
     } else if (other is CompanionPickup) {

@@ -60,30 +60,38 @@ class GameFeelSystem extends Component with HasGameReference<RunnerGame> {
     }
   }
 
-  /// 적 처치 시 약한 쉐이크
+  /// 적 처치 시 — 콤보에 비례하여 쉐이크 증폭
   void onEnemyKill({bool isGolden = false, bool isAir = false}) {
+    final comboScale = 1.0 + game.combo * 0.03; // 콤보 30 = 1.9x
     if (isGolden) {
-      shake(intensity: 6, duration: 0.25);
-      hitStop(duration: 0.06);
+      shake(intensity: 7 * comboScale, duration: 0.3);
+      hitStop(duration: 0.08);
+      zoomPunch(targetZoom: 1.03, duration: 0.2);
     } else if (isAir) {
-      shake(intensity: 3, duration: 0.12);
+      shake(intensity: 3.5 * comboScale, duration: 0.15);
+      hitStop(duration: 0.03);
     } else {
-      shake(intensity: 2, duration: 0.08);
+      shake(intensity: 2 * comboScale, duration: 0.1);
     }
   }
 
   /// 보스 피격
   void onBossHit() {
-    shake(intensity: 3, duration: 0.1);
-    hitStop(duration: 0.03);
+    shake(intensity: 4, duration: 0.12);
+    hitStop(duration: 0.04);
   }
 
   /// 보스 처치 — 극적 연출
   void onBossKill() {
-    shake(intensity: 12, duration: 0.5, frequency: 30);
-    hitStop(duration: 0.15);
-    slowMotion(scale: 0.3, duration: 0.8);
-    zoomPunch(targetZoom: 1.05, duration: 0.4);
+    shake(intensity: 15, duration: 0.6, frequency: 25);
+    hitStop(duration: 0.25);
+    slowMotion(scale: 0.2, duration: 1.0);
+    zoomPunch(targetZoom: 1.08, duration: 0.5);
+  }
+
+  /// 착지 임팩트
+  void onLanding() {
+    shake(intensity: 1.5, duration: 0.06);
   }
 
   /// 장애물 충돌
@@ -177,9 +185,14 @@ class GameFeelSystem extends Component with HasGameReference<RunnerGame> {
     final milestone = (combo ~/ 10) * 10;
     if (milestone > 0 && milestone > _lastComboMilestone) {
       _lastComboMilestone = milestone;
-      shake(intensity: 5, duration: 0.15);
-      zoomPunch(targetZoom: 1.03, duration: 0.2);
-      // 파티클은 runner_game에서 이미 처리
+      // 마일스톤이 높을수록 더 강한 피드백
+      final tier = (milestone / 10).clamp(1, 5).toDouble();
+      shake(intensity: 4 + tier * 2, duration: 0.15 + tier * 0.03);
+      zoomPunch(targetZoom: 1.02 + tier * 0.01, duration: 0.25);
+      if (milestone >= 30) {
+        hitStop(duration: 0.06);
+        slowMotion(scale: 0.7, duration: 0.3);
+      }
     }
     if (combo == 0) {
       _lastComboMilestone = 0;

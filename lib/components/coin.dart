@@ -38,9 +38,22 @@ class Coin extends PositionComponent
     _animTimer += dt;
 
     if (!_collected) {
-      // Hover animation
-      _hoverOffset = sin(_animTimer * 4) * 3;
+      // Hover animation — 콤보 높으면 빠르게 회전
+      final comboSpeed = 1.0 + game.combo * 0.05;
+      _hoverOffset = sin(_animTimer * 4 * comboSpeed) * 3;
       position.y += _hoverOffset * dt * 2;
+
+      // 코인 자석 — 플레이어 근처면 끌어당기기
+      final magnetRange = 80.0 + game.upgradeManager.coinMagnetRadius;
+      final dx = game.player.position.x - position.x;
+      final dy = game.player.position.y - position.y;
+      final dist = dx * dx + dy * dy;
+      if (dist < magnetRange * magnetRange && dist > 1) {
+        final pullSpeed = 300.0;
+        final d = sqrt(dist);
+        position.x += (dx / d) * pullSpeed * dt;
+        position.y += (dy / d) * pullSpeed * dt;
+      }
 
       // Cleanup if behind camera
       final cameraX = game.camera.viewfinder.position.x;
@@ -66,6 +79,12 @@ class Coin extends PositionComponent
     _popupAlpha = 1.0;
 
     game.addCoins(value);
+    game.soundManager.playCoinCollect(isBig: value >= 10);
+
+    // 코인 수집 미세 쉐이크 — 큰 코인은 더 강하게
+    if (value >= 10) {
+      game.gameFeel.shake(intensity: 1.5, duration: 0.06);
+    }
 
     // Collect particles
     game.particleEffect.spawnCoinCollect(position.x, position.y);
@@ -79,19 +98,27 @@ class Coin extends PositionComponent
     if (!_collected) {
       CoinRenderer.render(canvas, Size(size.x, size.y), animTimer: _animTimer);
     } else {
-      // Render popup text "+N"
+      // Render popup text "+N" — 스케일 바운스 + 큰 폰트
+      final popupScale = _popupTimer < 0.1
+          ? 1.0 + (1.0 - _popupTimer / 0.1) * 0.4 // 처음 1.4x → 1.0x
+          : 1.0;
+      final baseFontSize = value >= 10 ? 20.0 : 16.0;
       final style = ParagraphStyle(textAlign: TextAlign.center);
       final textStyle = TextStyle(
         color: Color.fromRGBO(255, 215, 0, _popupAlpha),
-        fontSize: 14,
+        fontSize: baseFontSize * popupScale,
         fontWeight: FontWeight.bold,
+        shadows: [
+          Shadow(color: Color.fromRGBO(0, 0, 0, _popupAlpha * 0.8), blurRadius: 3),
+          Shadow(color: Color.fromRGBO(255, 200, 0, _popupAlpha * 0.4), blurRadius: 8),
+        ],
       );
       final builder = ParagraphBuilder(style)
         ..pushStyle(textStyle)
         ..addText('+${value.toInt()}');
       final paragraph = builder.build()
-        ..layout(const ParagraphConstraints(width: 60));
-      canvas.drawParagraph(paragraph, Offset(-22, _popupY));
+        ..layout(const ParagraphConstraints(width: 80));
+      canvas.drawParagraph(paragraph, Offset(-32, _popupY));
     }
   }
 }

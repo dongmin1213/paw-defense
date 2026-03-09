@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../systems/daily_bonus_manager.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class DailyBonusPopup extends StatefulWidget {
   final RunnerGame game;
@@ -59,10 +60,11 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
                 opacity: _fade.value,
                 child: Container(
                   width: 340,
-                  padding: const EdgeInsets.all(20),
-                  decoration: GameTheme.panelDecoration(
-                    borderColor: GameTheme.accentGold.withValues(alpha: 0.3),
-                    borderRadius: 20,
+                  padding: const EdgeInsets.all(18),
+                  decoration: GameTheme.pixelPanelDecoration(
+                    fillColor: GameTheme.bgPanel,
+                    glow: true,
+                    glowColor: GameTheme.accentGold,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -72,65 +74,78 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.calendar_today_rounded,
-                              color: GameTheme.accentGold, size: 24),
+                              color: GameTheme.accentGold, size: 20),
                           const SizedBox(width: 8),
-                          Text('일일 보너스',
-                              style: GameTheme.titleMedium.copyWith(
+                          Text('DAILY BONUS',
+                              style: GameTheme.pixel(
+                                  fontSize: 12,
                                   color: GameTheme.accentGold)),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('연속 출석: ${streak > 0 ? streak : 1}일째',
-                          style: GameTheme.bodySmall),
-                      const SizedBox(height: 16),
+                      Text(
+                        'STREAK: ${streak > 0 ? streak : 1}',
+                        style: GameTheme.pixel(
+                            fontSize: 7, color: GameTheme.textMuted),
+                      ),
+                      const SizedBox(height: 14),
 
                       // 7일 캘린더
                       _buildDayCalendar(daily),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
 
                       // 보상 표시
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: GameTheme.cardDecoration(
-                          borderColor: GameTheme.accentGold.withValues(alpha: 0.2),
-                          glow: true,
+                        padding: const EdgeInsets.all(12),
+                        decoration: GameTheme.pixelPanelDecoration(
+                          fillColor: GameTheme.accentGold
+                              .withValues(alpha: 0.06),
+                          glow: !_claimed,
                           glowColor: GameTheme.accentGold,
                         ),
                         child: Column(
                           children: [
                             Text(
-                              _claimed ? '보상 수령 완료!' : '오늘의 보상',
-                              style: GameTheme.labelBold.copyWith(
-                                color: _claimed ? GameTheme.accentGreen : GameTheme.accentGold,
+                              _claimed ? 'CLAIMED!' : 'TODAY',
+                              style: GameTheme.pixel(
+                                fontSize: 8,
+                                color: _claimed
+                                    ? GameTheme.accentGreen
+                                    : GameTheme.accentGold,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.monetization_on,
-                                    color: GameTheme.accentGold, size: 22),
+                                    color: GameTheme.accentGold,
+                                    size: 20),
                                 const SizedBox(width: 6),
                                 Text(
                                   _claimed
-                                      ? GameTheme.formatNumber(_result!.coins)
+                                      ? GameTheme.formatNumber(
+                                          _result!.coins)
                                       : '${reward.coins}',
-                                  style: GameTheme.numberLarge.copyWith(fontSize: 24),
+                                  style: GameTheme.pixel(
+                                      fontSize: 14,
+                                      color: GameTheme.accentGold),
                                 ),
                                 if (reward.souls > 0) ...[
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 14),
                                   Icon(Icons.auto_awesome,
-                                      color: GameTheme.accentPurple, size: 20),
+                                      color: GameTheme.accentPurple,
+                                      size: 18),
                                   const SizedBox(width: 4),
                                   Text(
                                     '+${reward.souls}',
-                                    style: TextStyle(
-                                      color: GameTheme.accentPurple,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                    style: GameTheme.pixel(
+                                        fontSize: 12,
+                                        color:
+                                            GameTheme.accentPurple),
                                   ),
                                 ],
                               ],
@@ -139,24 +154,35 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
 
                       // 버튼
                       if (!_claimed)
-                        GameTheme.gameButton(
-                          label: '받기',
-                          icon: Icons.card_giftcard,
-                          onTap: _claim,
-                          gradient: GameTheme.gradientGold,
-                          fontSize: 18,
-                          horizontalPad: 40,
+                        ShimmerGlow(
+                          glowColor: GameTheme.accentGold,
+                          intensity: 0.2,
+                          child: GameTheme.pixelButton(
+                            label: 'CLAIM',
+                            icon: Icons.card_giftcard,
+                            onTap: _claim,
+                            gradient: GameTheme.gradientGold,
+                            fontSize: 10,
+                            horizontalPad: 32,
+                            verticalPad: 10,
+                          ),
                         )
                       else
-                        GameTheme.gameButton(
-                          label: '확인',
-                          onTap: () => widget.game.closeDailyBonus(),
+                        GameTheme.pixelButton(
+                          label: 'OK',
+                          onTap: () {
+                            _controller.reverse().then((_) {
+                              if (mounted) widget.game.closeDailyBonus();
+                            });
+                          },
                           gradient: GameTheme.gradientPrimary,
-                          fontSize: 16,
+                          fontSize: 10,
+                          horizontalPad: 32,
+                          verticalPad: 10,
                         ),
                     ],
                   ),
@@ -176,7 +202,9 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
         final day = i + 1;
         final reward = DailyBonusManager.rewards[i];
         final isClaimed = daily.streak >= day && daily.hasClaimed;
-        final isToday = !_claimed && ((daily.streak % 7) + 1 == day || (daily.streak == 0 && day == 1));
+        final isToday = !_claimed &&
+            ((daily.streak % 7) + 1 == day ||
+                (daily.streak == 0 && day == 1));
 
         Color bg;
         Color border;
@@ -191,38 +219,54 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
           textColor = GameTheme.accentGold;
         } else {
           bg = GameTheme.bgCard;
-          border = Colors.white.withValues(alpha: 0.04);
+          border = GameTheme.pixelBorder;
           textColor = GameTheme.textMuted;
         }
 
         return Container(
-          width: 38,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          width: 36,
+          padding: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: border, width: isToday ? 1.5 : 1),
+            border: Border.all(
+                color: border, width: isToday ? 2 : 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: GameTheme.pixelShadow.withValues(alpha: 0.5),
+                offset: const Offset(1, 1),
+                blurRadius: 0,
+              ),
+            ],
           ),
           child: Column(
             children: [
-              Text('$day일', style: TextStyle(
-                color: textColor, fontSize: 9, fontWeight: FontWeight.w700,
-              )),
+              Text('D$day',
+                  style: GameTheme.pixel(
+                      fontSize: 5, color: textColor)),
               const SizedBox(height: 3),
               if (isClaimed)
-                Icon(Icons.check, color: GameTheme.accentGreen, size: 14)
+                Container(
+                  width: 12,
+                  height: 12,
+                  color: GameTheme.accentGreen,
+                  child: const Icon(Icons.check,
+                      color: Colors.white, size: 10),
+                )
               else
                 Icon(
-                  reward.souls > 0 ? Icons.auto_awesome : Icons.monetization_on,
-                  color: reward.souls > 0 ? GameTheme.accentPurple : GameTheme.accentGold,
-                  size: 14,
+                  reward.souls > 0
+                      ? Icons.auto_awesome
+                      : Icons.monetization_on,
+                  color: reward.souls > 0
+                      ? GameTheme.accentPurple
+                      : GameTheme.accentGold,
+                  size: 12,
                 ),
               const SizedBox(height: 2),
               Text(
                 '${reward.coins}',
-                style: TextStyle(
-                  color: textColor, fontSize: 8, fontWeight: FontWeight.w600,
-                ),
+                style: GameTheme.pixel(
+                    fontSize: 5, color: textColor),
               ),
             ],
           ),
@@ -239,6 +283,21 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
     }
     widget.game.achievementManager.onDailyStreak(result.streak);
     widget.game.saveGame();
+
+    // 사운드 + UI 이펙트
+    widget.game.soundManager.playDailyClaim();
+    UIEffectManager.instance.spawnParticleBurst(
+      relX: 0.5, relY: 0.5,
+      color: const Color(0xFFFFD54F),
+      count: 16,
+      spread: 60,
+    );
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFFFFD54F),
+      duration: 0.25,
+      maxAlpha: 0.3,
+    );
+
     setState(() {
       _claimed = true;
       _result = result;

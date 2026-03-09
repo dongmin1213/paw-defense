@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../data/upgrade_data.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class UpgradeShop extends StatefulWidget {
   final RunnerGame game;
@@ -33,6 +34,12 @@ class _UpgradeShopState extends State<UpgradeShop>
     _entryController.forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.toggleShop();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -53,80 +60,91 @@ class _UpgradeShopState extends State<UpgradeShop>
             offset: Offset(0, _slideUp.value),
             child: Opacity(
               opacity: _fade.value,
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    // ── 헤더 ──
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: GameTheme.accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.shopping_bag_rounded,
-                                color: GameTheme.accent, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('업그레이드',
-                                  style: GameTheme.titleMedium
-                                      .copyWith(fontSize: 20)),
-                              Text(
-                                '능력을 강화하여 더 빠르게 성장하세요',
-                                style: GameTheme.bodySmall,
+              child: RetroScanlines(
+                opacity: 0.02,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // ── 헤더 ──
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: GameTheme.pixelCardDecoration(
+                                fillColor:
+                                    GameTheme.accent.withValues(alpha: 0.15),
+                                borderColor:
+                                    GameTheme.accent.withValues(alpha: 0.3),
                               ),
-                            ],
-                          ),
-                          const Spacer(),
-                          GameTheme.currencyDisplay(
-                            value: GameTheme.formatNumber(game.coins),
-                          ),
-                          const SizedBox(width: 8),
-                          GameTheme.closeButton(
-                              onTap: () => game.toggleShop()),
-                        ],
+                              child: const Icon(Icons.shopping_bag_rounded,
+                                  color: GameTheme.accent, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('UPGRADE',
+                                    style: GameTheme.pixel(
+                                        fontSize: 12,
+                                        color: GameTheme.accent)),
+                                Text(
+                                  '능력을 강화하여 더 빠르게 성장하세요',
+                                  style: GameTheme.bodySmall
+                                      .copyWith(fontSize: 10),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            GameTheme.pixelCurrency(
+                              value: GameTheme.formatNumber(game.coins),
+                            ),
+                            const SizedBox(width: 8),
+                            GameTheme.closeButton(
+                                onTap: _animatedClose),
+                          ],
+                        ),
                       ),
-                    ),
 
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: GameTheme.accent.withValues(alpha: 0.1),
-                    ),
-
-                    // ── 업그레이드 리스트 ──
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                        itemCount: UpgradeDatabase.upgrades.length,
-                        itemBuilder: (context, index) {
-                          final data = UpgradeDatabase.upgrades[index];
-                          final level = manager.getLevel(data.id);
-                          final isMaxed = manager.isMaxed(data.id);
-                          final cost =
-                              isMaxed ? 0.0 : manager.getCost(data.id);
-                          final canBuy =
-                              manager.canAfford(data.id, game.coins);
-
-                          return _UpgradeCard(
-                            data: data,
-                            level: level,
-                            isMaxed: isMaxed,
-                            cost: cost,
-                            canBuy: canBuy,
-                            coins: game.coins,
-                            onBuy: (count) => _buyMultiple(data.id, count),
-                          );
-                        },
+                      Container(
+                        height: 2,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        color: GameTheme.pixelBorder,
                       ),
-                    ),
-                  ],
+
+                      // ── 업그레이드 리스트 ──
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                          itemCount: UpgradeDatabase.upgrades.length,
+                          itemBuilder: (context, index) {
+                            final data = UpgradeDatabase.upgrades[index];
+                            final level = manager.getLevel(data.id);
+                            final isMaxed = manager.isMaxed(data.id);
+                            final cost =
+                                isMaxed ? 0.0 : manager.getCost(data.id);
+                            final canBuy =
+                                manager.canAfford(data.id, game.coins);
+
+                            return StaggeredEntry(
+                              index: index,
+                              child: _UpgradeCard(
+                                data: data,
+                                level: level,
+                                isMaxed: isMaxed,
+                                cost: cost,
+                                canBuy: canBuy,
+                                coins: game.coins,
+                                onBuy: (count) =>
+                                    _buyMultiple(data.id, count),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -152,6 +170,29 @@ class _UpgradeShopState extends State<UpgradeShop>
     if (bought > 0) {
       game.applyUpgrades();
       game.saveGame();
+      game.soundManager.playPurchase();
+      UIEffectManager.instance.spawnParticleBurst(
+        relX: 0.75,
+        relY: 0.5,
+        color: const Color(0xFF66BB6A),
+        count: 8,
+        spread: 40,
+      );
+      UIEffectManager.instance.spawnCoinFly(
+        fromRelX: 0.75,
+        fromRelY: 0.5,
+        toRelX: 0.85,
+        toRelY: 0.03,
+        count: 4,
+      );
+      if (bought >= 10) {
+        UIEffectManager.instance.spawnImpactText(
+          text: 'x$bought UPGRADE!',
+          color: const Color(0xFF66BB6A),
+          fontSize: 16,
+          duration: 1.0,
+        );
+      }
       setState(() {});
     }
   }
@@ -239,37 +280,40 @@ class _UpgradeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = data.maxLevel > 1 ? level / data.maxLevel : (isMaxed ? 1.0 : 0.0);
+    final progress =
+        data.maxLevel > 1 ? level / data.maxLevel : (isMaxed ? 1.0 : 0.0);
     final maxCount = _maxBuyCount();
     final remaining = data.maxLevel - level;
     final buy10Count = remaining.clamp(0, 10);
-    final can10 = data.maxLevel > 1 && !isMaxed && buy10Count > 0 && coins >= _totalCost(buy10Count);
+    final can10 = data.maxLevel > 1 &&
+        !isMaxed &&
+        buy10Count > 0 &&
+        coins >= _totalCost(buy10Count);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isMaxed
+      decoration: GameTheme.pixelCardDecoration(
+        fillColor: isMaxed
             ? _upgradeColor.withValues(alpha: 0.08)
             : GameTheme.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMaxed
-              ? _upgradeColor.withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.05),
-        ),
+        borderColor: isMaxed
+            ? _upgradeColor.withValues(alpha: 0.4)
+            : GameTheme.pixelBorder,
+        glow: isMaxed,
+        glowColor: _upgradeColor,
       ),
       child: Row(
         children: [
           // 아이콘
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _upgradeColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
+            width: 38,
+            height: 38,
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: _upgradeColor.withValues(alpha: 0.15),
+              borderColor: _upgradeColor.withValues(alpha: 0.3),
             ),
-            child: Icon(_upgradeIcon, color: _upgradeColor, size: 20),
+            child: Icon(_upgradeIcon, color: _upgradeColor, size: 18),
           ),
           const SizedBox(width: 10),
 
@@ -281,23 +325,30 @@ class _UpgradeCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(data.name,
-                        style: GameTheme.labelBold.copyWith(fontSize: 14)),
+                        style:
+                            GameTheme.labelBold.copyWith(fontSize: 13)),
                     const SizedBox(width: 6),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: isMaxed
                             ? _upgradeColor.withValues(alpha: 0.2)
-                            : Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(4),
+                            : GameTheme.bgDeep,
+                        border: Border.all(
+                          color: isMaxed
+                              ? _upgradeColor.withValues(alpha: 0.4)
+                              : GameTheme.pixelBorder,
+                          width: 1,
+                        ),
                       ),
                       child: Text(
-                        isMaxed ? 'MAX' : 'Lv.$level/${data.maxLevel}',
-                        style: TextStyle(
-                          color: isMaxed ? _upgradeColor : GameTheme.textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                        isMaxed ? 'MAX' : 'Lv.$level',
+                        style: GameTheme.pixel(
+                          fontSize: 6,
+                          color: isMaxed
+                              ? _upgradeColor
+                              : GameTheme.textMuted,
                         ),
                       ),
                     ),
@@ -306,13 +357,13 @@ class _UpgradeCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${data.description}  (${data.effectUnit}/lv)',
-                  style: GameTheme.bodySmall.copyWith(fontSize: 11),
+                  style: GameTheme.bodySmall.copyWith(fontSize: 10),
                 ),
                 if (data.maxLevel > 1) ...[
                   const SizedBox(height: 4),
-                  GameTheme.progressBar(
+                  GameTheme.pixelProgressBar(
                     value: progress,
-                    height: 3,
+                    height: 5,
                     fillColor: _upgradeColor,
                   ),
                 ],
@@ -321,12 +372,12 @@ class _UpgradeCard extends StatelessWidget {
           ),
           const SizedBox(width: 6),
 
-          // ── 구매 버튼 그룹 (x1 / x10 / MAX) ──
+          // ── 구매 버튼 그룹 ──
           if (!isMaxed)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _BuyButton(
+                _PixelBuyButton(
                   label: GameTheme.formatNumber(cost),
                   canBuy: canBuy,
                   onTap: canBuy ? () => onBuy(1) : null,
@@ -334,7 +385,7 @@ class _UpgradeCard extends StatelessWidget {
                 ),
                 if (data.maxLevel > 1) ...[
                   const SizedBox(width: 3),
-                  _BuyButton(
+                  _PixelBuyButton(
                     label: 'x$buy10Count',
                     canBuy: can10,
                     onTap: can10 ? () => onBuy(buy10Count) : null,
@@ -342,7 +393,7 @@ class _UpgradeCard extends StatelessWidget {
                     gradient: GameTheme.gradientPrimary,
                   ),
                   const SizedBox(width: 3),
-                  _BuyButton(
+                  _PixelBuyButton(
                     label: maxCount > 0 ? 'MAX' : '-',
                     canBuy: maxCount > 0,
                     onTap: maxCount > 0 ? () => onBuy(maxCount) : null,
@@ -355,14 +406,12 @@ class _UpgradeCard extends StatelessWidget {
           else
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: _upgradeColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: _upgradeColor.withValues(alpha: 0.3)),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: GameTheme.pixelCardDecoration(
+                fillColor: _upgradeColor.withValues(alpha: 0.15),
+                borderColor: _upgradeColor.withValues(alpha: 0.4),
               ),
-              child: Icon(Icons.check, color: _upgradeColor, size: 18),
+              child: Icon(Icons.check, color: _upgradeColor, size: 16),
             ),
         ],
       ),
@@ -370,14 +419,14 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-class _BuyButton extends StatelessWidget {
+class _PixelBuyButton extends StatefulWidget {
   final String label;
   final bool canBuy;
   final VoidCallback? onTap;
   final bool isCompact;
   final LinearGradient gradient;
 
-  const _BuyButton({
+  const _PixelBuyButton({
     required this.label,
     required this.canBuy,
     this.onTap,
@@ -386,36 +435,55 @@ class _BuyButton extends StatelessWidget {
   });
 
   @override
+  State<_PixelBuyButton> createState() => _PixelBuyButtonState();
+}
+
+class _PixelBuyButtonState extends State<_PixelBuyButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final highlight = _pressed
+        ? GameTheme.pixelShadow
+        : Colors.white.withValues(alpha: 0.2);
+    final shadow = _pressed
+        ? Colors.white.withValues(alpha: 0.1)
+        : GameTheme.pixelShadow;
+
     return GestureDetector(
-      onTap: canBuy ? onTap : null,
+      onTapDown: widget.canBuy ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.canBuy
+          ? (_) {
+              setState(() => _pressed = false);
+              widget.onTap?.call();
+            }
+          : null,
+      onTapCancel:
+          widget.canBuy ? () => setState(() => _pressed = false) : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 50),
+        transform: _pressed
+            ? (Matrix4.identity()..translate(1.0, 1.0))
+            : Matrix4.identity(),
         padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 8 : 10,
-          vertical: isCompact ? 6 : 8,
+          horizontal: widget.isCompact ? 7 : 9,
+          vertical: widget.isCompact ? 5 : 7,
         ),
         decoration: BoxDecoration(
-          gradient: canBuy ? gradient : null,
-          color: canBuy ? null : GameTheme.bgCard,
-          borderRadius: BorderRadius.circular(8),
-          border: canBuy
-              ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.06)),
-          boxShadow: canBuy
-              ? [BoxShadow(
-                  color: gradient.colors.first.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                )]
-              : null,
+          gradient: widget.canBuy ? widget.gradient : null,
+          color: widget.canBuy ? null : GameTheme.bgCard,
+          border: Border(
+            top: BorderSide(color: highlight, width: 1.5),
+            left: BorderSide(color: highlight, width: 1.5),
+            bottom: BorderSide(color: shadow, width: 2),
+            right: BorderSide(color: shadow, width: 2),
+          ),
         ),
         child: Text(
-          label,
-          style: TextStyle(
-            color: canBuy ? Colors.white : GameTheme.textMuted,
-            fontSize: isCompact ? 10 : 12,
-            fontWeight: FontWeight.w700,
+          widget.label,
+          style: GameTheme.pixel(
+            fontSize: widget.isCompact ? 6 : 7,
+            color: widget.canBuy ? Colors.white : GameTheme.textMuted,
           ),
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../systems/offline_reward.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class OfflinePopup extends StatefulWidget {
   final RunnerGame game;
@@ -88,77 +89,63 @@ class _OfflinePopupState extends State<OfflinePopup>
 
     return Container(
       width: 360,
-      padding: const EdgeInsets.all(28),
-      decoration: GameTheme.panelDecoration(
-        borderColor: GameTheme.accent.withValues(alpha: 0.2),
-        shadows: [
-          BoxShadow(
-            color: GameTheme.accent.withValues(alpha: 0.1),
-            blurRadius: 30,
-            spreadRadius: 2,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+      padding: const EdgeInsets.all(24),
+      decoration: GameTheme.pixelPanelDecoration(
+        fillColor: GameTheme.bgPanel,
+        glow: true,
+        glowColor: GameTheme.accent,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 환영 아이콘
           Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: GameTheme.accentGold.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: GameTheme.accentGold.withValues(alpha: 0.3)),
+            width: 50,
+            height: 50,
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
+              borderColor: GameTheme.accentGold.withValues(alpha: 0.4),
             ),
             child: const Icon(Icons.wb_sunny_rounded,
-                color: GameTheme.accentGold, size: 28),
+                color: GameTheme.accentGold, size: 24),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          Text('다시 오셨군요!',
-              style: GameTheme.titleMedium.copyWith(fontSize: 20)),
+          Text('WELCOME BACK!',
+              style: GameTheme.pixel(fontSize: 10, color: GameTheme.textPrimary)),
           const SizedBox(height: 6),
           Text(
             '${OfflineReward.formatDuration(reward.elapsedSeconds)} 동안\n비숏이 열심히 달렸습니다',
             textAlign: TextAlign.center,
-            style: GameTheme.bodyLarge.copyWith(height: 1.4),
+            style: GameTheme.bodyLarge.copyWith(height: 1.4, fontSize: 12),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           // 코인 보상 디스플레이
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  GameTheme.accentGold.withValues(alpha: 0.1),
-                  GameTheme.accentGold.withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: GameTheme.accentGold.withValues(alpha: 0.2)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: GameTheme.pixelPanelDecoration(
+              fillColor: GameTheme.accentGold.withValues(alpha: 0.08),
+              glow: true,
+              glowColor: GameTheme.accentGold,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.monetization_on,
-                    color: GameTheme.accentGold, size: 30),
+                    color: GameTheme.accentGold, size: 26),
                 const SizedBox(width: 10),
                 Text(
                   '+${GameTheme.formatNumber(displayCoins)}',
-                  style: TextStyle(
+                  style: GameTheme.pixel(
+                    fontSize: 16,
                     color: GameTheme.accentGold,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
+                    shadows: [
+                      Shadow(
+                          color: GameTheme.accentGold.withValues(alpha: 0.5),
+                          blurRadius: 8),
+                    ],
                   ),
                 ),
               ],
@@ -167,67 +154,37 @@ class _OfflinePopupState extends State<OfflinePopup>
           const SizedBox(height: 6),
           Text(
             'CpS: ${reward.cps.toStringAsFixed(1)}',
-            style: GameTheme.bodySmall,
+            style: GameTheme.pixel(fontSize: 6, color: GameTheme.textMuted),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // 버튼들
           Row(
             children: [
-              // 수령
               Expanded(
-                child: GestureDetector(
+                child: GameTheme.pixelButton(
+                  label: 'COLLECT',
                   onTap: () => _collect(1.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: GameTheme.gradientPrimary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text('수령',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
+                  gradient: GameTheme.gradientPrimary,
+                  fontSize: 8,
+                  verticalPad: 10,
+                  horizontalPad: 12,
                 ),
               ),
-              const SizedBox(width: 10),
-              // x2 광고
+              const SizedBox(width: 8),
               Expanded(
-                child: GestureDetector(
-                  onTap: _collectWithAd,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: GameTheme.gradientGold,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: GameTheme.accentGold.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.play_circle_filled,
-                              color: Colors.white, size: 18),
-                          SizedBox(width: 4),
-                          Text('x2 수령',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
+                child: ShimmerGlow(
+                  glowColor: GameTheme.accentGold,
+                  intensity: 0.2,
+                  child: GameTheme.pixelButton(
+                    label: 'x2',
+                    icon: Icons.play_circle_filled,
+                    onTap: _collectWithAd,
+                    gradient: GameTheme.gradientGold,
+                    fontSize: 8,
+                    verticalPad: 10,
+                    horizontalPad: 12,
                   ),
                 ),
               ),
@@ -241,7 +198,21 @@ class _OfflinePopupState extends State<OfflinePopup>
   void _collect(double multiplier) {
     widget.game.coins += widget.reward.coins * multiplier;
     widget.game.totalCoinsEarned += widget.reward.coins * multiplier;
-    widget.game.closeOfflinePopup();
+    widget.game.soundManager.playCoinCollect(isBig: true);
+    UIEffectManager.instance.spawnParticleBurst(
+      relX: 0.5, relY: 0.5,
+      color: const Color(0xFFFFD54F),
+      count: 16,
+      spread: 60,
+    );
+    UIEffectManager.instance.spawnCoinFly(
+      fromRelX: 0.5, fromRelY: 0.45,
+      toRelX: 0.85, toRelY: 0.03,
+      count: 8,
+    );
+    _controller.reverse().then((_) {
+      if (mounted) widget.game.closeOfflinePopup();
+    });
   }
 
   void _collectWithAd() {

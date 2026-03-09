@@ -25,6 +25,12 @@ class _AchievementScreenState extends State<AchievementScreen>
     )..forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.closeAchievementScreen();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -43,135 +49,167 @@ class _AchievementScreenState extends State<AchievementScreen>
           color: GameTheme.bgDeep.withValues(alpha: 0.95 * fade),
           child: Opacity(
             opacity: fade,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  // ── 헤더 ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: GameTheme.accentGold.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.emoji_events_rounded,
-                              color: GameTheme.accentGold, size: 22),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('업적',
-                                style: GameTheme.titleMedium
-                                    .copyWith(fontSize: 20, color: GameTheme.accentGold)),
-                            Text(
-                              '${manager.completedCount}/${manager.totalCount} 달성 (${(manager.completionPercent * 100).toStringAsFixed(0)}%)',
-                              style: GameTheme.bodySmall,
+            child: RetroScanlines(
+              opacity: 0.02,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // ── 헤더 ──
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: GameTheme.pixelCardDecoration(
+                              fillColor: GameTheme.accentGold
+                                  .withValues(alpha: 0.15),
+                              borderColor: GameTheme.accentGold
+                                  .withValues(alpha: 0.3),
                             ),
-                          ],
-                        ),
-                        const Spacer(),
-                        // 진행률 바
-                        SizedBox(
-                          width: 100,
-                          child: Column(
+                            child: const Icon(
+                                Icons.emoji_events_rounded,
+                                color: GameTheme.accentGold,
+                                size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              GameTheme.progressBar(
-                                value: manager.completionPercent,
-                                height: 6,
-                                fillGradient: GameTheme.gradientGold,
-                              ),
-                              const SizedBox(height: 2),
+                              Text('ACHIEVEMENT',
+                                  style: GameTheme.pixel(
+                                      fontSize: 12,
+                                      color: GameTheme.accentGold)),
                               Text(
-                                '${manager.completedCount}/${manager.totalCount}',
-                                style: GameTheme.bodySmall.copyWith(fontSize: 9),
+                                '${manager.completedCount}/${manager.totalCount} (${(manager.completionPercent * 100).toStringAsFixed(0)}%)',
+                                style: GameTheme.pixel(
+                                    fontSize: 6,
+                                    color: GameTheme.textMuted),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        GameTheme.closeButton(
-                          onTap: () => widget.game.closeAchievementScreen(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ── 카테고리 탭 ──
-                  SizedBox(
-                    height: 38,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: AchievementCategory.values.map((cat) {
-                        final isSelected = _selectedCategory == cat;
-                        final count = AchievementDatabase.getByCategory(cat).length;
-                        final done = AchievementDatabase.getByCategory(cat)
-                            .where((a) => manager.isCompleted(a.id))
-                            .length;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedCategory = cat),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? GameTheme.accentGold.withValues(alpha: 0.2)
-                                    : GameTheme.bgCard,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? GameTheme.accentGold.withValues(alpha: 0.5)
-                                      : Colors.white.withValues(alpha: 0.05),
+                          const Spacer(),
+                          SizedBox(
+                            width: 100,
+                            child: Column(
+                              children: [
+                                GameTheme.pixelProgressBar(
+                                  value: manager.completionPercent,
+                                  height: 8,
+                                  fillGradient: GameTheme.gradientGold,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(_categoryIcon(cat),
-                                      color: isSelected ? GameTheme.accentGold : GameTheme.textMuted,
-                                      size: 14),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    '${_categoryName(cat)} $done/$count',
-                                    style: TextStyle(
-                                      color: isSelected ? GameTheme.accentGold : GameTheme.textMuted,
-                                      fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${manager.completedCount}/${manager.totalCount}',
+                                  style: GameTheme.pixel(
+                                      fontSize: 5,
+                                      color: GameTheme.textMuted),
+                                ),
+                              ],
                             ),
                           ),
-                        );
-                      }).toList(),
+                          const SizedBox(width: 12),
+                          GameTheme.closeButton(
+                            onTap: () =>
+                                _animatedClose(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 6),
-
-                  // ── 업적 리스트 ──
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-                      itemCount: AchievementDatabase.getByCategory(_selectedCategory).length,
-                      itemBuilder: (context, index) {
-                        final achievement = AchievementDatabase.getByCategory(_selectedCategory)[index];
-                        final isCompleted = manager.isCompleted(achievement.id);
-                        return _AchievementCard(
-                          data: achievement,
-                          isCompleted: isCompleted,
-                        );
-                      },
+                    // ── 카테고리 탭 ──
+                    SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 12),
+                        children:
+                            AchievementCategory.values.map((cat) {
+                          final isSelected = _selectedCategory == cat;
+                          final count = AchievementDatabase.getByCategory(
+                                  cat)
+                              .length;
+                          final done = AchievementDatabase.getByCategory(
+                                  cat)
+                              .where(
+                                  (a) => manager.isCompleted(a.id))
+                              .length;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 5),
+                            child: GestureDetector(
+                              onTap: () => setState(
+                                  () => _selectedCategory = cat),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
+                                decoration:
+                                    GameTheme.pixelCardDecoration(
+                                  fillColor: isSelected
+                                      ? GameTheme.accentGold
+                                          .withValues(alpha: 0.2)
+                                      : GameTheme.bgCard,
+                                  borderColor: isSelected
+                                      ? GameTheme.accentGold
+                                          .withValues(alpha: 0.5)
+                                      : GameTheme.pixelBorder,
+                                  selected: isSelected,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(_categoryIcon(cat),
+                                        color: isSelected
+                                            ? GameTheme.accentGold
+                                            : GameTheme.textMuted,
+                                        size: 12),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${_categoryName(cat)} $done/$count',
+                                      style: GameTheme.pixel(
+                                        fontSize: 6,
+                                        color: isSelected
+                                            ? GameTheme.accentGold
+                                            : GameTheme.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 6),
+
+                    // ── 업적 리스트 ──
+                    Expanded(
+                      child: ListView.builder(
+                        padding:
+                            const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                        itemCount: AchievementDatabase.getByCategory(
+                                _selectedCategory)
+                            .length,
+                        itemBuilder: (context, index) {
+                          final achievement =
+                              AchievementDatabase.getByCategory(
+                                  _selectedCategory)[index];
+                          final isCompleted =
+                              manager.isCompleted(achievement.id);
+                          return StaggeredEntry(
+                            index: index,
+                            child: _AchievementCard(
+                              data: achievement,
+                              isCompleted: isCompleted,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -215,7 +253,8 @@ class _AchievementCard extends StatelessWidget {
   final AchievementData data;
   final bool isCompleted;
 
-  const _AchievementCard({required this.data, required this.isCompleted});
+  const _AchievementCard(
+      {required this.data, required this.isCompleted});
 
   IconData _getIcon(IconType type) {
     switch (type) {
@@ -245,42 +284,46 @@ class _AchievementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasSoul = data.soulReward > 0;
-    final borderColor = isCompleted
+    final accentColor = isCompleted
         ? (hasSoul ? GameTheme.accentPurple : GameTheme.accentGold)
-        : Colors.white.withValues(alpha: 0.04);
-    final bgColor = isCompleted
-        ? (hasSoul
-            ? GameTheme.accentPurple.withValues(alpha: 0.08)
-            : GameTheme.accentGold.withValues(alpha: 0.06))
-        : GameTheme.bgCard;
+        : GameTheme.pixelBorder;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor, width: isCompleted ? 1.2 : 0.8),
+      padding: const EdgeInsets.all(8),
+      decoration: GameTheme.pixelCardDecoration(
+        fillColor: isCompleted
+            ? (hasSoul
+                ? GameTheme.accentPurple.withValues(alpha: 0.08)
+                : GameTheme.accentGold.withValues(alpha: 0.06))
+            : GameTheme.bgCard,
+        borderColor: accentColor,
+        glow: isCompleted,
+        glowColor: accentColor,
       ),
       child: Row(
         children: [
           // 아이콘
           Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isCompleted
+            width: 34,
+            height: 34,
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: isCompleted
                   ? GameTheme.accentGold.withValues(alpha: 0.2)
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(8),
+                  : GameTheme.bgDeep,
+              borderColor: isCompleted
+                  ? GameTheme.accentGold.withValues(alpha: 0.4)
+                  : GameTheme.pixelBorder,
             ),
             child: Icon(
               _getIcon(data.iconType),
-              color: isCompleted ? GameTheme.accentGold : GameTheme.textMuted,
-              size: 18,
+              color: isCompleted
+                  ? GameTheme.accentGold
+                  : GameTheme.textMuted,
+              size: 16,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
 
           // 텍스트
           Expanded(
@@ -292,13 +335,21 @@ class _AchievementCard extends StatelessWidget {
                     Text(
                       data.name,
                       style: GameTheme.labelBold.copyWith(
-                        fontSize: 13,
-                        color: isCompleted ? GameTheme.textPrimary : GameTheme.textSecondary,
+                        fontSize: 12,
+                        color: isCompleted
+                            ? GameTheme.textPrimary
+                            : GameTheme.textSecondary,
                       ),
                     ),
                     if (isCompleted) ...[
-                      const SizedBox(width: 6),
-                      Icon(Icons.check_circle, color: GameTheme.accentGreen, size: 14),
+                      const SizedBox(width: 5),
+                      Container(
+                        width: 12,
+                        height: 12,
+                        color: GameTheme.accentGreen,
+                        child: const Icon(Icons.check,
+                            color: Colors.white, size: 10),
+                      ),
                     ],
                   ],
                 ),
@@ -306,8 +357,10 @@ class _AchievementCard extends StatelessWidget {
                 Text(
                   data.description,
                   style: GameTheme.bodySmall.copyWith(
-                    fontSize: 10,
-                    color: isCompleted ? GameTheme.textSecondary : GameTheme.textMuted,
+                    fontSize: 9,
+                    color: isCompleted
+                        ? GameTheme.textSecondary
+                        : GameTheme.textMuted,
                   ),
                 ),
               ],
@@ -323,15 +376,19 @@ class _AchievementCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.monetization_on,
-                        color: isCompleted ? GameTheme.accentGold.withValues(alpha: 0.5) : GameTheme.accentGold,
-                        size: 12),
+                        color: isCompleted
+                            ? GameTheme.accentGold
+                                .withValues(alpha: 0.5)
+                            : GameTheme.accentGold,
+                        size: 11),
                     const SizedBox(width: 3),
                     Text(
                       GameTheme.formatNumber(data.coinReward),
-                      style: TextStyle(
-                        color: isCompleted ? GameTheme.textMuted : GameTheme.accentGold,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                      style: GameTheme.pixel(
+                        fontSize: 6,
+                        color: isCompleted
+                            ? GameTheme.textMuted
+                            : GameTheme.accentGold,
                       ),
                     ),
                   ],
@@ -343,15 +400,19 @@ class _AchievementCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.auto_awesome,
-                          color: isCompleted ? GameTheme.accentPurple.withValues(alpha: 0.5) : GameTheme.accentPurple,
-                          size: 12),
+                          color: isCompleted
+                              ? GameTheme.accentPurple
+                                  .withValues(alpha: 0.5)
+                              : GameTheme.accentPurple,
+                          size: 11),
                       const SizedBox(width: 3),
                       Text(
                         '${data.soulReward}',
-                        style: TextStyle(
-                          color: isCompleted ? GameTheme.textMuted : GameTheme.accentPurple,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                        style: GameTheme.pixel(
+                          fontSize: 6,
+                          color: isCompleted
+                              ? GameTheme.textMuted
+                              : GameTheme.accentPurple,
                         ),
                       ),
                     ],

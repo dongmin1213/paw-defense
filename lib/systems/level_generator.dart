@@ -11,7 +11,12 @@ import '../components/treasure_box.dart';
 import '../data/enemy_data.dart';
 import '../data/companion_data.dart';
 import '../data/balance_config.dart';
+import '../ui/ui_effects.dart';
 import '../utils/constants.dart';
+import 'dart:ui' show Color;
+
+/// 구간 유형 — 위험/평화/일반 리듬
+enum ZoneType { normal, danger, peace }
 
 class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   double _generationCursorX = GameConstants.worldWidth;
@@ -25,6 +30,22 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   // Boss tracking
   int _nextBossDistance = 500; // First boss at 500m
   bool _bossActive = false;
+
+  // === 위험/평화 구간 리듬 ===
+  ZoneType _currentZone = ZoneType.normal;
+  double _zoneSegmentsLeft = 0; // 남은 세그먼트 수
+  double _normalSegmentCount = 0; // 일반 구간 경과 세그먼트
+  static const double _dangerZoneChance = 0.12; // 세그먼트당 위험 구간 돌입 확률
+  static const double _dangerZoneLength = 6; // 위험 구간 세그먼트 수
+  static const double _peaceZoneLength = 4; // 평화 구간 세그먼트 수
+  static const double _minNormalBetweenZones = 5; // 최소 일반 세그먼트
+
+  /// 현재 구간 타입
+  ZoneType get currentZone => _currentZone;
+  bool get isDangerZone => _currentZone == ZoneType.danger;
+  bool get isPeaceZone => _currentZone == ZoneType.peace;
+  /// 위험 구간 코인 배율
+  double get zoneCoinMultiplier => _currentZone == ZoneType.danger ? 3.0 : 1.0;
 
   @override
   void update(double dt) {
@@ -58,16 +79,65 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   void _generateSegment() {
     final segmentStartX = _generationCursorX;
 
+    // === 구간 리듬 업데이트 ===
+    _updateZone();
+
     // Don't spawn enemies during boss fight
     if (!_bossActive) {
-      _spawnEnemiesInSegment(segmentStartX);
+      if (!isPeaceZone) {
+        _spawnEnemiesInSegment(segmentStartX);
+      }
     }
 
     _spawnCoinsInSegment(segmentStartX);
     _spawnTreasureBoxInSegment(segmentStartX);
 
-    if (game.isActiveMode && !_bossActive) {
+    if (game.isActiveMode && !_bossActive && !isPeaceZone) {
       _spawnObstaclesInSegment(segmentStartX);
+    }
+  }
+
+  void _updateZone() {
+    if (_zoneSegmentsLeft > 0) {
+      _zoneSegmentsLeft -= 1;
+      if (_zoneSegmentsLeft <= 0) {
+        // 위험 구간이 끝나면 → 평화 구간 전환
+        if (_currentZone == ZoneType.danger) {
+          _currentZone = ZoneType.peace;
+          _zoneSegmentsLeft = _peaceZoneLength;
+          UIEffectManager.instance.spawnImpactText(
+            text: 'PEACE ZONE',
+            color: const Color(0xFF66BB6A),
+            fontSize: 16,
+            duration: 1.2,
+          );
+        } else {
+          // 평화 구간 종료 → 일반
+          _currentZone = ZoneType.normal;
+          _normalSegmentCount = 0;
+        }
+      }
+      return;
+    }
+
+    // 일반 구간에서 위험 구간 돌입 확률 체크
+    _normalSegmentCount += 1;
+    if (_normalSegmentCount >= _minNormalBetweenZones && !_bossActive) {
+      if (_rng.nextDouble() < _dangerZoneChance) {
+        _currentZone = ZoneType.danger;
+        _zoneSegmentsLeft = _dangerZoneLength;
+        UIEffectManager.instance.spawnImpactText(
+          text: 'DANGER ZONE!',
+          color: const Color(0xFFEF5350),
+          fontSize: 18,
+          duration: 1.5,
+        );
+        UIEffectManager.instance.screenFlash(
+          color: const Color(0xFFEF5350),
+          duration: 0.3,
+          maxAlpha: 0.3,
+        );
+      }
     }
   }
 
@@ -75,7 +145,8 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
     final enemies = EnemyDatabase.getEnemiesForRegion(game.currentRegionId);
     if (enemies.isEmpty) return;
 
-    final enemyCount = 1 + _rng.nextInt(3);
+    final baseCount = isDangerZone ? 3 + _rng.nextInt(3) : 1 + _rng.nextInt(3);
+    final enemyCount = baseCount;
     final spacing = GameConstants.segmentWidth / (enemyCount + 1);
 
     for (var i = 0; i < enemyCount; i++) {
@@ -106,8 +177,12 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   }
 
   void _spawnCoinsInSegment(double startX) {
-    if (_rng.nextDouble() > 0.6) return;
+    // 평화 구간: 코인 100% 스폰, 일반: 60%
+    final coinChance = isPeaceZone ? 1.0 : 0.6;
+    if (_rng.nextDouble() > coinChance) return;
 
+    // 평화 구간에서는 코인 가치 증가
+    final coinValue = isPeaceZone ? 2 : 1;
     final pattern = _rng.nextInt(3);
     final baseX = startX + _rng.nextDouble() * GameConstants.segmentWidth * 0.5 + 50;
 
@@ -115,11 +190,12 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
       case 0:
         game.world.add(Coin(
           spawnPosition: Vector2(baseX, GameConstants.groundY - 30 - _rng.nextDouble() * 40),
-          value: 1,
+          value: coinValue,
         ));
         break;
       case 1:
-        final count = 3 + _rng.nextInt(3);
+        // 평화 구간에서는 더 긴 코인 줄
+        final count = isPeaceZone ? 5 + _rng.nextInt(4) : 3 + _rng.nextInt(3);
         final isAir = _rng.nextBool();
         final y = isAir
             ? GameConstants.groundY - 100 - _rng.nextDouble() * 30
@@ -127,19 +203,19 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
         for (var i = 0; i < count; i++) {
           game.world.add(Coin(
             spawnPosition: Vector2(baseX + i * 22, y),
-            value: 1,
+            value: coinValue,
           ));
         }
         break;
       case 2:
-        final count = 5;
+        final count = isPeaceZone ? 8 : 5;
         for (var i = 0; i < count; i++) {
           final t = i / (count - 1);
           final arcX = baseX + t * 100;
           final arcY = GameConstants.groundY - 40 - sin(t * 3.1416) * 60;
           game.world.add(Coin(
             spawnPosition: Vector2(arcX, arcY),
-            value: 1,
+            value: coinValue,
           ));
         }
         break;
@@ -148,7 +224,9 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
 
   void _spawnObstaclesInSegment(double startX) {
     final stormMult = game.weatherManager.obstacleMultiplier;
-    if (_rng.nextDouble() > BalanceConfig.obstacleSpawnChance * stormMult) return;
+    // 위험 구간: 장애물 2배 확률
+    final dangerMult = isDangerZone ? 2.0 : 1.0;
+    if (_rng.nextDouble() > BalanceConfig.obstacleSpawnChance * stormMult * dangerMult) return;
 
     final x = startX + _rng.nextDouble() * GameConstants.segmentWidth * 0.6 + 60;
     if (x - _lastObstacleX < 200) return;

@@ -22,9 +22,12 @@ import '../systems/ad_manager.dart';
 import '../systems/save_manager.dart';
 import '../systems/offline_reward.dart';
 import '../systems/game_feel.dart';
+import '../systems/sound_manager.dart';
+import '../ui/ui_effects.dart';
 import '../systems/achievement_manager.dart';
 import '../systems/daily_bonus_manager.dart';
 import '../systems/bonus_stage_manager.dart';
+import '../systems/mission_manager.dart';
 import '../data/balance_config.dart';
 import '../data/region_data.dart';
 import '../utils/constants.dart';
@@ -42,7 +45,9 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   late GameFeelSystem gameFeel;
   final AchievementManager achievementManager = AchievementManager();
   final DailyBonusManager dailyBonusManager = DailyBonusManager();
+  final MissionManager missionManager = MissionManager();
   late BonusStageManager bonusStageManager;
+  late SoundManager soundManager;
 
   // Game state
   double coins = 0;
@@ -92,6 +97,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     saveManager.loadCompanions(companionManager);
     saveManager.loadAchievements(achievementManager);
     saveManager.loadDailyBonus(dailyBonusManager);
+    saveManager.loadMissions(missionManager);
     currentRegionId = saveManager.currentRegion;
 
     // Initialize ad manager
@@ -125,6 +131,13 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void startGame() {
     overlays.remove('MainMenu');
 
+    // Screen transition flash
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFF000000),
+      duration: 0.5,
+      maxAlpha: 0.6,
+    );
+
     // Show offline reward popup if pending
     if (pendingOfflineReward != null) {
       overlays.add('OfflinePopup');
@@ -157,12 +170,20 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     gameFeel = GameFeelSystem();
     world.add(gameFeel);
 
+    // Sound manager
+    soundManager = SoundManager();
+    soundManager.init();
+    world.add(soundManager);
+
     // Bonus stage manager
     bonusStageManager = BonusStageManager();
     world.add(bonusStageManager);
 
     // Apply saved upgrades
     applyUpgrades();
+
+    // Initialize daily missions
+    missionManager.checkDailyReset();
 
     // Show HUD overlay
     overlays.add('RunnerHud');
@@ -254,6 +275,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     achievementManager.onAscension(ascensionManager.ascensionCount);
     achievementManager.checkAll();
 
+    // Mission tracking
+    missionManager.onComboUpdate(combo);
+    missionManager.onDistanceUpdate(distanceInMeters);
+    // 미션 완료 보상 지급
+    _processMissionRewards();
+
     // Auto-save every 30 seconds
     _saveTimer += dt;
     if (_saveTimer >= 30.0) {
@@ -277,14 +304,37 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
           case 0:
             isGoldenHour = true;
             _goldenHourTimer = 20;
+            UIEffectManager.instance.spawnImpactText(
+              text: 'GOLDEN HOUR!',
+              color: const Color(0xFFFFD54F),
+              fontSize: 22,
+              duration: 1.8,
+            );
+            UIEffectManager.instance.screenFlash(
+              color: const Color(0xFFFFD54F),
+              duration: 0.3,
+              maxAlpha: 0.4,
+            );
             break;
           case 1:
             isMeteorShower = true;
             _meteorTimer = 30;
+            UIEffectManager.instance.spawnImpactText(
+              text: 'METEOR SHOWER!',
+              color: const Color(0xFF4FC3F7),
+              fontSize: 22,
+              duration: 1.8,
+            );
             break;
           case 2:
             isCompanionRally = true;
             _companionRallyTimer = 60;
+            UIEffectManager.instance.spawnImpactText(
+              text: 'COMPANION RALLY!',
+              color: const Color(0xFFFF9800),
+              fontSize: 22,
+              duration: 1.8,
+            );
             break;
         }
       }
@@ -328,8 +378,10 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     // If boss is active, tap attacks boss
     if (activeBoss != null && !activeBoss!.isDead) {
       activeBoss!.onTapAttack();
+      soundManager.playBossHit();
     }
 
+    soundManager.playJump();
     player.jump();
   }
 
@@ -347,17 +399,33 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     final rainbowMult = weatherManager.currentWeather == WeatherType.rainbow ? 2.0 : 1.0;
     // 장갑 장비 효과: 처치 시 추가 코인 +30%
     final gauntletMult = ascensionManager.hasGauntlet ? 1.3 : 1.0;
+    // 위험 구간 보너스
+    final zoneMult = levelGenerator.zoneCoinMultiplier;
     final total = amount * comboMult * regionMult * activeBonus * upgradeMult
         * soulMult * companionMult * weatherCoinMult * timeCoinMult * goldenMult
-        * rainbowMult * gauntletMult;
+        * rainbowMult * gauntletMult * zoneMult;
 
     coins += total;
     totalCoinsEarned += total;
+    missionManager.onCoinsCollected(total);
   }
 
   void addCombo(int amount) {
+    final prevMilestone = (combo ~/ 10) * 10;
     combo += amount;
     comboTimer = BalanceConfig.comboResetTime + companionManager.extraComboTime;
+
+    // 콤보 마일스톤 피드백 (10단위)
+    final newMilestone = (combo ~/ 10) * 10;
+    if (newMilestone > prevMilestone && newMilestone > 0) {
+      soundManager.playComboMilestone(combo);
+      UIEffectManager.instance.spawnImpactText(
+        text: 'COMBO x$combo!',
+        color: const Color(0xFF4FC3F7),
+        fontSize: 20,
+        duration: 1.2,
+      );
+    }
   }
 
   double get comboMultiplier {
@@ -435,7 +503,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void closeAscensionScreen() {
     overlays.remove('AscensionScreen');
     if (!isPlaying) {
-      // After ascension, go to main menu
+      // After ascension, go to main menu with transition
+      UIEffectManager.instance.screenFlash(
+        color: const Color(0xFF000000),
+        duration: 0.4,
+        maxAlpha: 0.5,
+      );
       overlays.add('MainMenu');
     } else {
       resumeEngine();
@@ -445,6 +518,18 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   void executeAscension() {
     // 극적 초월 연출
     gameFeel.onAscension();
+    soundManager.playAscension();
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFFCE93D8),
+      duration: 0.6,
+      maxAlpha: 0.8,
+    );
+    UIEffectManager.instance.spawnImpactText(
+      text: 'ASCENDED!',
+      color: const Color(0xFFCE93D8),
+      fontSize: 28,
+      duration: 2.0,
+    );
 
     ascensionManager.performAscension(totalCoinsEarned);
 
@@ -467,6 +552,40 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     // Save
     saveManager.resetForAscension();
     saveGame();
+  }
+
+  // === Mission Screen ===
+
+  void openMissionScreen() {
+    overlays.add('MissionScreen');
+    pauseEngine();
+  }
+
+  void closeMissionScreen() {
+    overlays.remove('MissionScreen');
+    resumeEngine();
+  }
+
+  void _processMissionRewards() {
+    final completed = missionManager.recentlyCompleted;
+    if (completed.isEmpty) return;
+
+    for (final mission in completed) {
+      if (mission.coinReward > 0) {
+        coins += mission.coinReward;
+        totalCoinsEarned += mission.coinReward;
+      }
+      if (mission.soulReward > 0) {
+        ascensionManager.souls += mission.soulReward;
+      }
+      UIEffectManager.instance.showAchievementToast(
+        name: '${mission.name}',
+        description: mission.description,
+        coinReward: mission.coinReward,
+        soulReward: mission.soulReward,
+      );
+    }
+    missionManager.clearRecentlyCompleted();
   }
 
   // === Region Change ===
@@ -524,6 +643,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       companionManager: companionManager,
       achievementManager: achievementManager,
       dailyBonusManager: dailyBonusManager,
+      missionManager: missionManager,
       currentRegion: currentRegionId,
     );
   }

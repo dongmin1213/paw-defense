@@ -120,7 +120,7 @@ class PlayerRenderer {
   static const _eyeColor = Color(0xFF2C2C2C);
   static const _eyeShine = Color(0xFFFFFFFF);
 
-  static void render(Canvas canvas, Size size, {required bool isRunning, required double animTimer, required bool isJumping, required bool isAttacking}) {
+  static void render(Canvas canvas, Size size, {required bool isRunning, required double animTimer, required bool isJumping, required bool isAttacking, int combo = 0}) {
     List<String> sprite;
 
     if (isAttacking) {
@@ -139,6 +139,51 @@ class PlayerRenderer {
     final px = min(size.width / spriteW, size.height / spriteH);
 
     PixelArt.drawCentered(canvas, sprite, _palette, size, pixelSize: px);
+
+    // === 콤보 글로우 이펙트 ===
+    if (combo >= 10) {
+      Color glowColor;
+      double glowRadius;
+      double glowAlpha;
+
+      if (combo >= 50) {
+        glowColor = const Color(0xFFFF1744); // INSANE - 빨강
+        glowRadius = 18.0;
+        glowAlpha = 0.5 + sin(animTimer * 6) * 0.2;
+      } else if (combo >= 30) {
+        glowColor = const Color(0xFFFF6D00); // EPIC - 오렌지
+        glowRadius = 14.0;
+        glowAlpha = 0.4 + sin(animTimer * 5) * 0.15;
+      } else if (combo >= 20) {
+        glowColor = const Color(0xFFFFD600); // GREAT - 골드
+        glowRadius = 10.0;
+        glowAlpha = 0.3 + sin(animTimer * 4) * 0.1;
+      } else {
+        glowColor = const Color(0xFF00E676); // NICE - 초록
+        glowRadius = 7.0;
+        glowAlpha = 0.2 + sin(animTimer * 3) * 0.08;
+      }
+
+      final center = Offset(size.width / 2, size.height / 2);
+      final glowPaint = Paint()
+        ..color = glowColor.withAlpha((glowAlpha * 255).toInt())
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawCircle(center, glowRadius, glowPaint);
+
+      // 스피드 트레일 라인 (콤보 30+)
+      if (combo >= 30) {
+        final trailPaint = Paint()
+          ..color = glowColor.withAlpha((glowAlpha * 180).toInt())
+          ..strokeWidth = 1.5;
+        for (var i = 0; i < 3; i++) {
+          final offset = (animTimer * 3 + i * 1.2) % 3.0;
+          final y = size.height * 0.3 + i * size.height * 0.2;
+          final startX = -offset * 6;
+          final endX = startX - 8 - i * 3;
+          canvas.drawLine(Offset(startX, y), Offset(endX, y), trailPaint);
+        }
+      }
+    }
 
     // Draw eyes on top (they need special sub-pixel detail)
     final offsetX = (size.width - spriteW * px) / 2;

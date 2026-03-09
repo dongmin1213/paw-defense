@@ -6,6 +6,7 @@ import '../game/runner_game.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
 import '../renderers/enemy_renderer.dart';
+import '../ui/ui_effects.dart';
 import '../utils/constants.dart';
 import 'runner_player.dart';
 import 'coin.dart';
@@ -71,6 +72,9 @@ class Enemy extends PositionComponent
     _isHit = true;
     _hitFlashTimer = 0.15;
 
+    // 넉백 — 타격감
+    position.x += 12;
+
     player.triggerAttack();
 
     if (currentHp <= 0) {
@@ -103,10 +107,43 @@ class Enemy extends PositionComponent
       isAir: data.type == EnemyType.air,
     );
 
+    // 사운드
+    game.soundManager.playEnemyKill(isGolden: isGolden);
+
+    // UI 이펙트 — 공중 킬 축하 + 황금 적 플래시
+    if (data.type == EnemyType.air && game.combo >= 5) {
+      UIEffectManager.instance.spawnFloatingText(
+        text: 'AIRBORNE!',
+        relX: 0.55, relY: 0.35,
+        color: const Color(0xFF4FC3F7),
+        fontSize: 14,
+        duration: 0.8,
+      );
+    }
+    if (isGolden) {
+      UIEffectManager.instance.screenFlash(
+        color: const Color(0xFFFFD54F),
+        duration: 0.25,
+        maxAlpha: 0.5,
+      );
+      UIEffectManager.instance.spawnImpactText(
+        text: 'GOLDEN KILL!',
+        color: const Color(0xFFFFD54F),
+        fontSize: 18,
+        duration: 1.2,
+      );
+    }
+
     // 업적 추적
     game.achievementManager.onEnemyKill(
       isGolden: isGolden,
       isAir: data.type == EnemyType.air,
+    );
+
+    // 미션 추적
+    game.missionManager.onEnemyKill(
+      isAir: data.type == EnemyType.air,
+      isGolden: isGolden,
     );
 
     game.particleEffect.spawnEnemyDeath(

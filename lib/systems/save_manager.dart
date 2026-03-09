@@ -5,6 +5,7 @@ import 'ascension_manager.dart';
 import 'companion_manager.dart';
 import 'achievement_manager.dart';
 import 'daily_bonus_manager.dart';
+import 'mission_manager.dart';
 import '../data/upgrade_data.dart';
 import '../data/soul_upgrade_data.dart';
 
@@ -19,6 +20,7 @@ class SaveManager {
   static const String _keyCompanions = 'companions_data';
   static const String _keyAchievements = 'achievements_data';
   static const String _keyDailyBonus = 'daily_bonus_data';
+  static const String _keyMissions = 'missions_data';
   static const String _upgradePrefix = 'upgrade_';
   static const String _soulUpgradePrefix = 'soul_upgrade_';
 
@@ -138,6 +140,21 @@ class SaveManager {
     }
   }
 
+  // === Missions ===
+  void saveMissions(MissionManager manager) {
+    _prefs.setString(_keyMissions, jsonEncode(manager.toMap()));
+  }
+
+  void loadMissions(MissionManager manager) {
+    final jsonStr = _prefs.getString(_keyMissions);
+    if (jsonStr != null) {
+      try {
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        manager.loadFromMap(data);
+      } catch (_) {}
+    }
+  }
+
   // === Save All ===
   void saveGameState({
     required double coins,
@@ -148,6 +165,7 @@ class SaveManager {
     required CompanionManager companionManager,
     required AchievementManager achievementManager,
     required DailyBonusManager dailyBonusManager,
+    required MissionManager missionManager,
     required String currentRegion,
   }) {
     this.coins = coins;
@@ -161,6 +179,7 @@ class SaveManager {
     saveCompanions(companionManager);
     saveAchievements(achievementManager);
     saveDailyBonus(dailyBonusManager);
+    saveMissions(missionManager);
     lastOnlineTime = DateTime.now().millisecondsSinceEpoch;
   }
 
