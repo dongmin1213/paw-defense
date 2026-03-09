@@ -70,9 +70,15 @@ class RunnerPlayer extends PositionComponent
 
     // Ground collision
     final groundLevel = GameConstants.groundY - size.y;
+    final wasAirborne = !_isOnGround;
     if (position.y >= groundLevel) {
       position.y = groundLevel;
       velocityY = 0;
+      if (wasAirborne) {
+        game.gameFeel.onLanding();
+        game.particleEffect.spawnDustTrail(position.x, position.y + size.y);
+        game.particleEffect.spawnDustTrail(position.x + 5, position.y + size.y);
+      }
       _isOnGround = true;
       _hasDoubleJumped = false;
     } else {

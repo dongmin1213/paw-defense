@@ -72,6 +72,9 @@ class Enemy extends PositionComponent
     _isHit = true;
     _hitFlashTimer = 0.15;
 
+    // 넉백 — 타격감
+    position.x += 12;
+
     player.triggerAttack();
 
     if (currentHp <= 0) {
@@ -107,12 +110,27 @@ class Enemy extends PositionComponent
     // 사운드
     game.soundManager.playEnemyKill(isGolden: isGolden);
 
-    // UI 이펙트 — 황금 적 처치 시 스크린 플래시 + 임팩트 텍스트
+    // UI 이펙트 — 공중 킬 축하 + 황금 적 플래시
+    if (data.type == EnemyType.air && game.combo >= 5) {
+      UIEffectManager.instance.spawnFloatingText(
+        text: 'AIRBORNE!',
+        relX: 0.55, relY: 0.35,
+        color: const Color(0xFF4FC3F7),
+        fontSize: 14,
+        duration: 0.8,
+      );
+    }
     if (isGolden) {
       UIEffectManager.instance.screenFlash(
         color: const Color(0xFFFFD54F),
-        duration: 0.2,
-        maxAlpha: 0.4,
+        duration: 0.25,
+        maxAlpha: 0.5,
+      );
+      UIEffectManager.instance.spawnImpactText(
+        text: 'GOLDEN KILL!',
+        color: const Color(0xFFFFD54F),
+        fontSize: 18,
+        duration: 1.2,
       );
     }
 

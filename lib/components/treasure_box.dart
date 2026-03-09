@@ -5,6 +5,7 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
+import '../ui/ui_effects.dart';
 import '../utils/constants.dart';
 import '../utils/pixel_art.dart';
 import 'coin.dart';
@@ -111,26 +112,54 @@ class TreasureBox extends PositionComponent
     game.achievementManager.onBoxOpened();
     game.soundManager.playTreasureOpen();
 
-    // 코인 폭발
+    // 코인 폭발 — 등급에 비례하는 양
     final rng = Random();
-    final coinCount = 5 + rng.nextInt(5) + rarity.index * 3;
+    final coinCount = 5 + rng.nextInt(5) + rarity.index * 5;
     final baseValue = (5.0 + rng.nextDouble() * 10) * _coinMultiplier;
 
     for (var i = 0; i < coinCount; i++) {
-      final coinX = position.x + rng.nextDouble() * 50 - 25;
-      final coinY = position.y - 10 - rng.nextDouble() * 40;
+      final coinX = position.x + rng.nextDouble() * 60 - 30;
+      final coinY = position.y - 10 - rng.nextDouble() * 50;
       game.world.add(Coin(
         spawnPosition: Vector2(coinX, coinY),
         value: baseValue / coinCount,
       ));
     }
 
-    // 파티클
+    // 파티클 — 등급별 폭발 크기
     game.particleEffect.spawnBossExplosion(
       position.x + size.x / 2,
       position.y + size.y / 2,
     );
-    game.gameFeel.shake(intensity: 3, duration: 0.15);
+
+    // 등급별 게임필 스케일링
+    final rarityScale = 1.0 + rarity.index * 1.5; // common=1, rare=2.5, epic=4
+    game.gameFeel.shake(intensity: 3 * rarityScale, duration: 0.15 + rarity.index * 0.05);
+    game.gameFeel.zoomPunch(targetZoom: 1.02 + rarity.index * 0.02, duration: 0.3);
+    if (rarity == TreasureRarity.epic) {
+      game.gameFeel.hitStop(duration: 0.08);
+      game.gameFeel.slowMotion(scale: 0.5, duration: 0.4);
+    }
+
+    // UI 이펙트 — 등급별 플래시
+    final flashColor = rarity == TreasureRarity.epic
+        ? const Color(0xFFBB6DEA)
+        : rarity == TreasureRarity.rare
+            ? const Color(0xFF5A8BE5)
+            : const Color(0xFFFFD700);
+    UIEffectManager.instance.screenFlash(
+      color: flashColor,
+      duration: 0.2,
+      maxAlpha: 0.2 + rarity.index * 0.15,
+    );
+    if (rarity != TreasureRarity.common) {
+      UIEffectManager.instance.spawnImpactText(
+        text: rarity == TreasureRarity.epic ? 'EPIC TREASURE!' : 'RARE TREASURE!',
+        color: flashColor,
+        fontSize: rarity == TreasureRarity.epic ? 20.0 : 16.0,
+        duration: 1.2,
+      );
+    }
   }
 
   @override
@@ -146,12 +175,21 @@ class TreasureBox extends PositionComponent
     if (_opened) {
       // 열림 이펙트
       final alpha = (1.0 - _openTimer / 0.8).clamp(0.0, 1.0);
+      final burstSize = 10 + _openTimer * 50; // 더 큰 폭발
       final paint = Paint()
-        ..color = Color.fromARGB((alpha * 200).toInt(), 255, 215, 0);
+        ..color = Color.fromARGB((alpha * 220).toInt(), 255, 215, 0);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2 + _hoverOffset),
-        10 + _openTimer * 20,
+        burstSize,
         paint,
+      );
+      // 내부 밝은 원
+      final innerPaint = Paint()
+        ..color = Color.fromARGB((alpha * 150).toInt(), 255, 255, 255);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2 + _hoverOffset),
+        burstSize * 0.5,
+        innerPaint,
       );
       return;
     }

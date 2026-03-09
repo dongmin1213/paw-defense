@@ -142,7 +142,7 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
     }
 
     final bounce = _comboController.isAnimating
-        ? sin(_comboController.value * pi) * 4
+        ? sin(_comboController.value * pi) * (combo >= 30 ? 10 : combo >= 10 ? 7 : 4)
         : 0.0;
 
     return Positioned(
@@ -337,30 +337,33 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
 
   Widget _buildBonusBanner(RunnerGame game) {
     final bonus = game.bonusStageManager;
+    final isUrgent = bonus.timeLeft < 2.0;
+    final bannerColor = isUrgent ? GameTheme.accentRed : GameTheme.accentGold;
     return Positioned(
       top: 32,
       left: 100,
       right: 100,
       child: ShimmerGlow(
-        glowColor: GameTheme.accentGold,
-        intensity: 0.4,
+        glowColor: bannerColor,
+        intensity: isUrgent ? 0.6 : 0.4,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: GameTheme.pixelPanelDecoration(
-            fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
+            fillColor: bannerColor.withValues(alpha: isUrgent ? 0.25 : 0.15),
             glow: true,
-            glowColor: GameTheme.accentGold,
+            glowColor: bannerColor,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.star, color: GameTheme.accentGold, size: 16),
+              Icon(isUrgent ? Icons.timer : Icons.star,
+                  color: bannerColor, size: 16),
               const SizedBox(width: 8),
               Text(
                 'BONUS  ${bonus.timeLeft.toStringAsFixed(1)}s',
                 style: GameTheme.pixel(
-                  fontSize: 9,
-                  color: GameTheme.accentGold,
+                  fontSize: isUrgent ? 11 : 9,
+                  color: bannerColor,
                   letterSpacing: 2,
                 ),
               ),
@@ -500,21 +503,21 @@ class _PixelHudChip extends StatelessWidget {
         animation: flashAnimation!,
         builder: (context, _) {
           final flash = (1.0 - flashAnimation!.value);
-          final glowAlpha = flash * 0.4;
+          final glowAlpha = flash * 0.5;
           return Container(
             decoration: glowAlpha > 0.01
                 ? BoxDecoration(
                     boxShadow: [
                       BoxShadow(
                         color: color.withValues(alpha: glowAlpha),
-                        blurRadius: 12 * flash,
-                        spreadRadius: 2 * flash,
+                        blurRadius: 16 * flash,
+                        spreadRadius: 3 * flash,
                       ),
                     ],
                   )
                 : null,
             child: Transform.scale(
-              scale: 1.0 + flash * 0.08,
+              scale: 1.0 + flash * 0.15,
               child: chip,
             ),
           );

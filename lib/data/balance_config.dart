@@ -7,15 +7,15 @@ class BalanceConfig {
   static const double offlineEfficiency = 0.3;
 
   // === 콤보 ===
-  static const double comboMultiplierPerStack = 0.05;
-  static const double comboResetTime = 3.0;
-  static const int jumpKillComboBonus = 2;
+  static const double comboMultiplierPerStack = 0.08;
+  static const double comboResetTime = 4.0;
+  static const int jumpKillComboBonus = 3;
   static const int groundKillComboBonus = 1;
 
   // === 적 ===
   static const double enemySpawnInterval = 1.5; // seconds worth of distance
   static const double airEnemyChance = 0.35; // 35% air, 65% ground
-  static const double goldenEnemyChance = 0.02;
+  static const double goldenEnemyChance = 0.04;
 
   // === 장애물 ===
   static const double obstacleSpawnChance = 0.3;
