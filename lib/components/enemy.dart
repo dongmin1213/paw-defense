@@ -1,286 +1,150 @@
-import 'dart:math';
+import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
-import '../game/boss_rush_game.dart';
-import '../utils/constants.dart';
-import 'player.dart';
+import 'package:flame/sprite.dart';
 
-enum EnemyType { slime, bat, skeleton }
+import '../game/runner_game.dart';
+import '../data/enemy_data.dart';
+import '../data/balance_config.dart';
+import '../utils/constants.dart';
+import '../utils/sprite_loader.dart';
+import 'runner_player.dart';
+import 'coin.dart';
 
 class Enemy extends PositionComponent
-    with HasGameReference<BossRushGame>, CollisionCallbacks {
-  final EnemyType type;
-  final Vector2 startPosition;
-  final double patrolRange;
+    with HasGameReference<RunnerGame>, CollisionCallbacks {
+  final EnemyData data;
+  final bool isGolden;
+  int currentHp;
+  double _animTimer = 0;
+  bool _isHit = false;
+  double _hitFlashTimer = 0;
+  double _hoverOffset = 0;
+  final double _hoverBaseY;
 
-  double hp = 3;
-  double _moveTimer = 0;
-  double _attackTimer = 0;
-  int _direction = 1;
-  double _hitFlash = 0;
+  static const double goldenMultiplier = 10.0;
 
+  SpriteAnimationTicker? _ticker;
 
   Enemy({
-    required this.type,
-    required this.startPosition,
-    this.patrolRange = 80,
-  }) : super(position: startPosition.clone());
+    required this.data,
+    required Vector2 spawnPosition,
+    this.isGolden = false,
+  })  : currentHp = data.hp,
+        _hoverBaseY = spawnPosition.y,
+        super(
+          position: spawnPosition,
+          size: Vector2(data.width, data.height),
+        );
 
   @override
   Future<void> onLoad() async {
-    await super.onLoad();
-    switch (type) {
-      case EnemyType.slime:
-        size = Vector2(30, 24);
-        hp = 3;
-        break;
-      case EnemyType.bat:
-        size = Vector2(28, 20);
-        hp = 2;
-        break;
-      case EnemyType.skeleton:
-        size = Vector2(30, 40);
-        hp = 5;
-        break;
-    }
     add(RectangleHitbox());
+
+    final anim = await SpriteLoader.loadAnimation(
+      'enemy_${data.id}.png',
+      frameWidth: 32, frameHeight: 32,
+      frameCount: 4, stepTime: 0.2,
+    );
+    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _moveTimer += dt;
-    _attackTimer += dt;
-    if (_hitFlash > 0) _hitFlash -= dt;
+    _animTimer += dt;
+    _ticker?.update(dt);
 
-    switch (type) {
-      case EnemyType.slime:
-        _updateSlime(dt);
-        break;
-      case EnemyType.bat:
-        _updateBat(dt);
-        break;
-      case EnemyType.skeleton:
-        _updateSkeleton(dt);
-        break;
+    // Air enemies hover
+    if (data.type == EnemyType.air) {
+      _hoverOffset = _sin(_animTimer * 3) * 8;
+      position.y = _hoverBaseY + _hoverOffset;
+    }
+
+    // Hit flash
+    if (_isHit) {
+      _hitFlashTimer -= dt;
+      if (_hitFlashTimer <= 0) {
+        _isHit = false;
+      }
+    }
+
+    // Cleanup if behind camera
+    final cameraX = game.camera.viewfinder.position.x;
+    if (position.x < cameraX - GameConstants.despawnBehindDistance) {
+      removeFromParent();
     }
   }
 
-  void _updateSlime(double dt) {
-    // Patrol back and forth
-    position.x += _direction * 40 * dt;
-    if ((position.x - startPosition.x).abs() > patrolRange) {
-      _direction *= -1;
-    }
-    // Hop animation
-    position.y = startPosition.y + sin(_moveTimer * 4) * 3;
-  }
+  void onHit(RunnerPlayer player) {
+    final damage = game.upgradeManager.attackMultiplier.ceil();
+    currentHp -= damage;
+    _isHit = true;
+    _hitFlashTimer = 0.15;
 
-  void _updateBat(double dt) {
-    // Sine wave flight
-    position.x += _direction * 50 * dt;
-    position.y = startPosition.y + sin(_moveTimer * 3) * 20;
-    if ((position.x - startPosition.x).abs() > patrolRange) {
-      _direction *= -1;
+    player.triggerAttack();
+
+    if (currentHp <= 0) {
+      _die();
     }
   }
 
-  void _updateSkeleton(double dt) {
-    // Patrol and occasionally throw bone
-    position.x += _direction * 30 * dt;
-    if ((position.x - startPosition.x).abs() > patrolRange) {
-      _direction *= -1;
+  void _die() {
+    double coinAmount = data.type == EnemyType.air
+        ? data.coinDrop * BalanceConfig.airEnemyCoinMultiplier
+        : data.coinDrop;
+
+    if (isGolden) {
+      coinAmount *= goldenMultiplier;
     }
 
-    if (_attackTimer >= 2.5) {
-      _attackTimer = 0;
-      _throwBone();
-    }
-  }
-
-  void _throwBone() {
-    if (!isMounted) return;
-    final playerPos = game.player.position;
-    final dir = (playerPos.x > position.x) ? 1 : -1;
-    game.world.add(_Bone(
-      startPosition: Vector2(position.x + size.x / 2, position.y),
-      direction: dir,
+    game.world.add(Coin(
+      spawnPosition: position.clone(),
+      value: coinAmount,
     ));
+
+    final comboAmount = data.type == EnemyType.air
+        ? BalanceConfig.jumpKillComboBonus
+        : BalanceConfig.groundKillComboBonus;
+    game.addCombo(comboAmount);
+
+    game.particleEffect.spawnEnemyDeath(
+      position.x + size.x / 2,
+      position.y + size.y / 2,
+      isGolden: isGolden,
+    );
+
+    removeFromParent();
   }
 
-  void takeDamage(double damage) {
-    hp -= damage;
-    _hitFlash = 0.1;
-
-    if (hp <= 0) {
-      game.onEnemyDefeated(this);
-      removeFromParent();
+  double _sin(double x) {
+    x = x % 6.2832;
+    if (x < 0) x += 6.2832;
+    if (x > 3.1416) {
+      x -= 3.1416;
+      return -(x * (4 - x * 1.2732) * 0.405 + x * (4 - x * 1.2732) * 0.595);
     }
-  }
-
-  @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
-    super.onCollisionStart(intersectionPoints, other);
-    if (other is Player) {
-      game.onPlayerHit();
-    }
-  }
-
-  @override
-  void render(Canvas canvas) {
-    final isFlash = _hitFlash > 0;
-
-    switch (type) {
-      case EnemyType.slime:
-        _renderSlime(canvas, isFlash);
-        break;
-      case EnemyType.bat:
-        _renderBat(canvas, isFlash);
-        break;
-      case EnemyType.skeleton:
-        _renderSkeleton(canvas, isFlash);
-        break;
-    }
-  }
-
-  void _renderSlime(Canvas canvas, bool flash) {
-    final color = flash ? Colors.white : Colors.green;
-    final paint = Paint()..color = color;
-
-    // Body blob
-    final path = Path()
-      ..moveTo(0, size.y)
-      ..quadraticBezierTo(0, 0, size.x / 2, 2)
-      ..quadraticBezierTo(size.x, 0, size.x, size.y)
-      ..close();
-    canvas.drawPath(path, paint);
-
-    // Eyes
-    if (!flash) {
-      final eye = Paint()..color = Colors.white;
-      canvas.drawCircle(Offset(size.x * 0.35, size.y * 0.4), 3, eye);
-      canvas.drawCircle(Offset(size.x * 0.65, size.y * 0.4), 3, eye);
-      final pupil = Paint()..color = Colors.black;
-      canvas.drawCircle(Offset(size.x * 0.35 + _direction * 1, size.y * 0.4), 1.5, pupil);
-      canvas.drawCircle(Offset(size.x * 0.65 + _direction * 1, size.y * 0.4), 1.5, pupil);
-    }
-  }
-
-  void _renderBat(Canvas canvas, bool flash) {
-    final color = flash ? Colors.white : Colors.purple.shade800;
-    final paint = Paint()..color = color;
-
-    // Body
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), 6, paint);
-
-    // Wings
-    final wingPhase = sin(_moveTimer * 8) * 0.3;
-    final wing = Paint()..color = color;
-    // Left wing
-    final leftWing = Path()
-      ..moveTo(size.x / 2 - 4, size.y / 2)
-      ..quadraticBezierTo(-2, size.y * (0.2 + wingPhase), 0, size.y / 2)
-      ..lineTo(size.x / 2 - 4, size.y / 2 + 3)
-      ..close();
-    canvas.drawPath(leftWing, wing);
-    // Right wing
-    final rightWing = Path()
-      ..moveTo(size.x / 2 + 4, size.y / 2)
-      ..quadraticBezierTo(size.x + 2, size.y * (0.2 + wingPhase), size.x, size.y / 2)
-      ..lineTo(size.x / 2 + 4, size.y / 2 + 3)
-      ..close();
-    canvas.drawPath(rightWing, wing);
-
-    // Eyes
-    if (!flash) {
-      final eye = Paint()..color = Colors.red;
-      canvas.drawCircle(Offset(size.x / 2 - 2, size.y / 2 - 1), 1.5, eye);
-      canvas.drawCircle(Offset(size.x / 2 + 2, size.y / 2 - 1), 1.5, eye);
-    }
-  }
-
-  void _renderSkeleton(Canvas canvas, bool flash) {
-    final color = flash ? Colors.white : Colors.grey.shade300;
-    final paint = Paint()..color = color;
-
-    // Head (skull)
-    canvas.drawCircle(Offset(size.x / 2, 8), 8, paint);
-    // Eye sockets
-    if (!flash) {
-      final dark = Paint()..color = Colors.black;
-      canvas.drawCircle(Offset(size.x / 2 - 3, 7), 2, dark);
-      canvas.drawCircle(Offset(size.x / 2 + 3, 7), 2, dark);
-      // Mouth
-      canvas.drawRect(Rect.fromLTWH(size.x / 2 - 3, 12, 6, 2), dark);
-    }
-
-    // Ribcage
-    final bonePaint = Paint()..color = color;
-    canvas.drawRect(Rect.fromLTWH(size.x / 2 - 1, 16, 2, 16), bonePaint);
-    for (int i = 0; i < 3; i++) {
-      final y = 18.0 + i * 5;
-      canvas.drawRect(Rect.fromLTWH(size.x / 2 - 6, y, 12, 2), bonePaint);
-    }
-
-    // Arms
-    canvas.drawRect(Rect.fromLTWH(size.x / 2 - 10, 18, 4, 2), bonePaint);
-    canvas.drawRect(Rect.fromLTWH(size.x / 2 + 6, 18, 4, 2), bonePaint);
-
-    // Legs
-    canvas.drawRect(Rect.fromLTWH(size.x / 2 - 5, 32, 2, 8), bonePaint);
-    canvas.drawRect(Rect.fromLTWH(size.x / 2 + 3, 32, 2, 8), bonePaint);
-  }
-}
-
-/// Bone projectile thrown by Skeleton
-class _Bone extends PositionComponent
-    with HasGameReference<BossRushGame>, CollisionCallbacks {
-  final int direction;
-  double _rotation = 0;
-
-  _Bone({
-    required Vector2 startPosition,
-    required this.direction,
-  }) : super(position: startPosition, size: Vector2(12, 6));
-
-  @override
-  Future<void> onLoad() async {
-    await super.onLoad();
-    add(RectangleHitbox());
-  }
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    position.x += direction * 150 * dt;
-    _rotation += dt * 10;
-
-    if (position.x < -20 || position.x > GameConstants.worldWidth + 20) {
-      removeFromParent();
-    }
-  }
-
-  @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
-    super.onCollisionStart(intersectionPoints, other);
-    if (other is Player) {
-      game.onPlayerHit();
-      removeFromParent();
-    }
+    return x * (4 - x * 1.2732) * 0.405 + x * (4 - x * 1.2732) * 0.595;
   }
 
   @override
   void render(Canvas canvas) {
-    canvas.save();
-    canvas.translate(size.x / 2, size.y / 2);
-    canvas.rotate(_rotation);
+    // Golden glow effect
+    if (isGolden) {
+      final glowPaint = Paint()
+        ..color = const Color(0xFFFFD600).withValues(alpha: ((_sin(_animTimer * 5) * 0.2 + 0.3).clamp(0.0, 1.0)));
+      canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.6, glowPaint);
+    }
 
-    final paint = Paint()..color = Colors.grey.shade200;
-    canvas.drawRect(Rect.fromLTWH(-size.x / 2, -1, size.x, 2), paint);
-    canvas.drawCircle(Offset(-size.x / 2, 0), 3, paint);
-    canvas.drawCircle(Offset(size.x / 2, 0), 3, paint);
-
-    canvas.restore();
+    final sprite = _ticker?.getSprite();
+    if (sprite != null) {
+      sprite.render(canvas, size: size);
+      if (_isHit) {
+        final flashPaint = Paint()
+          ..color = const Color(0xAAFFFFFF)
+          ..blendMode = BlendMode.srcATop;
+        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), flashPaint);
+      }
+    }
   }
 }

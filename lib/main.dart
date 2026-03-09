@@ -1,186 +1,110 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'classes/player_class.dart';
-import 'game/boss_rush_game.dart';
-import 'ui/game_overlay.dart';
-import 'ui/main_menu.dart';
 
-void main() {
+import 'game/runner_game.dart';
+import 'systems/save_manager.dart';
+import 'ui/runner_hud.dart';
+import 'ui/upgrade_shop.dart';
+import 'ui/main_menu.dart';
+import 'ui/soul_shop.dart';
+import 'ui/ascension_screen.dart';
+import 'ui/companion_screen.dart';
+import 'ui/offline_popup.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
+
+  // Lock orientation to landscape
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(const BossRushApp());
+
+  // Immersive fullscreen
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+  // Initialize save manager
+  final saveManager = SaveManager();
+  await saveManager.init();
+
+  runApp(BichonRunApp(saveManager: saveManager));
 }
 
-class BossRushApp extends StatelessWidget {
-  const BossRushApp({super.key});
+class BichonRunApp extends StatelessWidget {
+  final SaveManager saveManager;
+
+  const BichonRunApp({super.key, required this.saveManager});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "The Bichon's Odyssey",
+      title: "The Bichon's Run",
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: const MainMenuScreen(),
+      home: GameScreen(saveManager: saveManager),
     );
   }
 }
 
 class GameScreen extends StatefulWidget {
-  final int stageIndex;
-  final PlayerClassType playerClass;
-  final bool bossRushMode;
+  final SaveManager saveManager;
 
-  const GameScreen({
-    super.key,
-    required this.stageIndex,
-    required this.playerClass,
-    this.bossRushMode = false,
-  });
+  const GameScreen({super.key, required this.saveManager});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
-  late BossRushGame game;
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
+  late RunnerGame _game;
 
   @override
   void initState() {
     super.initState();
-    game = BossRushGame(
-      stageIndex: widget.stageIndex,
-      playerClass: widget.playerClass,
-      bossRushMode: widget.bossRushMode,
-    );
+    WidgetsBinding.instance.addObserver(this);
+    _game = RunnerGame();
+    _game.initSaveManager(widget.saveManager);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_game.isPlaying) {
+        _game.saveGame();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          GameWidget(
-            game: game,
-            overlayBuilderMap: {
-              'GameOverlay': (context, BossRushGame game) {
-                return GameOverlay(game: game);
-              },
-              'GameOver': (context, BossRushGame game) {
-                return _GameOverScreen(game: game);
-              },
-              'Victory': (context, BossRushGame game) {
-                return _VictoryScreen(
-                  game: game,
-                  stageIndex: widget.stageIndex,
-                );
-              },
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GameOverScreen extends StatelessWidget {
-  final BossRushGame game;
-
-  const _GameOverScreen({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.red, width: 2),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'GAME OVER',
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                game.overlays.remove('GameOver');
-                game.resetGame();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade800,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              ),
-              child: const Text('RETRY', style: TextStyle(fontSize: 20)),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('BACK TO MAP', style: TextStyle(color: Colors.white70)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VictoryScreen extends StatelessWidget {
-  final BossRushGame game;
-  final int stageIndex;
-
-  const _VictoryScreen({required this.game, required this.stageIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.amber, width: 2),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'VICTORY!',
-              style: TextStyle(
-                color: Colors.amber,
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              StageThemes.getStageName(stageIndex),
-              style: const TextStyle(color: Colors.white60, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'CONTINUE',
-                style: TextStyle(color: Colors.amber, fontSize: 18),
-              ),
-            ),
-          ],
-        ),
+      body: GameWidget(
+        game: _game,
+        overlayBuilderMap: {
+          'MainMenu': (context, game) => MainMenu(game: game as RunnerGame),
+          'RunnerHud': (context, game) => RunnerHud(game: game as RunnerGame),
+          'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
+          'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
+          'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
+          'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
+          'OfflinePopup': (context, game) {
+            final g = game as RunnerGame;
+            return OfflinePopup(
+              game: g,
+              reward: g.pendingOfflineReward!,
+            );
+          },
+        },
       ),
     );
   }
