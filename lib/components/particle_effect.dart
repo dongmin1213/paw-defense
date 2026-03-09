@@ -93,6 +93,22 @@ class ParticleEffect extends PositionComponent with HasGameReference<RunnerGame>
     ));
   }
 
+  /// Speed trail behind fast-moving player
+  void spawnSpeedTrail(double wx, double wy, double speed) {
+    if (speed < 250) return;
+    final rng = Random();
+    final alpha = ((speed - 250) / 200).clamp(0.2, 0.6);
+    _particles.add(_FxParticle(
+      x: wx,
+      y: wy + rng.nextDouble() * 20 - 10,
+      vx: -speed * 0.3,
+      vy: rng.nextDouble() * 10 - 5,
+      size: 2 + rng.nextDouble() * 2,
+      life: 0.2 + rng.nextDouble() * 0.15,
+      color: Color.fromRGBO(200, 220, 255, alpha),
+    ));
+  }
+
   /// Combo milestone burst
   void spawnComboMilestone(double wx, double wy) {
     final rng = Random();

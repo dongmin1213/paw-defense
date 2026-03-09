@@ -15,6 +15,7 @@ class Enemy extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
   final EnemyData data;
   final bool isGolden;
+  final bool isElite;
   int currentHp;
   double _animTimer = 0;
   bool _isHit = false;
@@ -23,16 +24,22 @@ class Enemy extends PositionComponent
   final double _hoverBaseY;
 
   static const double goldenMultiplier = 10.0;
+  static const double eliteHpMult = 3.0;
+  static const double eliteCoinMult = 5.0;
+  static const double eliteScale = 1.3;
 
   Enemy({
     required this.data,
     required Vector2 spawnPosition,
     this.isGolden = false,
-  })  : currentHp = data.hp,
+    this.isElite = false,
+  })  : currentHp = isElite ? (data.hp * eliteHpMult).ceil() : data.hp,
         _hoverBaseY = spawnPosition.y,
         super(
           position: spawnPosition,
-          size: Vector2(data.width, data.height),
+          size: isElite
+              ? Vector2(data.width * eliteScale, data.height * eliteScale)
+              : Vector2(data.width, data.height),
         );
 
   @override
@@ -87,6 +94,9 @@ class Enemy extends PositionComponent
         ? data.coinDrop * BalanceConfig.airEnemyCoinMultiplier
         : data.coinDrop;
 
+    if (isElite) {
+      coinAmount *= eliteCoinMult;
+    }
     if (isGolden) {
       coinAmount *= goldenMultiplier;
     }
@@ -119,6 +129,21 @@ class Enemy extends PositionComponent
         fontSize: 14,
         duration: 0.8,
       );
+    }
+    if (isElite) {
+      UIEffectManager.instance.screenFlash(
+        color: const Color(0xFFE040FB),
+        duration: 0.2,
+        maxAlpha: 0.35,
+      );
+      UIEffectManager.instance.spawnImpactText(
+        text: 'ELITE KILL!',
+        color: const Color(0xFFE040FB),
+        fontSize: 16,
+        duration: 1.0,
+      );
+      game.gameFeel.shake(intensity: 5, duration: 0.2);
+      game.gameFeel.hitStop(duration: 0.05);
     }
     if (isGolden) {
       UIEffectManager.instance.screenFlash(
@@ -167,6 +192,22 @@ class Enemy extends PositionComponent
 
   @override
   void render(Canvas canvas) {
+    // Elite aura
+    if (isElite && !_isHit) {
+      final pulse = (_sin(_animTimer * 5) * 0.3 + 0.4).clamp(0.0, 1.0);
+      final auraPaint = Paint()
+        ..color = const Color(0xFFE040FB).withValues(alpha: pulse)
+        ..isAntiAlias = false;
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(size.x / 2, size.y / 2),
+          width: size.x + 6,
+          height: size.y + 6,
+        ),
+        auraPaint,
+      );
+    }
+
     EnemyRenderer.render(
       canvas,
       Size(size.x, size.y),

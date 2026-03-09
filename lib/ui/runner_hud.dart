@@ -88,6 +88,23 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
           _buildModeIndicator(game),
           if (game.levelGenerator.isDangerZone || game.levelGenerator.isPeaceZone)
             _buildZoneIndicator(game),
+          // Zone screen tint overlay
+          if (game.levelGenerator.isDangerZone)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.red.withValues(alpha: 0.06),
+                ),
+              ),
+            ),
+          if (game.levelGenerator.isPeaceZone)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.green.withValues(alpha: 0.04),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -263,6 +280,19 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
                   ? GameTheme.accentGreen
                   : GameTheme.accentOrange,
             ),
+            if (game.tapCombo >= 3) ...[
+              const SizedBox(height: 4),
+              Text(
+                'TAP COMBO x${game.tapCombo}',
+                style: GameTheme.pixel(
+                  fontSize: 7,
+                  color: game.tapCombo >= 10
+                      ? GameTheme.accentGold
+                      : GameTheme.accentOrange,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
           ],
         ),
       ),

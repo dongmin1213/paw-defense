@@ -66,6 +66,11 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   // Boss
   Boss? activeBoss;
 
+  // Tap combo for boss fights
+  int tapCombo = 0;
+  double _tapComboTimer = 0;
+  static const double _tapComboWindow = 0.6;
+
   // Special events
   bool isGoldenHour = false;
   double _goldenHourTimer = 0;
@@ -248,6 +253,14 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       isActiveMode = false;
     }
 
+    // Tap combo timer
+    if (_tapComboTimer > 0) {
+      _tapComboTimer -= dt;
+      if (_tapComboTimer <= 0) {
+        tapCombo = 0;
+      }
+    }
+
     // Boss completion check
     if (activeBoss != null && activeBoss!.isDead) {
       levelGenerator.onBossComplete();
@@ -260,6 +273,15 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       particleEffect.spawnDustTrail(
         player.position.x,
         player.position.y + player.size.y,
+      );
+    }
+
+    // Speed trail at high velocities
+    if (_dustTimer == 0) {
+      particleEffect.spawnSpeedTrail(
+        player.position.x,
+        player.position.y + player.size.y / 2,
+        player.currentSpeed,
       );
     }
 
@@ -375,10 +397,36 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     _lastTapTime = _gameTime;
     isActiveMode = true;
 
-    // If boss is active, tap attacks boss
+    // If boss is active, tap attacks boss with combo damage
     if (activeBoss != null && !activeBoss!.isDead) {
-      activeBoss!.onTapAttack();
+      // Tap combo escalation
+      if (_tapComboTimer > 0) {
+        tapCombo++;
+      } else {
+        tapCombo = 1;
+      }
+      _tapComboTimer = _tapComboWindow;
+
+      // Combo multiplier: 1x, 1.2x, 1.5x, 2x, 3x...
+      final comboMult = tapCombo <= 1
+          ? 1.0
+          : tapCombo <= 3
+              ? 1.0 + (tapCombo - 1) * 0.2
+              : 1.0 + tapCombo * 0.3;
+      final damage = 2.0 * upgradeManager.attackMultiplier * comboMult;
+      activeBoss!.onTapAttackWithDamage(damage);
       soundManager.playBossHit();
+
+      // Combo feedback
+      if (tapCombo >= 5 && tapCombo % 5 == 0) {
+        UIEffectManager.instance.spawnImpactText(
+          text: 'TAP x$tapCombo!',
+          color: const Color(0xFFFF9800),
+          fontSize: 16,
+          duration: 0.8,
+        );
+        gameFeel.shake(intensity: 3, duration: 0.1);
+      }
     }
 
     soundManager.playJump();
