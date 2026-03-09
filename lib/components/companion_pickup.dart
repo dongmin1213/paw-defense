@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/companion_data.dart';
@@ -16,7 +17,7 @@ class CompanionPickup extends PositionComponent
   bool _collected = false;
   double _collectAnim = 0;
 
-  SpriteAnimation? _anim;
+  SpriteAnimationTicker? _ticker;
 
   CompanionPickup({
     required this.data,
@@ -30,18 +31,19 @@ class CompanionPickup extends PositionComponent
   Future<void> onLoad() async {
     add(RectangleHitbox(isSolid: true));
 
-    _anim = await SpriteLoader.loadAnimation(
+    final anim = await SpriteLoader.loadAnimation(
       'companion_${data.id}.png',
       frameWidth: 20, frameHeight: 20,
       frameCount: 4, stepTime: 0.2,
     );
+    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
-    _anim?.update(dt);
+    _ticker?.update(dt);
 
     // Float hover
     position.y = spawnPosition.y + sin(_animTimer * 3) * 4;
@@ -76,11 +78,6 @@ class CompanionPickup extends PositionComponent
   }
 
   @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
-    super.onCollisionStart(intersectionPoints, other);
-  }
-
-  @override
   void render(Canvas canvas) {
     if (_collected) return;
 
@@ -91,7 +88,7 @@ class CompanionPickup extends PositionComponent
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), 16, glowPaint);
 
     // Render companion sprite
-    final sprite = _anim?.getSprite();
+    final sprite = _ticker?.getSprite();
     if (sprite != null) {
       // Center the 20x20 sprite in the 28x28 component
       canvas.save();

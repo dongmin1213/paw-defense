@@ -3,9 +3,9 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
-import '../utils/constants.dart';
 import '../utils/sprite_loader.dart';
 import 'coin.dart';
 
@@ -18,7 +18,6 @@ class Boss extends PositionComponent
   double hp = 50;
   double _timer = 0;
   double _autoAttackTimer = 0;
-  double _animTimer = 0;
   bool _isDead = false;
   bool _isIntro = true;
   double _introTimer = 0;
@@ -27,7 +26,7 @@ class Boss extends PositionComponent
   static const double bossTimeLimit = 10.0;
   static const double autoAttackInterval = 0.5;
 
-  SpriteAnimation? _anim;
+  SpriteAnimationTicker? _ticker;
 
   Boss({
     required this.regionId,
@@ -84,18 +83,18 @@ class Boss extends PositionComponent
   Future<void> onLoad() async {
     add(RectangleHitbox(isSolid: true));
 
-    _anim = await SpriteLoader.loadAnimation(
+    final anim = await SpriteLoader.loadAnimation(
       'boss_$regionId.png',
       frameWidth: 64, frameHeight: 64,
       frameCount: 4, stepTime: 0.25,
     );
+    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _animTimer += dt;
-    _anim?.update(dt);
+    _ticker?.update(dt);
 
     if (_isDead) {
       _deathTimer += dt;
@@ -187,19 +186,19 @@ class Boss extends PositionComponent
     }
 
     // Render boss sprite
-    final sprite = _anim?.getSprite();
+    final sprite = _ticker?.getSprite();
     if (sprite != null) {
       sprite.render(canvas, size: size);
     }
 
     // HP bar
-    final barWidth = size.x + 10;
-    final barHeight = 5.0;
-    final barX = (size.x - barWidth) / 2;
-    final barY = -10.0;
+    const barWidth = 70.0;
+    const barHeight = 5.0;
+    const barX = (60 - barWidth) / 2;
+    const barY = -10.0;
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(barX, barY, barWidth, barHeight), const Radius.circular(2)),
+      RRect.fromRectAndRadius(const Rect.fromLTWH(barX, barY, barWidth, barHeight), const Radius.circular(2)),
       Paint()..color = const Color(0xFF333333),
     );
 
@@ -213,9 +212,9 @@ class Boss extends PositionComponent
       Paint()..color = hpColor,
     );
 
-    final timerY = barY - 6;
+    const timerY = barY - 6;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(barX, timerY, barWidth, 3), const Radius.circular(1)),
+      RRect.fromRectAndRadius(const Rect.fromLTWH(barX, timerY, barWidth, 3), const Radius.circular(1)),
       Paint()..color = const Color(0xFF555555),
     );
     final timeColor = timePercent < 0.5

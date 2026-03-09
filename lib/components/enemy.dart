@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/enemy_data.dart';
@@ -23,7 +24,7 @@ class Enemy extends PositionComponent
 
   static const double goldenMultiplier = 10.0;
 
-  SpriteAnimation? _anim;
+  SpriteAnimationTicker? _ticker;
 
   Enemy({
     required this.data,
@@ -40,18 +41,19 @@ class Enemy extends PositionComponent
   Future<void> onLoad() async {
     add(RectangleHitbox());
 
-    _anim = await SpriteLoader.loadAnimation(
+    final anim = await SpriteLoader.loadAnimation(
       'enemy_${data.id}.png',
       frameWidth: 32, frameHeight: 32,
       frameCount: 4, stepTime: 0.2,
     );
+    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
-    _anim?.update(dt);
+    _ticker?.update(dt);
 
     // Air enemies hover
     if (data.type == EnemyType.air) {
@@ -134,8 +136,7 @@ class Enemy extends PositionComponent
       canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.6, glowPaint);
     }
 
-    // Hit flash: draw white overlay
-    final sprite = _anim?.getSprite();
+    final sprite = _ticker?.getSprite();
     if (sprite != null) {
       sprite.render(canvas, size: size);
       if (_isHit) {

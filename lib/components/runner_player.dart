@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/balance_config.dart';
@@ -17,7 +18,6 @@ enum PlayerState { idle, run, jump, attack }
 class RunnerPlayer extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
   double velocityY = 0;
-  double _animTimer = 0;
   bool _isOnGround = true;
   bool _canDoubleJump = false;
   bool _hasDoubleJumped = false;
@@ -28,13 +28,13 @@ class RunnerPlayer extends PositionComponent
   double _slowdownTimer = 0;
   double _slowdownFactor = 1.0;
 
-  // Sprite animations
-  SpriteAnimation? _idleAnim;
-  SpriteAnimation? _runAnim;
-  SpriteAnimation? _jumpAnim;
-  SpriteAnimation? _attackAnim;
-  SpriteAnimation? _currentAnim;
-  double _spriteTimer = 0;
+  // Sprite animation tickers
+  SpriteAnimationTicker? _idleTicker;
+  SpriteAnimationTicker? _runTicker;
+  SpriteAnimationTicker? _jumpTicker;
+  SpriteAnimationTicker? _attackTicker;
+  SpriteAnimationTicker? _currentTicker;
+  PlayerState _prevState = PlayerState.run;
 
   // Speed
   double get currentSpeed {
@@ -55,29 +55,31 @@ class RunnerPlayer extends PositionComponent
   Future<void> onLoad() async {
     add(RectangleHitbox());
 
-    // Load sprite animations from bichon.png sprite sheet
-    // Layout: idle(0-3), run(4-9), jump(10-12), attack(13-15) = 16 frames, each 36x40
     const fw = 36.0;
     const fh = 40.0;
 
-    _idleAnim = await SpriteLoader.loadAnimation(
+    final idleAnim = await SpriteLoader.loadAnimation(
       'bichon.png', frameWidth: fw, frameHeight: fh,
       frameCount: 4, startFrame: 0, stepTime: 0.25,
     );
-    _runAnim = await SpriteLoader.loadAnimation(
+    final runAnim = await SpriteLoader.loadAnimation(
       'bichon.png', frameWidth: fw, frameHeight: fh,
       frameCount: 6, startFrame: 4, stepTime: 0.1,
     );
-    _jumpAnim = await SpriteLoader.loadAnimation(
+    final jumpAnim = await SpriteLoader.loadAnimation(
       'bichon.png', frameWidth: fw, frameHeight: fh,
       frameCount: 3, startFrame: 10, stepTime: 0.15, loop: false,
     );
-    _attackAnim = await SpriteLoader.loadAnimation(
+    final attackAnim = await SpriteLoader.loadAnimation(
       'bichon.png', frameWidth: fw, frameHeight: fh,
       frameCount: 3, startFrame: 13, stepTime: 0.1, loop: false,
     );
 
-    _currentAnim = _runAnim;
+    _idleTicker = idleAnim.createTicker();
+    _runTicker = runAnim.createTicker();
+    _jumpTicker = jumpAnim.createTicker();
+    _attackTicker = attackAnim.createTicker();
+    _currentTicker = _runTicker;
   }
 
   PlayerState get _state {
@@ -89,8 +91,6 @@ class RunnerPlayer extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    _animTimer += dt;
-    _spriteTimer += dt;
 
     // Horizontal movement (auto-run)
     position.x += currentSpeed * dt;
@@ -131,28 +131,26 @@ class RunnerPlayer extends PositionComponent
   }
 
   void _updateAnimation(double dt) {
-    SpriteAnimation? targetAnim;
-    switch (_state) {
-      case PlayerState.attack:
-        targetAnim = _attackAnim;
-        break;
-      case PlayerState.jump:
-        targetAnim = _jumpAnim;
-        break;
-      case PlayerState.run:
-        targetAnim = _runAnim;
-        break;
-      case PlayerState.idle:
-        targetAnim = _idleAnim;
-        break;
+    final state = _state;
+    if (state != _prevState) {
+      _prevState = state;
+      switch (state) {
+        case PlayerState.attack:
+          _currentTicker = _attackTicker;
+          break;
+        case PlayerState.jump:
+          _currentTicker = _jumpTicker;
+          break;
+        case PlayerState.run:
+          _currentTicker = _runTicker;
+          break;
+        case PlayerState.idle:
+          _currentTicker = _idleTicker;
+          break;
+      }
+      _currentTicker?.reset();
     }
-
-    if (targetAnim != _currentAnim) {
-      _currentAnim = targetAnim;
-      _currentAnim?.reset();
-    }
-
-    _currentAnim?.update(dt);
+    _currentTicker?.update(dt);
   }
 
   void jump() {
@@ -184,7 +182,7 @@ class RunnerPlayer extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    final sprite = _currentAnim?.getSprite();
+    final sprite = _currentTicker?.getSprite();
     if (sprite != null) {
       sprite.render(canvas, size: size);
     }

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../utils/constants.dart';
@@ -19,7 +20,7 @@ class Coin extends PositionComponent
   double _popupY = 0;
   double _popupAlpha = 0;
 
-  SpriteAnimation? _anim;
+  SpriteAnimationTicker? _ticker;
 
   Coin({
     required Vector2 spawnPosition,
@@ -33,18 +34,19 @@ class Coin extends PositionComponent
   Future<void> onLoad() async {
     add(CircleHitbox());
 
-    _anim = await SpriteLoader.loadAnimation(
+    final anim = await SpriteLoader.loadAnimation(
       'coin.png',
       frameWidth: 16, frameHeight: 16,
       frameCount: 8, stepTime: 0.1,
     );
+    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
-    _anim?.update(dt);
+    _ticker?.update(dt);
 
     if (!_collected) {
       // Hover animation
@@ -86,7 +88,7 @@ class Coin extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!_collected) {
-      final sprite = _anim?.getSprite();
+      final sprite = _ticker?.getSprite();
       if (sprite != null) {
         sprite.render(canvas, size: size);
       }

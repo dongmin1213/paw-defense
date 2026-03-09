@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/painting.dart' show HSVColor;
+
 class CompanionRenderer {
   static void render(Canvas canvas, String id, Size size, double animTimer) {
     switch (id) {
