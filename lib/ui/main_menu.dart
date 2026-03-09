@@ -94,12 +94,16 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
             opacity: 0.025,
             child: Container(
               decoration: const BoxDecoration(gradient: GameTheme.gradientDark),
-              child: Stack(
-                children: [
-                  ..._buildBgParticles(),
-                  // 스타필드 효과
-                  ..._buildStarfield(),
-                  SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final h = constraints.maxHeight;
+                  return Stack(
+                    children: [
+                      ..._buildBgParticles(w, h),
+                      // 스타필드 효과
+                      ..._buildStarfield(w, h),
+                      SafeArea(
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +149,9 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                ],
+                  ],
+                );
+                },
               ),
             ),
           );
@@ -206,7 +212,7 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
 
   Widget _buildStatsCard(RunnerGame game, bool hasAscended) {
     return Container(
-      width: 300,
+      constraints: const BoxConstraints(maxWidth: 320),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: GameTheme.pixelPanelDecoration(),
       child: Column(
@@ -291,11 +297,11 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
   }
 
   // 스타필드 배경 효과
-  List<Widget> _buildStarfield() {
+  List<Widget> _buildStarfield(double w, double h) {
     final rng = Random(99);
     return List.generate(15, (i) {
-      final x = rng.nextDouble() * 800;
-      final y = rng.nextDouble() * 600;
+      final x = rng.nextDouble() * w;
+      final y = rng.nextDouble() * h;
       final size = 1.0 + rng.nextDouble() * 2;
       final phase = rng.nextDouble() * 2 * pi;
       final twinkle =
@@ -313,7 +319,7 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
     });
   }
 
-  List<Widget> _buildBgParticles() {
+  List<Widget> _buildBgParticles(double w, double h) {
     final rng = Random(42);
     final colors = [
       GameTheme.accent,
@@ -331,8 +337,8 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
       final drift = sin((x + _bgController.value) * 3.14159 * 2) * 10;
 
       return Positioned(
-        left: (x * 800 + drift) % 800,
-        top: ((y + offset) % 1.0) * 600,
+        left: (x * w + drift) % w,
+        top: ((y + offset) % 1.0) * h,
         child: Container(
           width: size,
           height: size,

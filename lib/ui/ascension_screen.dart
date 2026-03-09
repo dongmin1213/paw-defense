@@ -73,6 +73,12 @@ class _AscensionScreenState extends State<AscensionScreen>
     _entryController.forward();
   }
 
+  void _animatedClose() {
+    _entryController.reverse().then((_) {
+      if (mounted) widget.game.closeAscensionScreen();
+    });
+  }
+
   @override
   void dispose() {
     _entryController.dispose();
@@ -237,7 +243,7 @@ class _AscensionScreenState extends State<AscensionScreen>
         ),
         const SizedBox(height: 14),
         GestureDetector(
-          onTap: () => widget.game.closeAscensionScreen(),
+          onTap: _animatedClose,
           child: Text(
             'BACK',
             style: GameTheme.pixel(
@@ -293,7 +299,7 @@ class _AscensionScreenState extends State<AscensionScreen>
           GameTheme.pixelButton(
             label: 'CONTINUE',
             icon: Icons.arrow_forward_rounded,
-            onTap: () => widget.game.closeAscensionScreen(),
+            onTap: _animatedClose,
             gradient: GameTheme.gradientGold,
             fontSize: 10,
             horizontalPad: 32,
@@ -306,6 +312,9 @@ class _AscensionScreenState extends State<AscensionScreen>
 
   List<Widget> _buildAscensionParticles() {
     final rng = Random(42);
+    final screen = MediaQuery.of(context).size;
+    final cx = screen.width / 2;
+    final cy = screen.height / 2;
     return List.generate(20, (i) {
       final angle = rng.nextDouble() * 2 * pi;
       final radius = 50 + rng.nextDouble() * 250;
@@ -313,8 +322,8 @@ class _AscensionScreenState extends State<AscensionScreen>
       final t = (_particleController.value * speed + i * 0.05) % 1.0;
       final size = 2 + rng.nextDouble() * 3;
 
-      final x = 400 + cos(angle + t * 2 * pi) * radius * t;
-      final y = 300 + sin(angle + t * 2 * pi) * radius * t;
+      final x = cx + cos(angle + t * 2 * pi) * radius * t;
+      final y = cy + sin(angle + t * 2 * pi) * radius * t;
       final alpha = (1 - t).clamp(0.0, 0.6);
 
       // 픽셀 스타일 사각형 파티클
