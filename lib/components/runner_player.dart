@@ -2,12 +2,11 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/balance_config.dart';
+import '../renderers/player_renderer.dart';
 import '../utils/constants.dart';
-import '../utils/sprite_loader.dart';
 import 'enemy.dart';
 import 'obstacle.dart';
 import 'coin.dart';
@@ -23,18 +22,11 @@ class RunnerPlayer extends PositionComponent
   bool _hasDoubleJumped = false;
   bool _isAttacking = false;
   double _attackTimer = 0;
+  double _animTimer = 0;
 
   // Slowdown from obstacle
   double _slowdownTimer = 0;
   double _slowdownFactor = 1.0;
-
-  // Sprite animation tickers
-  SpriteAnimationTicker? _idleTicker;
-  SpriteAnimationTicker? _runTicker;
-  SpriteAnimationTicker? _jumpTicker;
-  SpriteAnimationTicker? _attackTicker;
-  SpriteAnimationTicker? _currentTicker;
-  PlayerState _prevState = PlayerState.run;
 
   // Speed
   double get currentSpeed {
@@ -54,32 +46,6 @@ class RunnerPlayer extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox());
-
-    const fw = 36.0;
-    const fh = 40.0;
-
-    final idleAnim = await SpriteLoader.loadAnimation(
-      'bichon.png', frameWidth: fw, frameHeight: fh,
-      frameCount: 4, startFrame: 0, stepTime: 0.25,
-    );
-    final runAnim = await SpriteLoader.loadAnimation(
-      'bichon.png', frameWidth: fw, frameHeight: fh,
-      frameCount: 6, startFrame: 4, stepTime: 0.1,
-    );
-    final jumpAnim = await SpriteLoader.loadAnimation(
-      'bichon.png', frameWidth: fw, frameHeight: fh,
-      frameCount: 3, startFrame: 10, stepTime: 0.15, loop: false,
-    );
-    final attackAnim = await SpriteLoader.loadAnimation(
-      'bichon.png', frameWidth: fw, frameHeight: fh,
-      frameCount: 3, startFrame: 13, stepTime: 0.1, loop: false,
-    );
-
-    _idleTicker = idleAnim.createTicker();
-    _runTicker = runAnim.createTicker();
-    _jumpTicker = jumpAnim.createTicker();
-    _attackTicker = attackAnim.createTicker();
-    _currentTicker = _runTicker;
   }
 
   PlayerState get _state {
@@ -91,6 +57,7 @@ class RunnerPlayer extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    _animTimer += dt;
 
     // Horizontal movement (auto-run)
     position.x += currentSpeed * dt;
@@ -125,32 +92,6 @@ class RunnerPlayer extends PositionComponent
         _slowdownFactor = 1.0;
       }
     }
-
-    // Update sprite animation
-    _updateAnimation(dt);
-  }
-
-  void _updateAnimation(double dt) {
-    final state = _state;
-    if (state != _prevState) {
-      _prevState = state;
-      switch (state) {
-        case PlayerState.attack:
-          _currentTicker = _attackTicker;
-          break;
-        case PlayerState.jump:
-          _currentTicker = _jumpTicker;
-          break;
-        case PlayerState.run:
-          _currentTicker = _runTicker;
-          break;
-        case PlayerState.idle:
-          _currentTicker = _idleTicker;
-          break;
-      }
-      _currentTicker?.reset();
-    }
-    _currentTicker?.update(dt);
   }
 
   void jump() {
@@ -182,10 +123,14 @@ class RunnerPlayer extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    final sprite = _currentTicker?.getSprite();
-    if (sprite != null) {
-      sprite.render(canvas, size: size);
-    }
+    PlayerRenderer.render(
+      canvas,
+      Size(size.x, size.y),
+      isRunning: _state == PlayerState.run,
+      animTimer: _animTimer,
+      isJumping: !_isOnGround,
+      isAttacking: _isAttacking,
+    );
   }
 
   @override

@@ -4,11 +4,34 @@ import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
 import '../utils/constants.dart';
-import '../utils/sprite_loader.dart';
+import '../utils/pixel_art.dart';
 
 class Obstacle extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
-  Sprite? _sprite;
+
+  static const _rockSprite = [
+    '......dddd......',
+    '....ddDDDDdd....',
+    '...dDDDDDDDDd...',
+    '..dDDhDDDDDDDd..',
+    '.dDDhhDDDDDDDDd.',
+    '.dDDhDDDDDDDDDd.',
+    'dDDDDDDDDDDDDDDd',
+    'dDDDDDDDDDssDDDd',
+    'dDDDDDDDDDssDDDd',
+    'dDDsDDDDDDDDDDDd',
+    '.dDDDDDDDDDDDDd.',
+    '.dDDDDDDDDDDDDd.',
+    '..ddDDDDDDDDdd..',
+    '....dddddddd....',
+  ];
+
+  static const _palette = {
+    'D': Color(0xFF8B7355), // Rock body
+    'd': Color(0xFF6B5545), // Rock dark outline
+    'h': Color(0xFFA89070), // Highlight
+    's': Color(0xFF5A4535), // Shadow crack
+  };
 
   Obstacle({
     required Vector2 spawnPosition,
@@ -20,11 +43,6 @@ class Obstacle extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox());
-
-    _sprite = await SpriteLoader.loadSprite(
-      'obstacle.png',
-      frameWidth: 24, frameHeight: 24,
-    );
   }
 
   @override
@@ -39,8 +57,9 @@ class Obstacle extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    if (_sprite != null) {
-      _sprite!.render(canvas, size: size);
-    }
+    PixelArt.drawCentered(
+      canvas, _rockSprite, _palette, Size(size.x, size.y),
+      pixelSize: size.x / _rockSprite[0].length,
+    );
   }
 }

@@ -3,10 +3,9 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
-import '../utils/sprite_loader.dart';
+import '../renderers/boss_renderer.dart';
 import 'coin.dart';
 
 class Boss extends PositionComponent
@@ -22,11 +21,10 @@ class Boss extends PositionComponent
   bool _isIntro = true;
   double _introTimer = 0;
   double _deathTimer = 0;
+  double _animTimer = 0;
 
   static const double bossTimeLimit = 10.0;
   static const double autoAttackInterval = 0.5;
-
-  SpriteAnimationTicker? _ticker;
 
   Boss({
     required this.regionId,
@@ -82,19 +80,12 @@ class Boss extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox(isSolid: true));
-
-    final anim = await SpriteLoader.loadAnimation(
-      'boss_$regionId.png',
-      frameWidth: 64, frameHeight: 64,
-      frameCount: 4, stepTime: 0.25,
-    );
-    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _ticker?.update(dt);
+    _animTimer += dt;
 
     if (_isDead) {
       _deathTimer += dt;
@@ -185,46 +176,46 @@ class Boss extends PositionComponent
       return;
     }
 
-    // Render boss sprite
-    final sprite = _ticker?.getSprite();
-    if (sprite != null) {
-      sprite.render(canvas, size: size);
-    }
+    // Render boss pixel art
+    BossRenderer.render(canvas, regionId, Size(size.x, size.y), _animTimer);
 
-    // HP bar
+    // HP bar (pixel style)
     const barWidth = 70.0;
     const barHeight = 5.0;
     const barX = (60 - barWidth) / 2;
     const barY = -10.0;
+    final paint = Paint()..isAntiAlias = false;
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(barX, barY, barWidth, barHeight), const Radius.circular(2)),
-      Paint()..color = const Color(0xFF333333),
-    );
+    // Background
+    paint.color = const Color(0xFF333333);
+    canvas.drawRect(const Rect.fromLTWH(barX, barY, barWidth, barHeight), paint);
 
+    // HP fill
     final hpColor = hpPercent > 0.5
         ? const Color(0xFFE53935)
         : hpPercent > 0.25
             ? const Color(0xFFFF9800)
             : const Color(0xFFFF1744);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight), const Radius.circular(2)),
-      Paint()..color = hpColor,
-    );
+    paint.color = hpColor;
+    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight), paint);
 
+    // Border
+    paint.color = const Color(0xFFFFFFFF);
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 1;
+    canvas.drawRect(const Rect.fromLTWH(barX, barY, barWidth, barHeight), paint);
+    paint.style = PaintingStyle.fill;
+
+    // Timer bar
     const timerY = barY - 6;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(barX, timerY, barWidth, 3), const Radius.circular(1)),
-      Paint()..color = const Color(0xFF555555),
-    );
+    paint.color = const Color(0xFF555555);
+    canvas.drawRect(const Rect.fromLTWH(barX, timerY, barWidth, 3), paint);
     final timeColor = timePercent < 0.5
         ? const Color(0xFF4CAF50)
         : timePercent < 0.8
             ? const Color(0xFFFF9800)
             : const Color(0xFFE53935);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(barX, timerY, barWidth * (1 - timePercent), 3), const Radius.circular(1)),
-      Paint()..color = timeColor,
-    );
+    paint.color = timeColor;
+    canvas.drawRect(Rect.fromLTWH(barX, timerY, barWidth * (1 - timePercent), 3), paint);
   }
 }
