@@ -4,8 +4,8 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
-import '../renderers/coin_renderer.dart';
 import '../utils/constants.dart';
+import '../utils/sprite_loader.dart';
 
 class Coin extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
@@ -19,6 +19,8 @@ class Coin extends PositionComponent
   double _popupY = 0;
   double _popupAlpha = 0;
 
+  SpriteAnimation? _anim;
+
   Coin({
     required Vector2 spawnPosition,
     this.value = 1,
@@ -30,12 +32,19 @@ class Coin extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(CircleHitbox());
+
+    _anim = await SpriteLoader.loadAnimation(
+      'coin.png',
+      frameWidth: 16, frameHeight: 16,
+      frameCount: 8, stepTime: 0.1,
+    );
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
+    _anim?.update(dt);
 
     if (!_collected) {
       // Hover animation
@@ -77,7 +86,10 @@ class Coin extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!_collected) {
-      CoinRenderer.render(canvas, size.toSize(), animTimer: _animTimer);
+      final sprite = _anim?.getSprite();
+      if (sprite != null) {
+        sprite.render(canvas, size: size);
+      }
     } else {
       // Render popup text "+N"
       final style = ParagraphStyle(textAlign: TextAlign.center);

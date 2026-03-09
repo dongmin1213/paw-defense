@@ -5,14 +5,14 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
-import '../renderers/boss_renderer.dart';
 import '../utils/constants.dart';
+import '../utils/sprite_loader.dart';
 import 'coin.dart';
 
 class Boss extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
   final String regionId;
-  final int bossIndex; // which boss encounter (1st, 2nd, etc.)
+  final int bossIndex;
 
   double maxHp = 50;
   double hp = 50;
@@ -27,6 +27,8 @@ class Boss extends PositionComponent
   static const double bossTimeLimit = 10.0;
   static const double autoAttackInterval = 0.5;
 
+  SpriteAnimation? _anim;
+
   Boss({
     required this.regionId,
     required this.bossIndex,
@@ -40,7 +42,6 @@ class Boss extends PositionComponent
   }
 
   void _calculateHp() {
-    // HP scales with region and boss index
     final regionMult = _regionHpMultiplier();
     maxHp = (30 + bossIndex * 20) * regionMult;
     hp = maxHp;
@@ -69,7 +70,6 @@ class Boss extends PositionComponent
   }
 
   double get soulReward {
-    // Small soul drop from bosses
     switch (regionId) {
       case 'meadow': return 0;
       case 'forest': return 0.5;
@@ -83,12 +83,19 @@ class Boss extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox(isSolid: true));
+
+    _anim = await SpriteLoader.loadAnimation(
+      'boss_$regionId.png',
+      frameWidth: 64, frameHeight: 64,
+      frameCount: 4, stepTime: 0.25,
+    );
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
+    _anim?.update(dt);
 
     if (_isDead) {
       _deathTimer += dt;
@@ -101,7 +108,6 @@ class Boss extends PositionComponent
     // Intro slide-in
     if (_isIntro) {
       _introTimer += dt;
-      // Boss slides to position right of player
       final targetX = game.player.position.x + 180;
       position.x += (targetX - position.x) * 2 * dt;
       if (_introTimer > 1.0) {
@@ -110,14 +116,13 @@ class Boss extends PositionComponent
       return;
     }
 
-    // Follow player (stay to the right)
+    // Follow player
     final targetX = game.player.position.x + 180;
     position.x += (targetX - position.x) * 3 * dt;
 
     // Timer
     _timer += dt;
     if (_timer >= bossTimeLimit) {
-      // Boss escapes
       _escape();
       return;
     }
@@ -132,7 +137,6 @@ class Boss extends PositionComponent
 
   void onTapAttack() {
     if (_isDead || _isIntro) return;
-    // Player tap = extra attack (2x DPS)
     _takeDamage(2.0 * game.upgradeManager.attackMultiplier);
   }
 
@@ -147,7 +151,6 @@ class Boss extends PositionComponent
   void _die() {
     _isDead = true;
 
-    // Spawn coins
     final rng = Random();
     final coinCount = 8 + rng.nextInt(5);
     for (var i = 0; i < coinCount; i++) {
@@ -159,10 +162,8 @@ class Boss extends PositionComponent
       ));
     }
 
-    // Combo bonus
     game.addCombo(5);
 
-    // Boss explosion particles
     game.particleEffect.spawnBossExplosion(
       position.x + size.x / 2,
       position.y + size.y / 2,
@@ -180,14 +181,16 @@ class Boss extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (_isDead) {
-      // Death flash
       final flashPaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.5);
       canvas.drawCircle(Offset(size.x / 2, size.y / 2), 30, flashPaint);
       return;
     }
 
-    // Render boss
-    BossRenderer.render(canvas, regionId, size.toSize(), _animTimer);
+    // Render boss sprite
+    final sprite = _anim?.getSprite();
+    if (sprite != null) {
+      sprite.render(canvas, size: size);
+    }
 
     // HP bar
     final barWidth = size.x + 10;
@@ -195,13 +198,11 @@ class Boss extends PositionComponent
     final barX = (size.x - barWidth) / 2;
     final barY = -10.0;
 
-    // BG
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(barX, barY, barWidth, barHeight), const Radius.circular(2)),
       Paint()..color = const Color(0xFF333333),
     );
 
-    // HP fill
     final hpColor = hpPercent > 0.5
         ? const Color(0xFFE53935)
         : hpPercent > 0.25
@@ -212,7 +213,6 @@ class Boss extends PositionComponent
       Paint()..color = hpColor,
     );
 
-    // Timer bar
     final timerY = barY - 6;
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(barX, timerY, barWidth, 3), const Radius.circular(1)),

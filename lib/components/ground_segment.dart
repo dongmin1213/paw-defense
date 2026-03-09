@@ -1,12 +1,14 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
 import '../data/region_data.dart';
 import '../utils/constants.dart';
+import '../utils/sprite_loader.dart';
 
 class GroundSegment extends PositionComponent with HasGameReference<RunnerGame> {
   final RegionData region;
+  ui.Image? _tileImage;
 
   GroundSegment({
     required double startX,
@@ -17,48 +19,44 @@ class GroundSegment extends PositionComponent with HasGameReference<RunnerGame> 
         );
 
   @override
+  Future<void> onLoad() async {
+    _tileImage = await SpriteLoader.loadImage('ground_${region.id}.png');
+  }
+
+  @override
   void update(double dt) {
     super.update(dt);
 
-    // Recycle: if segment is far behind camera, move it ahead
     final cameraX = game.camera.viewfinder.position.x;
     if (position.x + size.x < cameraX - GameConstants.despawnBehindDistance) {
-      // Find the rightmost ground segment position
       final aheadX = cameraX + GameConstants.worldWidth + GameConstants.spawnAheadDistance;
       position.x = aheadX;
     }
   }
 
   @override
-  void render(Canvas canvas) {
-    // Main ground fill
-    final groundPaint = Paint()..color = region.groundColor;
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      groundPaint,
-    );
+  void render(ui.Canvas canvas) {
+    if (_tileImage != null) {
+      // Tile the 32x16 image across the segment
+      final tileW = _tileImage!.width.toDouble();
+      final tileH = _tileImage!.height.toDouble();
+      final cols = (size.x / tileW).ceil();
+      final rows = (size.y / tileH).ceil();
 
-    // Top grass line
-    final grassPaint = Paint()
-      ..color = region.groundAccentColor
-      ..strokeWidth = 3;
-    canvas.drawLine(
-      const Offset(0, 1),
-      Offset(size.x, 1),
-      grassPaint,
-    );
-
-    // Texture lines
-    final texturePaint = Paint()
-      ..color = region.groundAccentColor.withValues(alpha: 0.3)
-      ..strokeWidth = 1;
-
-    for (var i = 0; i < 3; i++) {
-      final y = 15.0 + i * 25.0;
-      canvas.drawLine(
-        Offset(10 + i * 20.0, y),
-        Offset(size.x - 10 - i * 15.0, y),
-        texturePaint,
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          canvas.drawImage(
+            _tileImage!,
+            ui.Offset(c * tileW, r * tileH),
+            ui.Paint(),
+          );
+        }
+      }
+    } else {
+      // Fallback solid color
+      canvas.drawRect(
+        ui.Rect.fromLTWH(0, 0, size.x, size.y),
+        ui.Paint()..color = region.groundColor,
       );
     }
   }

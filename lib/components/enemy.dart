@@ -5,8 +5,8 @@ import 'package:flame/components.dart';
 import '../game/runner_game.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
-import '../renderers/enemy_renderer.dart';
 import '../utils/constants.dart';
+import '../utils/sprite_loader.dart';
 import 'runner_player.dart';
 import 'coin.dart';
 
@@ -23,6 +23,8 @@ class Enemy extends PositionComponent
 
   static const double goldenMultiplier = 10.0;
 
+  SpriteAnimation? _anim;
+
   Enemy({
     required this.data,
     required Vector2 spawnPosition,
@@ -37,12 +39,19 @@ class Enemy extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox());
+
+    _anim = await SpriteLoader.loadAnimation(
+      'enemy_${data.id}.png',
+      frameWidth: 32, frameHeight: 32,
+      frameCount: 4, stepTime: 0.2,
+    );
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
+    _anim?.update(dt);
 
     // Air enemies hover
     if (data.type == EnemyType.air) {
@@ -79,29 +88,24 @@ class Enemy extends PositionComponent
   }
 
   void _die() {
-    // Determine coin amount
     double coinAmount = data.type == EnemyType.air
         ? data.coinDrop * BalanceConfig.airEnemyCoinMultiplier
         : data.coinDrop;
 
-    // Golden enemy bonus
     if (isGolden) {
       coinAmount *= goldenMultiplier;
     }
 
-    // Spawn coin at enemy position
     game.world.add(Coin(
       spawnPosition: position.clone(),
       value: coinAmount,
     ));
 
-    // Add combo
     final comboAmount = data.type == EnemyType.air
         ? BalanceConfig.jumpKillComboBonus
         : BalanceConfig.groundKillComboBonus;
     game.addCombo(comboAmount);
 
-    // Death particles
     game.particleEffect.spawnEnemyDeath(
       position.x + size.x / 2,
       position.y + size.y / 2,
@@ -112,7 +116,6 @@ class Enemy extends PositionComponent
   }
 
   double _sin(double x) {
-    // Simple sin approximation to avoid importing dart:math in hot path
     x = x % 6.2832;
     if (x < 0) x += 6.2832;
     if (x > 3.1416) {
@@ -131,13 +134,16 @@ class Enemy extends PositionComponent
       canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.6, glowPaint);
     }
 
-    EnemyRenderer.render(
-      canvas,
-      size.toSize(),
-      data,
-      animTimer: _animTimer,
-      isHit: _isHit,
-      isGolden: isGolden,
-    );
+    // Hit flash: draw white overlay
+    final sprite = _anim?.getSprite();
+    if (sprite != null) {
+      sprite.render(canvas, size: size);
+      if (_isHit) {
+        final flashPaint = Paint()
+          ..color = const Color(0xAAFFFFFF)
+          ..blendMode = BlendMode.srcATop;
+        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), flashPaint);
+      }
+    }
   }
 }
