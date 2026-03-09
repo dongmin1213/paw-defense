@@ -222,8 +222,7 @@ class Boss4IronColossus extends BossBase {
         const Offset(60, 70),
         12,
         Paint()
-          ..color = Colors.red.withValues(alpha: 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+          ..color = Colors.red.withValues(alpha: 0.2),
       );
     }
 

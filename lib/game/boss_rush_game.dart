@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flame/camera.dart';
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
@@ -29,11 +30,18 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
   bool _bossSpawned = false;
   final List<Enemy> _enemies = [];
 
+  // Screen shake
+  double _shakeTimer = 0;
+  double _shakeIntensity = 0;
+
   BossRushGame({
     required this.stageIndex,
     required this.playerClass,
     this.bossRushMode = false,
   });
+
+  @override
+  Color backgroundColor() => const Color(0xFF000000);
 
   @override
   Future<void> onLoad() async {
@@ -115,11 +123,34 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
     _enterBossPhase();
   }
 
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (_shakeTimer > 0) {
+      _shakeTimer -= dt;
+      final progress = _shakeTimer / (_shakeTimer + dt); // decay
+      final offsetX = sin(_shakeTimer * 40) * _shakeIntensity * progress;
+      final offsetY = cos(_shakeTimer * 35) * _shakeIntensity * 0.5 * progress;
+      camera.viewfinder.position = Vector2(offsetX, offsetY);
+
+      if (_shakeTimer <= 0) {
+        camera.viewfinder.position = Vector2.zero();
+      }
+    }
+  }
+
+  void triggerShake({double intensity = 3.0, double duration = 0.15}) {
+    _shakeIntensity = intensity;
+    _shakeTimer = duration;
+  }
+
   void onPlayerHit() {
     if (player.isInvincible || isGameOver) return;
 
     playerHp--;
     player.startInvincibility();
+    triggerShake(intensity: 4.0, duration: 0.2);
 
     if (playerHp <= 0) {
       gameOver();
@@ -160,6 +191,8 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
     currentPhase = GamePhase.exploration;
     _bossSpawned = false;
     _enemies.clear();
+    _shakeTimer = 0;
+    camera.viewfinder.position = Vector2.zero();
 
     world.removeAll(world.children.toList());
     resumeEngine();

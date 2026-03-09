@@ -240,8 +240,7 @@ class Boss8Overlord extends BossBase {
 
     // Eye glow
     final eyeGlow = Paint()
-      ..color = eyeColor.withValues(alpha: 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      ..color = eyeColor.withValues(alpha: 0.3);
     canvas.drawCircle(Offset(size.x / 2 - 8, 15), 8, eyeGlow);
     canvas.drawCircle(Offset(size.x / 2 + 8, 15), 8, eyeGlow);
 
@@ -267,21 +266,18 @@ class Boss8Overlord extends BossBase {
       const Offset(-6, 12),
       9,
       Paint()
-        ..color = orbColor.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+        ..color = orbColor.withValues(alpha: 0.2),
     );
 
     // Dark aura
     final auraPaint = Paint()
-      ..color = (currentPhase >= 3 ? Colors.red : Colors.purple).withValues(alpha: 0.15)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      ..color = (currentPhase >= 3 ? Colors.red : Colors.purple).withValues(alpha: 0.1);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), 60, auraPaint);
 
     // Phase 4 - ultimate form indicator
     if (currentPhase >= 4) {
       final ultimatePaint = Paint()
-        ..color = Colors.red.withValues(alpha: 0.1 + sin(_moveTimer * 5) * 0.1)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+        ..color = Colors.red.withValues(alpha: 0.08 + sin(_moveTimer * 5) * 0.08);
       canvas.drawCircle(Offset(size.x / 2, size.y / 2), 70, ultimatePaint);
     }
   }

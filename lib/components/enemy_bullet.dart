@@ -84,10 +84,9 @@ class EnemyBullet extends CircleComponent with HasGameReference<BossRushGame>, C
 
   @override
   void render(Canvas canvas) {
-    // Glow effect
+    // Outer glow ring (no blur filter for performance)
     final glowPaint = Paint()
-      ..color = GameConstants.enemyBulletColor.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      ..color = GameConstants.enemyBulletColor.withValues(alpha: 0.15);
     canvas.drawCircle(Offset.zero, radius + 3, glowPaint);
     super.render(canvas);
   }

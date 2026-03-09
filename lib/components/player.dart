@@ -533,8 +533,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
     final orb = Paint()..color = orbColor;
     canvas.drawCircle(Offset(staffX + 1.5, 2), 5, orb);
     final glow = Paint()
-      ..color = orbColor.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..color = orbColor.withValues(alpha: 0.2);
     canvas.drawCircle(Offset(staffX + 1.5, 2), 7, glow);
   }
 

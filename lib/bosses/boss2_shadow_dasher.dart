@@ -185,8 +185,7 @@ class Boss2ShadowDasher extends BossBase {
     // Shadow effect
     if (currentPhase >= 2) {
       final shadowPaint = Paint()
-        ..color = Colors.purple.withValues(alpha: 0.2)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+        ..color = Colors.purple.withValues(alpha: 0.15);
       canvas.drawRect(Rect.fromLTWH(-5, -5, size.x + 10, size.y + 10), shadowPaint);
     }
   }

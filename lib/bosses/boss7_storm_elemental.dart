@@ -192,8 +192,7 @@ class Boss7StormElemental extends BossBase {
     // Storm aura
     if (_isStorming) {
       final stormPaint = Paint()
-        ..color = Colors.lightBlueAccent.withValues(alpha: 0.2)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+        ..color = Colors.lightBlueAccent.withValues(alpha: 0.15);
       canvas.drawCircle(Offset(size.x / 2, size.y / 2), 50, stormPaint);
     }
   }

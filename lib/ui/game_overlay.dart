@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../game/boss_rush_game.dart';
 import '../utils/constants.dart';
 
@@ -37,16 +38,38 @@ class _TopHud extends StatefulWidget {
   State<_TopHud> createState() => _TopHudState();
 }
 
-class _TopHudState extends State<_TopHud> {
+class _TopHudState extends State<_TopHud> with SingleTickerProviderStateMixin {
+  late final Ticker _ticker;
+  int _lastHp = 0;
+  double _lastGauge = 0;
+  double _lastBossHp = -1;
+  GamePhase _lastPhase = GamePhase.exploration;
+
   @override
   void initState() {
     super.initState();
-    _startUpdate();
+    _ticker = createTicker(_onTick);
+    _ticker.start();
   }
 
-  void _startUpdate() async {
-    while (mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    final g = widget.game;
+    final bossHp = g.currentPhase == GamePhase.boss ? g.boss.hpPercentage : -1.0;
+    // Only rebuild if values actually changed
+    if (g.playerHp != _lastHp ||
+        g.specialGauge != _lastGauge ||
+        g.currentPhase != _lastPhase ||
+        bossHp != _lastBossHp) {
+      _lastHp = g.playerHp;
+      _lastGauge = g.specialGauge;
+      _lastPhase = g.currentPhase;
+      _lastBossHp = bossHp;
       if (mounted) setState(() {});
     }
   }

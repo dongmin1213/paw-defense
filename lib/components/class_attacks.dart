@@ -182,8 +182,7 @@ class Arrow extends PositionComponent
 
     if (isCharged) {
       final glow = Paint()
-        ..color = Colors.greenAccent.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+        ..color = Colors.greenAccent.withValues(alpha: 0.2);
       canvas.drawRect(Rect.fromLTWH(-3, -3, size.x + 6, size.y + 6), glow);
     }
   }
@@ -242,11 +241,10 @@ class MagicBolt extends PositionComponent
     // Magic orb
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
 
-    // Glow
+    // Glow ring (no blur for performance)
     final glow = Paint()
-      ..color = (isFire ? Colors.orange : Colors.cyan).withValues(alpha: 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2 + 3, glow);
+      ..color = (isFire ? Colors.orange : Colors.cyan).withValues(alpha: 0.2);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2 + 4, glow);
   }
 }
 
@@ -495,11 +493,14 @@ class Meteor extends PositionComponent
     final t = _lifetime / 0.5;
     final radius = 50.0 * (1.2 - t * 0.3);
 
-    // Outer fire
+    // Outer fire (no blur for performance)
     final firePaint = Paint()
-      ..color = Colors.deepOrange.withValues(alpha: t * 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      ..color = Colors.deepOrange.withValues(alpha: t * 0.5);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), radius, firePaint);
+    // Softer outer ring to simulate glow
+    final outerGlow = Paint()
+      ..color = Colors.deepOrange.withValues(alpha: t * 0.15);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), radius * 1.2, outerGlow);
 
     // Inner core
     final core = Paint()

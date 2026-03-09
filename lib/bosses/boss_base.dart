@@ -40,12 +40,15 @@ abstract class BossBase extends PositionComponent with HasGameReference<BossRush
     if (newPhase > currentPhase) {
       currentPhase = newPhase;
       onPhaseChange(currentPhase);
+      // Strong shake on phase change
+      game.triggerShake(intensity: 6.0, duration: 0.3);
     }
 
     if (currentHp <= 0) {
       currentHp = 0;
       isDefeated = true;
       onDefeat();
+      game.triggerShake(intensity: 8.0, duration: 0.4);
       game.onBossDefeated();
     }
   }

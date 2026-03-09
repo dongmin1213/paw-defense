@@ -205,8 +205,7 @@ class Boss5MirrorTrickster extends BossBase {
     // Mirror effect
     if (_isShuffling) {
       final shimmer = Paint()
-        ..color = Colors.white.withValues(alpha: 0.5 * (1 - _shuffleProgress * 2))
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        ..color = Colors.white.withValues(alpha: 0.4 * (1 - _shuffleProgress * 2));
       canvas.drawRect(Rect.fromLTWH(-5, -5, size.x + 10, size.y + 10), shimmer);
     }
   }
@@ -234,8 +233,7 @@ class _MirrorClone extends PositionComponent with CollisionCallbacks {
     );
     // Shimmer
     final shimmer = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      ..color = Colors.white.withValues(alpha: 0.1);
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), shimmer);
   }
 }

@@ -181,8 +181,7 @@ class Boss3BulletWitch extends BossBase {
 
     // Magic aura
     final auraPaint = Paint()
-      ..color = (currentPhase >= 2 ? Colors.purple : Colors.deepPurple).withValues(alpha: 0.2)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      ..color = (currentPhase >= 2 ? Colors.purple : Colors.deepPurple).withValues(alpha: 0.15);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), 35, auraPaint);
 
     // Staff

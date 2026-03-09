@@ -58,10 +58,9 @@ class Bullet extends RectangleComponent with HasGameReference<BossRushGame>, Col
   @override
   void render(Canvas canvas) {
     if (isSpecial) {
-      // Special attack - glowing effect
+      // Special attack - glowing effect (no blur for performance)
       final glowPaint = Paint()
-        ..color = Colors.orange.withValues(alpha: 0.4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        ..color = Colors.orange.withValues(alpha: 0.25);
       canvas.drawRect(Rect.fromLTWH(-4, -4, size.x + 8, size.y + 8), glowPaint);
     }
     super.render(canvas);
