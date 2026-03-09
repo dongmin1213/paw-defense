@@ -2,48 +2,35 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'game/runner_game.dart';
-import 'systems/save_manager.dart';
-import 'ui/runner_hud.dart';
-import 'ui/upgrade_shop.dart';
-import 'ui/main_menu.dart';
-import 'ui/soul_shop.dart';
-import 'ui/ascension_screen.dart';
-import 'ui/companion_screen.dart';
-import 'ui/offline_popup.dart';
-import 'ui/achievement_screen.dart';
-import 'ui/daily_bonus_popup.dart';
-import 'ui/mission_screen.dart';
-import 'ui/ui_effects.dart';
+import 'game/defense_game.dart';
+import 'ui/defense_main_menu.dart';
+import 'ui/defense_hud.dart';
+import 'ui/wave_reward_screen.dart';
+import 'ui/star_shop_screen.dart';
+import 'ui/run_result_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock orientation to landscape
+  // Lock orientation to portrait
   await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
   ]);
 
   // Immersive fullscreen
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-  // Initialize save manager
-  final saveManager = SaveManager();
-  await saveManager.init();
-
-  runApp(BichonRunApp(saveManager: saveManager));
+  runApp(const CastleDefenseApp());
 }
 
-class BichonRunApp extends StatelessWidget {
-  final SaveManager saveManager;
-
-  const BichonRunApp({super.key, required this.saveManager});
+class CastleDefenseApp extends StatelessWidget {
+  const CastleDefenseApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "The Bichon's Run",
+      title: '동물 성벽 지키기',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0D0D1A),
@@ -53,29 +40,26 @@ class BichonRunApp extends StatelessWidget {
           surface: Color(0xFF141428),
         ),
       ),
-      home: GameScreen(saveManager: saveManager),
+      home: const GameScreen(),
     );
   }
 }
 
 class GameScreen extends StatefulWidget {
-  final SaveManager saveManager;
-
-  const GameScreen({super.key, required this.saveManager});
+  const GameScreen({super.key});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
-  late RunnerGame _game;
+  late DefenseGame _game;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _game = RunnerGame();
-    _game.initSaveManager(widget.saveManager);
+    _game = DefenseGame();
   }
 
   @override
@@ -97,28 +81,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: UIEffectOverlay(
-        child: GameWidget(
-          game: _game,
-          overlayBuilderMap: {
-            'MainMenu': (context, game) => MainMenu(game: game as RunnerGame),
-            'RunnerHud': (context, game) => RunnerHud(game: game as RunnerGame),
-            'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
-            'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
-            'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
-            'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
-            'OfflinePopup': (context, game) {
-              final g = game as RunnerGame;
-              return OfflinePopup(
-                game: g,
-                reward: g.pendingOfflineReward!,
-              );
-            },
-            'AchievementScreen': (context, game) => AchievementScreen(game: game as RunnerGame),
-            'DailyBonus': (context, game) => DailyBonusPopup(game: game as RunnerGame),
-            'MissionScreen': (context, game) => MissionScreen(game: game as RunnerGame),
+      body: GameWidget(
+        game: _game,
+        overlayBuilderMap: {
+          'DefenseMainMenu': (context, game) =>
+              DefenseMainMenu(game: game as DefenseGame),
+          'DefenseHud': (context, game) =>
+              DefenseHud(game: game as DefenseGame),
+          'WaveReward': (context, game) =>
+              WaveRewardScreen(game: game as DefenseGame),
+          'StarShop': (context, game) =>
+              StarShopScreen(game: game as DefenseGame),
+          'RunResult': (context, game) {
+            final g = game as DefenseGame;
+            return RunResultScreen(
+              game: g,
+              wavesCleared: g.currentWave,
+              goldEarned: g.runGoldEarned,
+              starsEarned: g.lastRunStars,
+              killCount: g.runKills,
+            );
           },
-        ),
+        },
       ),
     );
   }

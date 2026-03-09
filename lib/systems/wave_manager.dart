@@ -43,7 +43,7 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     currentWave++;
     wallTookDamage = false;
 
-    final unitCount = game.unitSlots.where((s) => s != null).length;
+    final unitCount = game.unitSlots.where((s) => s.isOccupied).length;
     final baseCount = _baseEnemyCount;
     totalEnemiesInWave =
         ((baseCount + (currentWave * 0.8).floor()) * (1 + unitCount * 0.04))
@@ -111,7 +111,7 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   void spawnEnemy() {
     if (enemiesSpawned >= totalEnemiesInWave) return;
 
-    final unitCount = game.unitSlots.where((s) => s != null).length;
+    final unitCount = game.unitSlots.where((s) => s.isOccupied).length;
     final typeId = _pickEnemyType();
     final hp = _scaledHp(typeId, unitCount);
     final speed = _scaledSpeed(typeId, unitCount);
