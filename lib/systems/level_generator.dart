@@ -7,6 +7,7 @@ import '../components/coin.dart';
 import '../components/obstacle.dart';
 import '../components/companion_pickup.dart';
 import '../components/boss.dart';
+import '../components/treasure_box.dart';
 import '../data/enemy_data.dart';
 import '../data/companion_data.dart';
 import '../data/balance_config.dart';
@@ -63,6 +64,7 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
     }
 
     _spawnCoinsInSegment(segmentStartX);
+    _spawnTreasureBoxInSegment(segmentStartX);
 
     if (game.isActiveMode && !_bossActive) {
       _spawnObstaclesInSegment(segmentStartX);
@@ -194,6 +196,30 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
   void onBossComplete() {
     _bossActive = false;
     game.activeBoss = null;
+  }
+
+  void _spawnTreasureBoxInSegment(double startX) {
+    // 5% chance per segment
+    if (_rng.nextDouble() > 0.05) return;
+
+    final x = startX + _rng.nextDouble() * GameConstants.segmentWidth * 0.7 + 40;
+    final y = GameConstants.groundY - 30 - _rng.nextDouble() * 50;
+
+    // Rarity roll
+    final rarityRoll = _rng.nextDouble();
+    TreasureRarity rarity;
+    if (rarityRoll < 0.05) {
+      rarity = TreasureRarity.epic;
+    } else if (rarityRoll < 0.30) {
+      rarity = TreasureRarity.rare;
+    } else {
+      rarity = TreasureRarity.common;
+    }
+
+    game.world.add(TreasureBox(
+      spawnPosition: Vector2(x, y),
+      rarity: rarity,
+    ));
   }
 
   EnemyData _weightedRandom(List<EnemyData> pool) {

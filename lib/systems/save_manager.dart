@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'upgrade_manager.dart';
 import 'ascension_manager.dart';
 import 'companion_manager.dart';
+import 'achievement_manager.dart';
+import 'daily_bonus_manager.dart';
 import '../data/upgrade_data.dart';
 import '../data/soul_upgrade_data.dart';
 
@@ -15,6 +17,8 @@ class SaveManager {
   static const String _keyLastOnline = 'last_online_time';
   static const String _keyCurrentRegion = 'current_region';
   static const String _keyCompanions = 'companions_data';
+  static const String _keyAchievements = 'achievements_data';
+  static const String _keyDailyBonus = 'daily_bonus_data';
   static const String _upgradePrefix = 'upgrade_';
   static const String _soulUpgradePrefix = 'soul_upgrade_';
 
@@ -104,6 +108,36 @@ class SaveManager {
     }
   }
 
+  // === Achievements ===
+  void saveAchievements(AchievementManager manager) {
+    _prefs.setString(_keyAchievements, jsonEncode(manager.toMap()));
+  }
+
+  void loadAchievements(AchievementManager manager) {
+    final jsonStr = _prefs.getString(_keyAchievements);
+    if (jsonStr != null) {
+      try {
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        manager.loadFromMap(data);
+      } catch (_) {}
+    }
+  }
+
+  // === Daily Bonus ===
+  void saveDailyBonus(DailyBonusManager manager) {
+    _prefs.setString(_keyDailyBonus, jsonEncode(manager.toMap()));
+  }
+
+  void loadDailyBonus(DailyBonusManager manager) {
+    final jsonStr = _prefs.getString(_keyDailyBonus);
+    if (jsonStr != null) {
+      try {
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        manager.loadFromMap(data);
+      } catch (_) {}
+    }
+  }
+
   // === Save All ===
   void saveGameState({
     required double coins,
@@ -112,6 +146,8 @@ class SaveManager {
     required UpgradeManager upgradeManager,
     required AscensionManager ascensionManager,
     required CompanionManager companionManager,
+    required AchievementManager achievementManager,
+    required DailyBonusManager dailyBonusManager,
     required String currentRegion,
   }) {
     this.coins = coins;
@@ -123,6 +159,8 @@ class SaveManager {
     saveUpgrades(upgradeManager);
     saveAscension(ascensionManager);
     saveCompanions(companionManager);
+    saveAchievements(achievementManager);
+    saveDailyBonus(dailyBonusManager);
     lastOnlineTime = DateTime.now().millisecondsSinceEpoch;
   }
 

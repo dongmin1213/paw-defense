@@ -11,8 +11,8 @@
 ## 디렉토리 구조
 
 ```
-lib/                              # ~7200줄, 41파일
-├── main.dart                     # 앱 진입점 — GameWidget + 7개 오버레이 등록
+lib/                              # ~11000줄, 49파일
+├── main.dart                     # 앱 진입점 — GameWidget + 9개 오버레이 등록
 ├── game/
 │   └── runner_game.dart          # FlameGame 메인 (466줄)
 │                                 #   게임 상태, 카메라, 입력(TapCallbacks)
@@ -27,6 +27,7 @@ lib/                              # ~7200줄, 41파일
 │   ├── parallax_layer.dart       # 3레이어 픽셀아트 패럴랙스 (구름/산/풀잎/나무)
 │   ├── companion_pickup.dart     # 필드 동료 — 희귀도 글로우, 수집 팝업
 │   ├── boss.dart                 # 보스 — HP바/타이머바, 자동+탭 공격, 10초 제한
+│   ├── treasure_box.dart         # 보물상자 — 3등급(일반/레어/에픽), 코인 폭발, 픽셀아트
 │   ├── weather_effect.dart       # 날씨 파티클 + 시간대 오버레이 (priority 50)
 │   └── particle_effect.dart      # FX 사각 픽셀 파티클 — 5종 이펙트 (priority 60)
 ├── data/                         # ★ 데이터 정의 — 컨텐츠 추가 = 여기만 수정
@@ -35,7 +36,8 @@ lib/                              # ~7200줄, 41파일
 │   ├── region_data.dart          # 5개 지역 (RegionData)
 │   ├── upgrade_data.dart         # 일반 업그레이드 7종 (UpgradeData)
 │   ├── soul_upgrade_data.dart    # 영구 업그레이드 13종 (SoulUpgradeData)
-│   └── companion_data.dart       # 동료 10종 (CompanionData)
+│   ├── companion_data.dart       # 동료 10종 (CompanionData)
+│   └── achievement_data.dart     # 업적 46종 (AchievementData + AchievementDatabase)
 ├── renderers/                    # ★ 픽셀아트 렌더링 — 스프라이트 교체 = 여기만 수정
 │   ├── player_renderer.dart      # 비숏 픽셀아트 5프레임 (PixelArt 기반)
 │   ├── enemy_renderer.dart       # 적 20종 픽셀아트 + 황금/피격 팔레트 변환
@@ -48,17 +50,24 @@ lib/                              # ~7200줄, 41파일
 │   ├── ascension_manager.dart    # 초월 — 소울/영구업글/지역해금
 │   ├── companion_manager.dart    # 동료 — 수집/장착/레벨업/버프
 │   ├── weather_manager.dart      # 날씨(5종)/시간대(4종) — 배율 getter
+│   ├── game_feel.dart            # ★ 게임필 시스템 — 쉐이크/히트스탑/슬로모션/줌펀치/자동업글
+│   ├── achievement_manager.dart  # 업적 추적 — 15+ 카운터, checkAll(), 이벤트 메서드
+│   ├── daily_bonus_manager.dart  # 일일 보너스 — 7일 주기, 스트릭 배율
+│   ├── bonus_stage_manager.dart  # 보너스 스테이지 — ~800m마다, 8초 코인 러시
 │   ├── ad_manager.dart           # 광고 스텁 (SDK 미연동)
 │   ├── offline_reward.dart       # CpS 기반 오프라인 보상 계산
 │   └── save_manager.dart         # SharedPreferences 저장/로드
-└── ui/                           # Flutter 위젯 오버레이 7개
-    ├── runner_hud.dart           # HUD — 거리/코인/콤보/보스/날씨/이벤트/버튼
-    ├── upgrade_shop.dart         # 일반 업그레이드 상점 (pauseEngine)
-    ├── soul_shop.dart            # 영구 업그레이드 — 3탭(강화/지역/장비)
-    ├── ascension_screen.dart     # 초월 연출 — 화이트아웃 애니
-    ├── companion_screen.dart     # 동료 관리 — 장착/도감/레벨업
-    ├── offline_popup.dart        # 오프라인 복귀 팝업
-    └── main_menu.dart            # 타이틀 화면 + 통계 + 시작
+└── ui/                           # Flutter 위젯 오버레이 9개
+    ├── game_theme.dart           # ★ 통합 디자인 시스템 — 색상/타이포/버튼/패널/그라디언트
+    ├── runner_hud.dart           # HUD — 숫자롤링/콤보등급/보스HP/보너스배너/업적버튼
+    ├── upgrade_shop.dart         # 일반 업그레이드 — 카드형+x1/x10/MAX 벌크구매
+    ├── soul_shop.dart            # 영구 업그레이드 — 트리형 스킬트리 (4섹션 노드 그래프)
+    ├── ascension_screen.dart     # 초월 — 파티클 폭발+글로우 펄스+소울 카운트업
+    ├── companion_screen.dart     # 동료 — 리스트+상세패널 분할/레어도 뱃지/글로우
+    ├── offline_popup.dart        # 오프라인 복귀 — 코인 카운트업 롤링
+    ├── achievement_screen.dart   # 업적 — 5카테고리 탭+완료율+카드형 목록
+    ├── daily_bonus_popup.dart    # 일일 보너스 — 7일 캘린더+보상+수령
+    └── main_menu.dart            # 타이틀 — ShaderMask 그라디언트+파티클 배경
 └── utils/
     ├── constants.dart            # 월드(800x600), 물리(중력1100, 점프-520, 속도180)
     ├── pixel_art.dart            # ★ 픽셀아트 유틸 — 문자맵 스프라이트 블록 렌더링
@@ -162,8 +171,13 @@ RunnerGame (FlameGame with HasCollisionDetection, TapCallbacks)
 │   ├── CompanionPickup[] (PositionComponent + CollisionCallbacks)
 │   │   └── 수집 → companionManager.addCompanion() + 팝업
 │   │
+│   ├── TreasureBox[] (PositionComponent + CollisionCallbacks)
+│   │   └── 3등급(일반/레어/에픽), 충돌 → 코인 폭발 + 파티클
+│   │
 │   ├── WeatherEffect (PositionComponent) — 날씨 파티클 + 시간대 오버레이 (priority 50)
 │   ├── ParticleEffect (PositionComponent) — FX 파티클 (priority 60)
+│   ├── GameFeelSystem (Component) — 스크린쉐이크/히트스탑/슬로모션/줌펀치
+│   ├── BonusStageManager (Component) — ~800m마다, 8초 코인 러시
 │   └── LevelGenerator (Component) — 절차적 레벨 생성
 │
 ├── [매니저 (non-component)]
@@ -171,17 +185,21 @@ RunnerGame (FlameGame with HasCollisionDetection, TapCallbacks)
 │   ├── AscensionManager — 초월 조건/실행, 소울, 영구 업글 13종
 │   ├── CompanionManager — 동료 수집/장착(1~4슬롯)/레벨업/버프 계산
 │   ├── WeatherManager — 시간대(4종) + 날씨(5종, 3~5분 주기), 배율
+│   ├── AchievementManager — 업적 46종, 15+ 카운터 추적
+│   ├── DailyBonusManager — 7일 보상 주기, 스트릭 배율
 │   ├── AdManager — 광고 스텁 (실제 SDK 없음)
 │   └── SaveManager — SharedPreferences 저장/로드
 │
 └── [Flutter 오버레이 (GameWidget overlayBuilderMap)]
-    ├── MainMenu — 타이틀 + 시작 + 통계
-    ├── RunnerHud — HUD (거리/코인/콤보/보스/날씨/이벤트/버튼들)
-    ├── UpgradeShop — 일반 업글 상점
-    ├── SoulShop — 영구 업글 상점 (3탭)
-    ├── AscensionScreen — 초월 연출
-    ├── CompanionScreen — 동료 관리/도감
-    └── OfflinePopup — 오프라인 복귀 팝업
+    ├── MainMenu — 타이틀 + ShaderMask + 파티클 + 통계
+    ├── RunnerHud — HUD (숫자롤링/콤보등급/보스/보너스배너/업적버튼)
+    ├── UpgradeShop — 일반 업글 상점 (x1/x10/MAX 벌크구매)
+    ├── SoulShop — 영구 업글 트리형 스킬트리 (4섹션)
+    ├── AscensionScreen — 초월 연출 (파티클/글로우/카운트업)
+    ├── CompanionScreen — 동료 관리/도감 (분할뷰)
+    ├── OfflinePopup — 오프라인 복귀 팝업
+    ├── AchievementScreen — 업적 (5카테고리 탭)
+    └── DailyBonusPopup — 일일 보너스 (7일 캘린더)
 ```
 
 ---
@@ -280,6 +298,8 @@ ascensionCount, souls, currentRegion, lastOnlineTime
 upgrade_{speedLv/coinLv/attackLv/jumpLv/doubleJump/magnetLv/comboRetainLv}
 soul_upgrade_{id}_level  (13종)
 companions (JSON string: {id: {owned, level, equipped}})
+achievements_data (JSON string: {unlocked: [...], counters: {...}})
+daily_bonus_data (JSON string: {streak, lastClaimDate, ...})
 ```
 
 ### 저장 타이밍
@@ -297,16 +317,18 @@ companions (JSON string: {id: {owned, level, equipped}})
 ## 오버레이 시스템
 
 ```dart
-// main.dart
+// main.dart — 9개 오버레이 등록
 GameWidget(
   overlayBuilderMap: {
-    'MainMenu':        (ctx, g) => MainMenu(game: g),
-    'RunnerHud':       (ctx, g) => RunnerHud(game: g),
-    'UpgradeShop':     (ctx, g) => UpgradeShop(game: g),
-    'SoulShop':        (ctx, g) => SoulShop(game: g),
-    'AscensionScreen': (ctx, g) => AscensionScreen(game: g),
-    'CompanionScreen': (ctx, g) => CompanionScreen(game: g),
-    'OfflinePopup':    (ctx, g) => OfflinePopup(game: g, result: g.pendingOfflineReward!),
+    'MainMenu':           (ctx, g) => MainMenu(game: g),
+    'RunnerHud':          (ctx, g) => RunnerHud(game: g),
+    'UpgradeShop':        (ctx, g) => UpgradeShop(game: g),
+    'SoulShop':           (ctx, g) => SoulShop(game: g),
+    'AscensionScreen':    (ctx, g) => AscensionScreen(game: g),
+    'CompanionScreen':    (ctx, g) => CompanionScreen(game: g),
+    'OfflinePopup':       (ctx, g) => OfflinePopup(game: g, reward: g.pendingOfflineReward!),
+    'AchievementScreen':  (ctx, g) => AchievementScreen(game: g),
+    'DailyBonus':         (ctx, g) => DailyBonusPopup(game: g),
   },
   initialActiveOverlays: ['MainMenu'],
 );
@@ -319,7 +341,9 @@ MainMenu → [시작] → RunnerHud (게임 시작)
   RunnerHud → [소울] → SoulShop
   RunnerHud → [초월] → AscensionScreen → MainMenu
   RunnerHud → [동료] → CompanionScreen
+  RunnerHud → [업적] → AchievementScreen
   시작 시 오프라인 보상 → OfflinePopup → RunnerHud
+  시작 시 일일 보너스 → DailyBonus → RunnerHud
 ```
 
 ---
@@ -353,9 +377,9 @@ MainMenu → [시작] → RunnerHud (게임 시작)
 ### 알려진 기술 부채
 - HUD 100ms Timer 폴링 → 상태 관리 패턴으로 개선 필요
 - 광고는 스텁 — 실제 google_mobile_ads SDK 연동 필요
-- 장비 효과(활/장갑/망토) 미구현 (해금 구조만 있음)
-- 자동 공중적 처치/자동 업글 미구현 (소울 해금만 있음)
+- 장비 효과 일부 미구현 — 활(자동 공중 처치)/망토(대시) — 장갑(x1.3 코인)은 구현 완료
 - 사운드 미구현 (flame_audio 의존성만 있음)
+- 업적 보상 자동 수령 미구현 (추적만)
 - 빌드 검증은 CI(GitHub Actions)로만 가능 (로컬 flutter 없음)
 
 ---

@@ -21,6 +21,10 @@ import '../systems/weather_manager.dart';
 import '../systems/ad_manager.dart';
 import '../systems/save_manager.dart';
 import '../systems/offline_reward.dart';
+import '../systems/game_feel.dart';
+import '../systems/achievement_manager.dart';
+import '../systems/daily_bonus_manager.dart';
+import '../systems/bonus_stage_manager.dart';
 import '../data/balance_config.dart';
 import '../data/region_data.dart';
 import '../utils/constants.dart';
@@ -35,6 +39,10 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   final AdManager adManager = AdManager();
   late final SaveManager saveManager;
   late ParticleEffect particleEffect;
+  late GameFeelSystem gameFeel;
+  final AchievementManager achievementManager = AchievementManager();
+  final DailyBonusManager dailyBonusManager = DailyBonusManager();
+  late BonusStageManager bonusStageManager;
 
   // Game state
   double coins = 0;
@@ -82,6 +90,8 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     saveManager.loadUpgrades(upgradeManager);
     saveManager.loadAscension(ascensionManager);
     saveManager.loadCompanions(companionManager);
+    saveManager.loadAchievements(achievementManager);
+    saveManager.loadDailyBonus(dailyBonusManager);
     currentRegionId = saveManager.currentRegion;
 
     // Initialize ad manager
@@ -143,12 +153,25 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     particleEffect = ParticleEffect();
     world.add(particleEffect);
 
+    // Game feel system (screen shake, hit stop, auto systems)
+    gameFeel = GameFeelSystem();
+    world.add(gameFeel);
+
+    // Bonus stage manager
+    bonusStageManager = BonusStageManager();
+    world.add(bonusStageManager);
+
     // Apply saved upgrades
     applyUpgrades();
 
     // Show HUD overlay
     overlays.add('RunnerHud');
     isPlaying = true;
+
+    // Daily bonus popup (if not claimed today)
+    if (dailyBonusManager.canClaim) {
+      overlays.add('DailyBonus');
+    }
   }
 
   void _spawnInitialGround() {
@@ -166,16 +189,22 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     super.update(dt);
     if (!isPlaying) return;
 
-    _gameTime += dt;
+    // 히트스탑 중이면 프레임 스킵
+    if (gameFeel.isHitStopped) return;
+
+    // 슬로모션 적용
+    final effectiveDt = dt * gameFeel.timeScale;
+    _gameTime += effectiveDt;
 
     // Update weather system
-    weatherManager.update(dt);
+    weatherManager.update(effectiveDt);
 
-    // Update camera to follow player
+    // Update camera to follow player + 쉐이크 오프셋 + 줌 펀치
     camera.viewfinder.position = Vector2(
-      player.position.x - 150,
-      0,
+      player.position.x - 150 + gameFeel.shakeOffset.x,
+      gameFeel.shakeOffset.y,
     );
+    camera.viewfinder.zoom = gameFeel.currentZoom;
 
     // Update distance
     distance = player.position.x - GameConstants.playerStartX;
@@ -215,6 +244,15 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
 
     // Special events
     _updateSpecialEvents(dt);
+
+    // Achievement tracking
+    achievementManager.onDistanceUpdate(distance);
+    achievementManager.onCoinsEarned(totalCoinsEarned);
+    achievementManager.onComboUpdate(combo);
+    achievementManager.onCompanionUpdate(companionManager.ownedCount);
+    achievementManager.onRegionUpdate(ascensionManager.unlockedRegionIds.length);
+    achievementManager.onAscension(ascensionManager.ascensionCount);
+    achievementManager.checkAll();
 
     // Auto-save every 30 seconds
     _saveTimer += dt;
@@ -307,8 +345,11 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     final timeCoinMult = weatherManager.timeCoinMultiplier;
     final goldenMult = isGoldenHour ? 5.0 : 1.0;
     final rainbowMult = weatherManager.currentWeather == WeatherType.rainbow ? 2.0 : 1.0;
+    // 장갑 장비 효과: 처치 시 추가 코인 +30%
+    final gauntletMult = ascensionManager.hasGauntlet ? 1.3 : 1.0;
     final total = amount * comboMult * regionMult * activeBonus * upgradeMult
-        * soulMult * companionMult * weatherCoinMult * timeCoinMult * goldenMult * rainbowMult;
+        * soulMult * companionMult * weatherCoinMult * timeCoinMult * goldenMult
+        * rainbowMult * gauntletMult;
 
     coins += total;
     totalCoinsEarned += total;
@@ -364,6 +405,24 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     resumeEngine();
   }
 
+  // === Achievement Screen ===
+
+  void openAchievementScreen() {
+    overlays.add('AchievementScreen');
+    pauseEngine();
+  }
+
+  void closeAchievementScreen() {
+    overlays.remove('AchievementScreen');
+    resumeEngine();
+  }
+
+  // === Daily Bonus ===
+
+  void closeDailyBonus() {
+    overlays.remove('DailyBonus');
+  }
+
   // === Ascension ===
 
   bool get canAscend => ascensionManager.canAscend(totalCoinsEarned);
@@ -384,6 +443,9 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   }
 
   void executeAscension() {
+    // 극적 초월 연출
+    gameFeel.onAscension();
+
     ascensionManager.performAscension(totalCoinsEarned);
 
     // Reset regular upgrades and coins
@@ -460,6 +522,8 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       upgradeManager: upgradeManager,
       ascensionManager: ascensionManager,
       companionManager: companionManager,
+      achievementManager: achievementManager,
+      dailyBonusManager: dailyBonusManager,
       currentRegion: currentRegionId,
     );
   }

@@ -2,119 +2,161 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../data/companion_data.dart';
 import '../systems/companion_manager.dart';
+import 'game_theme.dart';
 
 class CompanionScreen extends StatefulWidget {
   final RunnerGame game;
-
   const CompanionScreen({super.key, required this.game});
 
   @override
   State<CompanionScreen> createState() => _CompanionScreenState();
 }
 
-class _CompanionScreenState extends State<CompanionScreen> {
-  String _selectedTab = 'equipped';
+class _CompanionScreenState extends State<CompanionScreen>
+    with SingleTickerProviderStateMixin {
+  int _tabIndex = 0;
+  String? _selectedId;
+  late AnimationController _entryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
     final manager = game.companionManager;
 
-    return Material(
-      color: Colors.black.withValues(alpha: 0.92),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AnimatedBuilder(
+      animation: _entryController,
+      builder: (context, _) {
+        final fade = _entryController.value;
+        return Material(
+          color: GameTheme.bgDeep.withValues(alpha: 0.94 * fade),
+          child: Opacity(
+            opacity: fade,
+            child: SafeArea(
+              child: Column(
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        '동료',
-                        style: TextStyle(
-                          color: Color(0xFFFF9800),
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${manager.ownedCount}/${manager.totalCount}',
-                        style: const TextStyle(color: Colors.white54, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        '슬롯 ${manager.equippedIds.length}/${manager.maxSlots}',
-                        style: const TextStyle(color: Color(0xFFFF9800), fontSize: 14),
-                      ),
-                      const SizedBox(width: 16),
-                      GestureDetector(
-                        onTap: () => widget.game.closeCompanionScreen(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  // ── 헤더 ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(8),
+                            color: GameTheme.accentOrange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text('닫기', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                          child: const Icon(Icons.pets,
+                              color: GameTheme.accentOrange, size: 22),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('동료',
+                                style: GameTheme.titleMedium.copyWith(
+                                    fontSize: 20,
+                                    color: GameTheme.accentOrange)),
+                            Row(
+                              children: [
+                                Text(
+                                  '보유 ${manager.ownedCount}/${manager.totalCount}',
+                                  style: GameTheme.bodySmall,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '장착 ${manager.equippedIds.length}/${manager.maxSlots}',
+                                  style: GameTheme.bodySmall.copyWith(
+                                      color: GameTheme.accentOrange),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        GameTheme.currencyDisplay(
+                          value: GameTheme.formatNumber(game.coins),
+                        ),
+                        const SizedBox(width: 8),
+                        GameTheme.closeButton(
+                            onTap: () => game.closeCompanionScreen()),
+                      ],
+                    ),
+                  ),
+
+                  // ── 탭 바 ──
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: GameTheme.bgCard,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildTab(0, '장착'),
+                        _buildTab(1, '도감'),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ── 콘텐츠 ──
+                  Expanded(
+                    child: _tabIndex == 0
+                        ? _buildEquippedView(manager)
+                        : _buildCodexView(manager),
                   ),
                 ],
               ),
             ),
-
-            // Tabs
-            Row(
-              children: [
-                _buildTab('equipped', '장착'),
-                _buildTab('codex', '도감'),
-              ],
-            ),
-            const Divider(color: Colors.white24, height: 1),
-
-            // Content
-            Expanded(
-              child: _selectedTab == 'equipped'
-                  ? _buildEquippedView(manager)
-                  : _buildCodexView(manager),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildTab(String id, String label) {
-    final isSelected = _selectedTab == id;
+  Widget _buildTab(int index, String label) {
+    final isSelected = _tabIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = id),
-        child: Container(
+        onTap: () => setState(() => _tabIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected ? const Color(0xFFFF9800) : Colors.transparent,
-                width: 2,
-              ),
-            ),
+            color: isSelected
+                ? GameTheme.accentOrange.withValues(alpha: 0.2)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: isSelected
+                ? Border.all(
+                    color: GameTheme.accentOrange.withValues(alpha: 0.4))
+                : null,
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? const Color(0xFFFF9800) : Colors.white54,
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? GameTheme.accentOrange
+                  : GameTheme.textMuted,
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ),
@@ -125,115 +167,242 @@ class _CompanionScreenState extends State<CompanionScreen> {
   Widget _buildEquippedView(CompanionManager manager) {
     final owned = manager.allOwned;
     if (owned.isEmpty) {
-      return const Center(
-        child: Text(
-          '아직 동료가 없습니다.\n달리다 보면 동료를 만날 수 있어요!',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white54, fontSize: 14),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.pets, color: GameTheme.textMuted.withValues(alpha: 0.3), size: 48),
+            const SizedBox(height: 12),
+            Text(
+              '아직 동료가 없습니다',
+              style: GameTheme.bodyLarge.copyWith(color: GameTheme.textMuted),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '달리다 보면 동료를 만날 수 있어요!',
+              style: GameTheme.bodySmall,
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: owned.length,
-      itemBuilder: (context, index) => _buildCompanionRow(owned[index], manager),
+    return Row(
+      children: [
+        // 동료 리스트
+        Expanded(
+          flex: 3,
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(12, 0, 6, 16),
+            itemCount: owned.length,
+            itemBuilder: (context, i) =>
+                _buildCompanionRow(owned[i], manager),
+          ),
+        ),
+
+        // 상세 패널
+        if (_selectedId != null && manager.owns(_selectedId!))
+          Expanded(
+            flex: 2,
+            child: _buildDetailPanel(
+              manager.getOwned(_selectedId!)!,
+              manager,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildCompanionRow(OwnedCompanion owned, CompanionManager manager) {
     final data = CompanionDatabase.get(owned.id);
     final isEquipped = manager.isEquipped(owned.id);
+    final isSelected = _selectedId == owned.id;
     final rarityColor = CompanionDatabase.rarityColor(data.rarity);
-    final rarityName = CompanionDatabase.rarityName(data.rarity);
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedId = owned.id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? rarityColor.withValues(alpha: 0.1)
+              : isEquipped
+                  ? rarityColor.withValues(alpha: 0.06)
+                  : GameTheme.bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? rarityColor.withValues(alpha: 0.5)
+                : isEquipped
+                    ? rarityColor.withValues(alpha: 0.25)
+                    : Colors.white.withValues(alpha: 0.05),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // 아바타
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: data.color.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                border: Border.all(color: rarityColor, width: 1.5),
+                boxShadow: isEquipped
+                    ? [BoxShadow(color: rarityColor.withValues(alpha: 0.2), blurRadius: 6)]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  data.name.substring(0, 1),
+                  style: TextStyle(
+                    color: rarityColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // 이름 + 레어도
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(data.name,
+                          style: GameTheme.labelBold.copyWith(fontSize: 13)),
+                      const SizedBox(width: 6),
+                      _RarityBadge(rarity: data.rarity),
+                      const SizedBox(width: 4),
+                      Text('Lv.${owned.level}',
+                          style: GameTheme.bodySmall
+                              .copyWith(fontSize: 10)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(data.buffDescription,
+                      style: GameTheme.bodySmall.copyWith(fontSize: 10)),
+                ],
+              ),
+            ),
+
+            // 장착 인디케이터
+            if (isEquipped)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: GameTheme.accentGreen,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: GameTheme.accentGreen.withValues(alpha: 0.4),
+                        blurRadius: 4),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailPanel(OwnedCompanion owned, CompanionManager manager) {
+    final data = CompanionDatabase.get(owned.id);
+    final isEquipped = manager.isEquipped(owned.id);
+    final rarityColor = CompanionDatabase.rarityColor(data.rarity);
     final cost = manager.levelUpCost(owned.id);
     final canLevelUp = manager.canLevelUp(owned.id, widget.game.coins);
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isEquipped
-            ? rarityColor.withValues(alpha: 0.15)
-            : Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isEquipped
-              ? rarityColor.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.1),
-        ),
+      margin: const EdgeInsets.fromLTRB(6, 0, 12, 16),
+      padding: const EdgeInsets.all(14),
+      decoration: GameTheme.panelDecoration(
+        borderColor: rarityColor.withValues(alpha: 0.3),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Companion icon area
+          // 대형 아바타
           Container(
-            width: 36,
-            height: 36,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.3),
+              color: data.color.withValues(alpha: 0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: rarityColor, width: 1.5),
+              border: Border.all(color: rarityColor, width: 2),
+              boxShadow: [
+                BoxShadow(
+                    color: rarityColor.withValues(alpha: 0.3),
+                    blurRadius: 12),
+              ],
             ),
             child: Center(
               child: Text(
                 data.name.substring(0, 1),
-                style: TextStyle(color: rarityColor, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: rarityColor,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900),
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 8),
+          Text(data.name, style: GameTheme.titleSmall),
+          _RarityBadge(rarity: data.rarity),
+          const SizedBox(height: 4),
+          Text('레벨 ${owned.level}',
+              style: GameTheme.bodySmall.copyWith(
+                  color: rarityColor, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          Text(data.buffDescription,
+              style: GameTheme.bodySmall,
+              textAlign: TextAlign.center),
 
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(data.name, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: rarityColor.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(rarityName, style: TextStyle(color: rarityColor, fontSize: 10)),
-                    ),
-                    const SizedBox(width: 6),
-                    Text('Lv.${owned.level}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(data.buffDescription, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              ],
-            ),
-          ),
+          const Spacer(),
 
-          // Level up button
+          // 레벨업 버튼
           GestureDetector(
             onTap: canLevelUp ? () => _levelUp(owned.id) : null,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              margin: const EdgeInsets.only(right: 6),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: canLevelUp
-                    ? const Color(0xFFFF9800).withValues(alpha: 0.7)
-                    : Colors.grey.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(6),
+                gradient: canLevelUp ? GameTheme.gradientGold : null,
+                color: canLevelUp ? null : GameTheme.bgCard,
+                borderRadius: BorderRadius.circular(10),
+                border: canLevelUp
+                    ? null
+                    : Border.all(
+                        color: Colors.white.withValues(alpha: 0.06)),
               ),
-              child: Text(
-                '↑ ${_formatCost(cost)}',
-                style: TextStyle(
-                  color: canLevelUp ? Colors.white : Colors.white38,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.arrow_upward,
+                      color: canLevelUp ? Colors.white : GameTheme.textMuted,
+                      size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    '레벨업  ${GameTheme.formatNumber(cost)}',
+                    style: TextStyle(
+                      color: canLevelUp ? Colors.white : GameTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+          const SizedBox(height: 6),
 
-          // Equip/unequip button
+          // 장착/해제 버튼
           GestureDetector(
             onTap: () {
               if (isEquipped) {
@@ -245,16 +414,29 @@ class _CompanionScreenState extends State<CompanionScreen> {
               setState(() {});
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: isEquipped
-                    ? Colors.red.withValues(alpha: 0.6)
-                    : const Color(0xFF4CAF50).withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(6),
+                    ? GameTheme.accentRed.withValues(alpha: 0.15)
+                    : GameTheme.accentGreen.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isEquipped
+                      ? GameTheme.accentRed.withValues(alpha: 0.3)
+                      : GameTheme.accentGreen.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 isEquipped ? '해제' : '장착',
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isEquipped
+                      ? GameTheme.accentRed
+                      : GameTheme.accentGreen,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -282,12 +464,21 @@ class _CompanionScreenState extends State<CompanionScreen> {
         return Container(
           decoration: BoxDecoration(
             color: isOwned
-                ? rarityColor.withValues(alpha: 0.15)
-                : Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8),
+                ? rarityColor.withValues(alpha: 0.1)
+                : GameTheme.bgCard,
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isOwned ? rarityColor.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.1),
+              color: isOwned
+                  ? rarityColor.withValues(alpha: 0.4)
+                  : Colors.white.withValues(alpha: 0.05),
             ),
+            boxShadow: isOwned
+                ? [
+                    BoxShadow(
+                        color: rarityColor.withValues(alpha: 0.15),
+                        blurRadius: 6)
+                  ]
+                : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -296,16 +487,23 @@ class _CompanionScreenState extends State<CompanionScreen> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: isOwned ? data.color.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
+                  color: isOwned
+                      ? data.color.withValues(alpha: 0.25)
+                      : GameTheme.bgPanel,
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isOwned
+                        ? rarityColor.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.06),
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     isOwned ? data.name.substring(0, 1) : '?',
                     style: TextStyle(
-                      color: isOwned ? rarityColor : Colors.white24,
+                      color: isOwned ? rarityColor : GameTheme.textMuted,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -314,14 +512,19 @@ class _CompanionScreenState extends State<CompanionScreen> {
               Text(
                 isOwned ? data.name : '???',
                 style: TextStyle(
-                  color: isOwned ? Colors.white : Colors.white24,
+                  color: isOwned
+                      ? GameTheme.textPrimary
+                      : GameTheme.textMuted,
                   fontSize: 10,
                 ),
               ),
               if (isOwned)
                 Text(
                   'Lv.${owned.level}',
-                  style: TextStyle(color: rarityColor, fontSize: 9),
+                  style: TextStyle(
+                      color: rarityColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600),
                 ),
             ],
           ),
@@ -330,18 +533,35 @@ class _CompanionScreenState extends State<CompanionScreen> {
     );
   }
 
-  String _formatCost(double cost) {
-    if (cost >= 1000000) return '${(cost / 1000000).toStringAsFixed(1)}M';
-    if (cost >= 1000) return '${(cost / 1000).toStringAsFixed(1)}K';
-    return cost.toStringAsFixed(0);
-  }
-
   void _levelUp(String id) {
-    final cost = widget.game.companionManager.doLevelUp(id, widget.game.coins);
+    final cost =
+        widget.game.companionManager.doLevelUp(id, widget.game.coins);
     if (cost > 0) {
       widget.game.coins -= cost;
       widget.game.saveGame();
       setState(() {});
     }
+  }
+}
+
+class _RarityBadge extends StatelessWidget {
+  final CompanionRarity rarity;
+  const _RarityBadge({required this.rarity});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = CompanionDatabase.rarityColor(rarity);
+    final name = CompanionDatabase.rarityName(rarity);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(name,
+          style: TextStyle(
+              color: color, fontSize: 9, fontWeight: FontWeight.w700)),
+    );
   }
 }

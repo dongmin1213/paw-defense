@@ -132,6 +132,8 @@ class Boss extends PositionComponent
 
   void _takeDamage(double damage) {
     hp -= damage;
+    // 게임필 — 보스 피격
+    game.gameFeel.onBossHit();
     if (hp <= 0) {
       hp = 0;
       _die();
@@ -153,6 +155,15 @@ class Boss extends PositionComponent
     }
 
     game.addCombo(5);
+    // 게임필 — 보스 처치 극적 연출
+    game.gameFeel.onBossKill();
+    // 업적 추적
+    game.achievementManager.onBossKill();
+
+    // 보스 소울 보상
+    if (soulReward > 0) {
+      game.ascensionManager.souls += soulReward.toInt();
+    }
 
     game.particleEffect.spawnBossExplosion(
       position.x + size.x / 2,

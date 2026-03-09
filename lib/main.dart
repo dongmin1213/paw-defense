@@ -11,6 +11,8 @@ import 'ui/soul_shop.dart';
 import 'ui/ascension_screen.dart';
 import 'ui/companion_screen.dart';
 import 'ui/offline_popup.dart';
+import 'ui/achievement_screen.dart';
+import 'ui/daily_bonus_popup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +44,12 @@ class BichonRunApp extends StatelessWidget {
       title: "The Bichon's Run",
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: const Color(0xFF0D0D1A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF4FC3F7),
+          secondary: Color(0xFFFFD54F),
+          surface: Color(0xFF141428),
+        ),
       ),
       home: GameScreen(saveManager: saveManager),
     );
@@ -104,6 +111,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               reward: g.pendingOfflineReward!,
             );
           },
+          'AchievementScreen': (context, game) => AchievementScreen(game: game as RunnerGame),
+          'DailyBonus': (context, game) => DailyBonusPopup(game: game as RunnerGame),
         },
       ),
     );

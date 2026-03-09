@@ -97,6 +97,18 @@ class Enemy extends PositionComponent
         : BalanceConfig.groundKillComboBonus;
     game.addCombo(comboAmount);
 
+    // 게임필 — 스크린 쉐이크 + 히트스탑
+    game.gameFeel.onEnemyKill(
+      isGolden: isGolden,
+      isAir: data.type == EnemyType.air,
+    );
+
+    // 업적 추적
+    game.achievementManager.onEnemyKill(
+      isGolden: isGolden,
+      isAir: data.type == EnemyType.air,
+    );
+
     game.particleEffect.spawnEnemyDeath(
       position.x + size.x / 2,
       position.y + size.y / 2,

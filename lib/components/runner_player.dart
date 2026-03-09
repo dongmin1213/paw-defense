@@ -34,7 +34,9 @@ class RunnerPlayer extends PositionComponent
     final distanceMultiplier = BalanceConfig.speedMultiplier(game.distance);
     final upgradeMultiplier = game.upgradeManager.speedMultiplier;
     final companionMultiplier = game.companionManager.speedMultiplier;
-    return baseSpeed * distanceMultiplier * upgradeMultiplier * companionMultiplier * _slowdownFactor;
+    // 망토 장비 효과: 이동속도 +20%
+    final cloakBonus = game.ascensionManager.hasCloak ? 1.2 : 1.0;
+    return baseSpeed * distanceMultiplier * upgradeMultiplier * companionMultiplier * cloakBonus * _slowdownFactor;
   }
 
   RunnerPlayer()
@@ -145,6 +147,7 @@ class RunnerPlayer extends PositionComponent
         if (hash < game.companionManager.obstacleIgnoreChance * 100) return;
       }
       applySlowdown();
+      game.gameFeel.onObstacleHit();
     } else if (other is Coin) {
       other.collect();
     } else if (other is CompanionPickup) {

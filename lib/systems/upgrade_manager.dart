@@ -89,6 +89,15 @@ class UpgradeManager {
     }
   }
 
+  /// 이름 문자열로 UpgradeId 조회 (자동 업그레이드 시스템용)
+  UpgradeId? upgradeIdFromName(String name) {
+    try {
+      return UpgradeId.values.firstWhere((e) => e.name == name);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void resetAll() {
     for (final id in UpgradeId.values) {
       _levels[id] = 0;
