@@ -168,10 +168,15 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
       // Golden enemy chance (2%, or 100% during golden hour)
       final isGolden = game.isGoldenHour || _rng.nextDouble() < BalanceConfig.goldenEnemyChance;
 
+      // Elite enemy chance (5% in danger zones, 2% otherwise)
+      final eliteChance = isDangerZone ? 0.05 : 0.02;
+      final isElite = !isGolden && _rng.nextDouble() < eliteChance;
+
       game.world.add(Enemy(
         data: data,
         spawnPosition: Vector2(x, y),
         isGolden: isGolden,
+        isElite: isElite,
       ));
     }
   }
