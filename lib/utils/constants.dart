@@ -4,7 +4,7 @@ class GameConstants {
   // World
   static const double gravity = 980.0;
   static const double groundY = 500.0;
-  static const double worldWidth = 800.0;
+  static const double worldWidth = 1200.0;
   static const double worldHeight = 600.0;
 
   // Player
