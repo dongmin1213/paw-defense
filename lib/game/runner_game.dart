@@ -182,11 +182,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     // Update weather system
     weatherManager.update(effectiveDt);
 
-    // Update camera to follow player + 쉐이크 오프셋
+    // Update camera to follow player + 쉐이크 오프셋 + 줌 펀치
     camera.viewfinder.position = Vector2(
       player.position.x - 150 + gameFeel.shakeOffset.x,
       gameFeel.shakeOffset.y,
     );
+    camera.viewfinder.zoom = gameFeel.currentZoom;
 
     // Update distance
     distance = player.position.x - GameConstants.playerStartX;

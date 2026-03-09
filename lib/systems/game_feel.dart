@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flame/components.dart';
 import '../game/runner_game.dart';
+import '../components/enemy.dart';
+import '../data/enemy_data.dart';
 
 /// 게임필 시스템 — 스크린쉐이크, 히트스탑, 슬로모션, 줌 펀치
 /// Idle Slayer / Skul 수준의 타격감과 피드백
@@ -30,6 +32,7 @@ class GameFeelSystem extends Component with HasGameReference<RunnerGame> {
 
   // ── 자동 시스템 ──
   double _autoUpgradeTimer = 0;
+  double _autoAirKillTimer = 0;
 
   final Random _rng = Random();
 
@@ -195,6 +198,41 @@ class GameFeelSystem extends Component with HasGameReference<RunnerGame> {
         _autoUpgradeTimer = 0;
         _tryAutoUpgrade();
       }
+    }
+
+    // 자동 공중 처치 — 방치 모드에서 공중 적 자동 처치
+    if (game.ascensionManager.hasAutoAirKill && !game.isActiveMode) {
+      _autoAirKillTimer += dt;
+      if (_autoAirKillTimer >= 1.0) {
+        _autoAirKillTimer = 0;
+        _tryAutoAirKill();
+      }
+    }
+  }
+
+  void _tryAutoAirKill() {
+    // 화면 내 공중 적 중 가장 가까운 하나를 자동 처치
+    final cameraX = game.camera.viewfinder.position.x;
+    final screenRight = cameraX + 800;
+
+    Enemy? closest;
+    double closestDist = double.infinity;
+
+    for (final child in game.world.children) {
+      if (child is Enemy &&
+          child.data.type == EnemyType.air &&
+          child.position.x > cameraX &&
+          child.position.x < screenRight) {
+        final dist = (child.position.x - game.player.position.x).abs();
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = child;
+        }
+      }
+    }
+
+    if (closest != null) {
+      closest.onHit(game.player);
     }
   }
 
