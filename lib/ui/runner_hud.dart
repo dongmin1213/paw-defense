@@ -15,6 +15,7 @@ class RunnerHud extends StatefulWidget {
 class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
   Timer? _updateTimer;
   late AnimationController _comboController;
+  late AnimationController _comboPulse;
   int _prevCombo = 0;
   double _displayCoins = 0;
   double _displayDistance = 0;
@@ -32,6 +33,10 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    _comboPulse = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..repeat(reverse: true);
   }
 
   void _animateValues() {
@@ -50,6 +55,7 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
   void dispose() {
     _updateTimer?.cancel();
     _comboController.dispose();
+    _comboPulse.dispose();
     super.dispose();
   }
 
@@ -63,8 +69,7 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
           if (game.combo > 0) _buildComboMeter(game),
           if (game.activeBoss != null && !game.activeBoss!.isDead)
             _buildBossBar(game),
-          if (game.bonusStageManager.isActive)
-            _buildBonusBanner(game),
+          if (game.bonusStageManager.isActive) _buildBonusBanner(game),
           _buildWeatherInfo(game),
           _buildActionButtons(game),
           _buildModeIndicator(game),
@@ -80,13 +85,13 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       right: 12,
       child: Row(
         children: [
-          _HudInfoChip(
+          _PixelHudChip(
             icon: Icons.near_me,
             value: '${_displayDistance.toStringAsFixed(0)}m',
             color: GameTheme.textPrimary,
           ),
           const Spacer(),
-          _HudInfoChip(
+          _PixelHudChip(
             icon: Icons.monetization_on,
             value: GameTheme.formatNumber(_displayCoins),
             color: GameTheme.accentGold,
@@ -133,40 +138,55 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
         offset: Offset(0, -bounce),
         child: Container(
           width: 80,
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-          decoration: BoxDecoration(
-            color: GameTheme.bgPanel.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: comboColor.withValues(alpha: 0.4),
-              width: 1.5,
-            ),
-            boxShadow: combo >= 10
-                ? [BoxShadow(color: comboColor.withValues(alpha: 0.3), blurRadius: 12)]
-                : null,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+          decoration: GameTheme.pixelPanelDecoration(
+            fillColor: GameTheme.bgPanel.withValues(alpha: 0.9),
+            glow: combo >= 10,
+            glowColor: comboColor,
           ),
           child: Column(
             children: [
               Text(
                 '$combo',
-                style: TextStyle(
+                style: GameTheme.pixel(
+                  fontSize: combo >= 20 ? 16 : 14,
                   color: comboColor,
-                  fontSize: combo >= 20 ? 28 : 24,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
+                  shadows: combo >= 20
+                      ? [
+                          Shadow(
+                              color: comboColor.withValues(alpha: 0.6),
+                              blurRadius: 8)
+                        ]
+                      : null,
                 ),
               ),
               if (comboTier.isNotEmpty)
-                Text(comboTier, style: TextStyle(
-                  color: comboColor, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1,
-                )),
+                AnimatedBuilder(
+                  animation: _comboPulse,
+                  builder: (context, _) {
+                    return Opacity(
+                      opacity:
+                          combo >= 30 ? 0.7 + _comboPulse.value * 0.3 : 1.0,
+                      child: Text(comboTier,
+                          style: GameTheme.pixel(
+                            fontSize: 6,
+                            color: comboColor,
+                            letterSpacing: 1,
+                          )),
+                    );
+                  },
+                ),
               const SizedBox(height: 2),
               Text(
                 'x${comboMult.toStringAsFixed(1)}',
-                style: TextStyle(color: comboColor.withValues(alpha: 0.8), fontSize: 11, fontWeight: FontWeight.w700),
+                style: GameTheme.pixel(
+                  fontSize: 7,
+                  color: comboColor.withValues(alpha: 0.8),
+                ),
               ),
               const SizedBox(height: 4),
-              GameTheme.progressBar(value: timerPercent, height: 3, fillColor: comboColor),
+              GameTheme.pixelProgressBar(
+                  value: timerPercent, height: 5, fillColor: comboColor),
             ],
           ),
         ),
@@ -182,8 +202,10 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       right: 80,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: GameTheme.cardDecoration(
-          borderColor: GameTheme.accentRed.withValues(alpha: 0.3),
+        decoration: GameTheme.pixelPanelDecoration(
+          fillColor: GameTheme.bgCard,
+          glow: true,
+          glowColor: GameTheme.accentRed,
         ),
         child: Column(
           children: [
@@ -191,26 +213,39 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(children: [
-                  Icon(Icons.warning_amber_rounded, color: GameTheme.accentRed, size: 14),
+                  Icon(Icons.warning_amber_rounded,
+                      color: GameTheme.accentRed, size: 14),
                   const SizedBox(width: 4),
-                  Text('BOSS', style: GameTheme.labelBold.copyWith(
-                    color: GameTheme.accentRed, fontSize: 12, letterSpacing: 2,
-                  )),
+                  Text('BOSS',
+                      style: GameTheme.pixel(
+                        fontSize: 8,
+                        color: GameTheme.accentRed,
+                        letterSpacing: 2,
+                      )),
                 ]),
                 Text(
                   '${(boss.timePercent * 10).toStringAsFixed(1)}s',
-                  style: GameTheme.bodySmall.copyWith(
-                    color: boss.timePercent > 0.5 ? GameTheme.accentGreen : GameTheme.accentRed,
+                  style: GameTheme.pixel(
+                    fontSize: 7,
+                    color: boss.timePercent > 0.5
+                        ? GameTheme.accentGreen
+                        : GameTheme.accentRed,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            GameTheme.progressBar(value: boss.hpPercent, height: 8, fillGradient: GameTheme.gradientRed),
+            GameTheme.pixelProgressBar(
+                value: boss.hpPercent,
+                height: 10,
+                fillGradient: GameTheme.gradientRed),
             const SizedBox(height: 3),
-            GameTheme.progressBar(
-              value: 1.0 - boss.timePercent, height: 3,
-              fillColor: boss.timePercent > 0.5 ? GameTheme.accentGreen : GameTheme.accentOrange,
+            GameTheme.pixelProgressBar(
+              value: 1.0 - boss.timePercent,
+              height: 4,
+              fillColor: boss.timePercent > 0.5
+                  ? GameTheme.accentGreen
+                  : GameTheme.accentOrange,
             ),
           ],
         ),
@@ -228,16 +263,19 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
           if (game.activeEventName != null) _buildEventBanner(game),
           const SizedBox(height: 4),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: GameTheme.glassDecoration(opacity: 0.1, borderRadius: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: GameTheme.bgDeep.withValues(alpha: 0.7),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(game.weatherManager.weatherEmoji, style: const TextStyle(fontSize: 13)),
+                Text(game.weatherManager.weatherEmoji,
+                    style: const TextStyle(fontSize: 11)),
                 const SizedBox(width: 5),
                 Text(
-                  '${game.weatherManager.timeDisplayName} · ${game.weatherManager.weatherDisplayName}',
-                  style: GameTheme.bodySmall.copyWith(fontSize: 10),
+                  '${game.weatherManager.timeDisplayName} ${game.weatherManager.weatherDisplayName}',
+                  style: GameTheme.bodySmall.copyWith(fontSize: 9),
                 ),
               ],
             ),
@@ -262,22 +300,21 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [eventColor.withValues(alpha: 0.3), eventColor.withValues(alpha: 0.1)],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: eventColor.withValues(alpha: 0.4)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: GameTheme.pixelCardDecoration(
+        fillColor: eventColor.withValues(alpha: 0.2),
+        borderColor: eventColor.withValues(alpha: 0.5),
+        glow: true,
+        glowColor: eventColor,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(eventIcon, color: eventColor, size: 14),
+          Icon(eventIcon, color: eventColor, size: 12),
           const SizedBox(width: 6),
           Text(
             '${game.activeEventName}  ${game.activeEventTimeLeft.toStringAsFixed(0)}s',
-            style: GameTheme.labelBold.copyWith(color: eventColor, fontSize: 12),
+            style: GameTheme.pixel(fontSize: 7, color: eventColor),
           ),
         ],
       ),
@@ -290,41 +327,40 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       top: 32,
       left: 100,
       right: 100,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              GameTheme.accentGold.withValues(alpha: 0.3),
-              GameTheme.accentGold.withValues(alpha: 0.1),
+      child: ShimmerGlow(
+        glowColor: GameTheme.accentGold,
+        intensity: 0.4,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: GameTheme.pixelPanelDecoration(
+            fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
+            glow: true,
+            glowColor: GameTheme.accentGold,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.star, color: GameTheme.accentGold, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'BONUS  ${bonus.timeLeft.toStringAsFixed(1)}s',
+                style: GameTheme.pixel(
+                  fontSize: 9,
+                  color: GameTheme.accentGold,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 60,
+                child: GameTheme.pixelProgressBar(
+                  value: 1.0 - bonus.progress,
+                  height: 6,
+                  fillGradient: GameTheme.gradientGold,
+                ),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: GameTheme.accentGold.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.star, color: GameTheme.accentGold, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'BONUS STAGE  ${bonus.timeLeft.toStringAsFixed(1)}s',
-              style: GameTheme.labelBold.copyWith(
-                color: GameTheme.accentGold,
-                fontSize: 14,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: GameTheme.progressBar(
-                value: 1.0 - bonus.progress,
-                height: 4,
-                fillGradient: GameTheme.gradientGold,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -338,36 +374,40 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (game.companionManager.ownedCount > 0)
-            _ActionButton(
+            _PixelActionButton(
               icon: Icons.pets,
-              label: '${game.companionManager.equippedIds.length}/${game.companionManager.maxSlots}',
+              label:
+                  '${game.companionManager.equippedIds.length}/${game.companionManager.maxSlots}',
               color: GameTheme.accentOrange,
               onTap: () => game.openCompanionScreen(),
             ),
           if (game.canAscend)
-            _ActionButton(
-              icon: Icons.auto_awesome,
-              label: '초월',
+            PixelSparkle(
               color: GameTheme.accentGold,
-              glow: true,
-              onTap: () => game.openAscensionScreen(),
+              child: _PixelActionButton(
+                icon: Icons.auto_awesome,
+                label: 'ASC',
+                color: GameTheme.accentGold,
+                glow: true,
+                onTap: () => game.openAscensionScreen(),
+              ),
             ),
           if (game.ascensionManager.ascensionCount > 0)
-            _ActionButton(
+            _PixelActionButton(
               icon: Icons.auto_awesome,
               label: '${game.ascensionManager.souls}',
               color: GameTheme.accentPurple,
               onTap: () => game.openSoulShop(),
             ),
-          _ActionButton(
+          _PixelActionButton(
             icon: Icons.emoji_events_rounded,
             label: '${game.achievementManager.completedCount}',
             color: GameTheme.accentGold,
             onTap: () => game.openAchievementScreen(),
           ),
-          _ActionButton(
+          _PixelActionButton(
             icon: Icons.shopping_bag_rounded,
-            label: '상점',
+            label: 'SHOP',
             color: GameTheme.accent,
             onTap: () => game.toggleShop(),
           ),
@@ -382,25 +422,24 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
       left: 0,
       right: 0,
       child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: game.isActiveMode
+          decoration: GameTheme.pixelCardDecoration(
+            fillColor: game.isActiveMode
                 ? GameTheme.accentGreen.withValues(alpha: 0.2)
-                : GameTheme.textMuted.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: game.isActiveMode
-                  ? GameTheme.accentGreen.withValues(alpha: 0.4)
-                  : Colors.transparent,
-            ),
+                : GameTheme.bgCard.withValues(alpha: 0.5),
+            borderColor: game.isActiveMode
+                ? GameTheme.accentGreen.withValues(alpha: 0.5)
+                : GameTheme.pixelBorder,
           ),
           child: Text(
             game.isActiveMode ? 'ACTIVE' : 'IDLE',
-            style: TextStyle(
-              color: game.isActiveMode ? GameTheme.accentGreen : GameTheme.textMuted,
-              fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 2,
+            style: GameTheme.pixel(
+              fontSize: 6,
+              color: game.isActiveMode
+                  ? GameTheme.accentGreen
+                  : GameTheme.textMuted,
+              letterSpacing: 2,
             ),
           ),
         ),
@@ -409,66 +448,73 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
   }
 }
 
-class _HudInfoChip extends StatelessWidget {
+class _PixelHudChip extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-  const _HudInfoChip({required this.icon, required this.value, required this.color});
+  const _PixelHudChip(
+      {required this.icon, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: GameTheme.bgDeep.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: GameTheme.pixelCardDecoration(
+        fillColor: GameTheme.bgDeep.withValues(alpha: 0.75),
+        borderColor: color.withValues(alpha: 0.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 6),
-          Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w800)),
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 5),
+          Text(
+            value,
+            style: GameTheme.pixel(fontSize: 9, color: color),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
+class _PixelActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final bool glow;
   final VoidCallback onTap;
-  const _ActionButton({
-    required this.icon, required this.label, required this.color,
-    this.glow = false, required this.onTap,
+  const _PixelActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.glow = false,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.only(left: 5),
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-            boxShadow: glow
-                ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10)]
-                : null,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: GameTheme.pixelCardDecoration(
+            fillColor: color.withValues(alpha: 0.12),
+            borderColor: color.withValues(alpha: 0.35),
+            glow: glow,
+            glowColor: color,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 14),
+              Icon(icon, color: color, size: 12),
               const SizedBox(width: 4),
-              Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(
+                label,
+                style: GameTheme.pixel(fontSize: 6, color: color),
+              ),
             ],
           ),
         ),
