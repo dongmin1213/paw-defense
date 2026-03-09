@@ -94,7 +94,6 @@ class _UpgradeShopState extends State<UpgradeShop>
                       ),
                     ),
 
-                    // 구분선
                     Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -121,8 +120,8 @@ class _UpgradeShopState extends State<UpgradeShop>
                             isMaxed: isMaxed,
                             cost: cost,
                             canBuy: canBuy,
-                            onBuy: () => _buy(data.id),
-                            delayMs: index * 50,
+                            coins: game.coins,
+                            onBuy: (count) => _buyMultiple(data.id, count),
                           );
                         },
                       ),
@@ -137,11 +136,20 @@ class _UpgradeShopState extends State<UpgradeShop>
     );
   }
 
-  void _buy(UpgradeId id) {
+  void _buyMultiple(UpgradeId id, int count) {
     final game = widget.game;
-    final cost = game.upgradeManager.buy(id, game.coins);
-    if (cost > 0) {
-      game.coins -= cost;
+    int bought = 0;
+    for (var i = 0; i < count; i++) {
+      final cost = game.upgradeManager.buy(id, game.coins);
+      if (cost > 0) {
+        game.coins -= cost;
+        bought++;
+        game.achievementManager.onUpgradeBought();
+      } else {
+        break;
+      }
+    }
+    if (bought > 0) {
       game.applyUpgrades();
       game.saveGame();
       setState(() {});
@@ -155,8 +163,8 @@ class _UpgradeCard extends StatelessWidget {
   final bool isMaxed;
   final double cost;
   final bool canBuy;
-  final VoidCallback onBuy;
-  final int delayMs;
+  final double coins;
+  final void Function(int count) onBuy;
 
   const _UpgradeCard({
     required this.data,
@@ -164,8 +172,8 @@ class _UpgradeCard extends StatelessWidget {
     required this.isMaxed,
     required this.cost,
     required this.canBuy,
+    required this.coins,
     required this.onBuy,
-    this.delayMs = 0,
   });
 
   IconData get _upgradeIcon {
@@ -206,9 +214,36 @@ class _UpgradeCard extends StatelessWidget {
     }
   }
 
+  int _maxBuyCount() {
+    if (isMaxed) return 0;
+    final remaining = data.maxLevel - level;
+    var count = 0;
+    var simCoins = coins;
+    var simLevel = level;
+    while (count < remaining && simCoins >= data.costAt(simLevel)) {
+      simCoins -= data.costAt(simLevel);
+      simLevel++;
+      count++;
+    }
+    return count;
+  }
+
+  double _totalCost(int n) {
+    var total = 0.0;
+    final clampedN = n.clamp(0, data.maxLevel - level);
+    for (var i = 0; i < clampedN; i++) {
+      total += data.costAt(level + i);
+    }
+    return total;
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = data.maxLevel > 1 ? level / data.maxLevel : (isMaxed ? 1.0 : 0.0);
+    final maxCount = _maxBuyCount();
+    final remaining = data.maxLevel - level;
+    final buy10Count = remaining.clamp(0, 10);
+    final can10 = data.maxLevel > 1 && !isMaxed && buy10Count > 0 && coins >= _totalCost(buy10Count);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
@@ -284,45 +319,38 @@ class _UpgradeCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
-          // 구매 버튼
+          // ── 구매 버튼 그룹 (x1 / x10 / MAX) ──
           if (!isMaxed)
-            GestureDetector(
-              onTap: canBuy ? onBuy : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: canBuy ? GameTheme.gradientGreen : null,
-                  color: canBuy ? null : GameTheme.bgCard,
-                  borderRadius: BorderRadius.circular(10),
-                  border: canBuy
-                      ? null
-                      : Border.all(
-                          color: Colors.white.withValues(alpha: 0.06)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _BuyButton(
+                  label: GameTheme.formatNumber(cost),
+                  canBuy: canBuy,
+                  onTap: canBuy ? () => onBuy(1) : null,
+                  gradient: GameTheme.gradientGreen,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.monetization_on,
-                        color: canBuy
-                            ? GameTheme.accentGold
-                            : GameTheme.textMuted,
-                        size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      GameTheme.formatNumber(cost),
-                      style: TextStyle(
-                        color: canBuy ? Colors.white : GameTheme.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                if (data.maxLevel > 1) ...[
+                  const SizedBox(width: 3),
+                  _BuyButton(
+                    label: 'x$buy10Count',
+                    canBuy: can10,
+                    onTap: can10 ? () => onBuy(buy10Count) : null,
+                    isCompact: true,
+                    gradient: GameTheme.gradientPrimary,
+                  ),
+                  const SizedBox(width: 3),
+                  _BuyButton(
+                    label: maxCount > 0 ? 'MAX' : '-',
+                    canBuy: maxCount > 0,
+                    onTap: maxCount > 0 ? () => onBuy(maxCount) : null,
+                    isCompact: true,
+                    gradient: GameTheme.gradientGold,
+                  ),
+                ],
+              ],
             )
           else
             Container(
@@ -337,6 +365,59 @@ class _UpgradeCard extends StatelessWidget {
               child: Icon(Icons.check, color: _upgradeColor, size: 18),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _BuyButton extends StatelessWidget {
+  final String label;
+  final bool canBuy;
+  final VoidCallback? onTap;
+  final bool isCompact;
+  final LinearGradient gradient;
+
+  const _BuyButton({
+    required this.label,
+    required this.canBuy,
+    this.onTap,
+    this.isCompact = false,
+    required this.gradient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: canBuy ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 8 : 10,
+          vertical: isCompact ? 6 : 8,
+        ),
+        decoration: BoxDecoration(
+          gradient: canBuy ? gradient : null,
+          color: canBuy ? null : GameTheme.bgCard,
+          borderRadius: BorderRadius.circular(8),
+          border: canBuy
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          boxShadow: canBuy
+              ? [BoxShadow(
+                  color: gradient.colors.first.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: canBuy ? Colors.white : GameTheme.textMuted,
+            fontSize: isCompact ? 10 : 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

@@ -63,6 +63,8 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
           if (game.combo > 0) _buildComboMeter(game),
           if (game.activeBoss != null && !game.activeBoss!.isDead)
             _buildBossBar(game),
+          if (game.bonusStageManager.isActive)
+            _buildBonusBanner(game),
           _buildWeatherInfo(game),
           _buildActionButtons(game),
           _buildModeIndicator(game),
@@ -282,6 +284,52 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildBonusBanner(RunnerGame game) {
+    final bonus = game.bonusStageManager;
+    return Positioned(
+      top: 32,
+      left: 100,
+      right: 100,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              GameTheme.accentGold.withValues(alpha: 0.3),
+              GameTheme.accentGold.withValues(alpha: 0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: GameTheme.accentGold.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.star, color: GameTheme.accentGold, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'BONUS STAGE  ${bonus.timeLeft.toStringAsFixed(1)}s',
+              style: GameTheme.labelBold.copyWith(
+                color: GameTheme.accentGold,
+                fontSize: 14,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 60,
+              child: GameTheme.progressBar(
+                value: 1.0 - bonus.progress,
+                height: 4,
+                fillGradient: GameTheme.gradientGold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionButtons(RunnerGame game) {
     return Positioned(
       bottom: 10,
@@ -311,6 +359,12 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
               color: GameTheme.accentPurple,
               onTap: () => game.openSoulShop(),
             ),
+          _ActionButton(
+            icon: Icons.emoji_events_rounded,
+            label: '${game.achievementManager.completedCount}',
+            color: GameTheme.accentGold,
+            onTap: () => game.openAchievementScreen(),
+          ),
           _ActionButton(
             icon: Icons.shopping_bag_rounded,
             label: '상점',

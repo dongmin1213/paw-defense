@@ -157,6 +157,8 @@ class Boss extends PositionComponent
     game.addCombo(5);
     // 게임필 — 보스 처치 극적 연출
     game.gameFeel.onBossKill();
+    // 업적 추적
+    game.achievementManager.onBossKill();
 
     // 보스 소울 보상
     if (soulReward > 0) {

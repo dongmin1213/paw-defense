@@ -103,6 +103,12 @@ class Enemy extends PositionComponent
       isAir: data.type == EnemyType.air,
     );
 
+    // 업적 추적
+    game.achievementManager.onEnemyKill(
+      isGolden: isGolden,
+      isAir: data.type == EnemyType.air,
+    );
+
     game.particleEffect.spawnEnemyDeath(
       position.x + size.x / 2,
       position.y + size.y / 2,

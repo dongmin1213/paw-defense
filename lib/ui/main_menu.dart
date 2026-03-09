@@ -190,6 +190,10 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
                 '${game.saveManager.souls}',
                 valueColor: GameTheme.accentPurple),
           ],
+          const SizedBox(height: 8),
+          _statRow(Icons.emoji_events, '업적',
+              '${game.achievementManager.completedCount}/${game.achievementManager.totalCount}',
+              valueColor: GameTheme.accentGold),
         ],
       ),
     );
@@ -254,22 +258,33 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
 
   List<Widget> _buildBgParticles() {
     final rng = Random(42);
-    return List.generate(15, (i) {
+    final colors = [
+      GameTheme.accent,
+      GameTheme.accentGold,
+      GameTheme.accentPurple,
+      GameTheme.accentGreen,
+    ];
+    return List.generate(25, (i) {
       final x = rng.nextDouble();
       final y = rng.nextDouble();
-      final size = 2.0 + rng.nextDouble() * 3;
-      final speed = 0.3 + rng.nextDouble() * 0.7;
+      final size = 1.5 + rng.nextDouble() * 4;
+      final speed = 0.2 + rng.nextDouble() * 0.8;
       final offset = _bgController.value * speed;
+      final color = colors[i % colors.length];
+      final drift = sin((x + _bgController.value) * 3.14159 * 2) * 10;
 
       return Positioned(
-        left: (x * 800) % 800,
+        left: (x * 800 + drift) % 800,
         top: ((y + offset) % 1.0) * 600,
         child: Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: GameTheme.accent.withValues(alpha: 0.1 + rng.nextDouble() * 0.15),
+            color: color.withValues(alpha: 0.08 + rng.nextDouble() * 0.12),
             shape: BoxShape.circle,
+            boxShadow: size > 3
+                ? [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 4)]
+                : null,
           ),
         ),
       );

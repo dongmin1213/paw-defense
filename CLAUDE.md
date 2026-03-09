@@ -19,22 +19,23 @@ flutter build apk --release
 
 ---
 
-## 프로젝트 구조 (42개 파일, ~8500줄)
+## 프로젝트 구조 (49개 파일, ~11000줄)
 
 ```
 lib/
-├── main.dart                     # 앱 진입점, 7개 오버레이 등록
+├── main.dart                     # 앱 진입점, 9개 오버레이 등록
 ├── game/
-│   └── runner_game.dart          # FlameGame 메인 — 게임 상태, 카메라, 입력, 이벤트, 게임필 통합
+│   └── runner_game.dart          # FlameGame 메인 — 게임 상태, 카메라, 입력, 이벤트, 게임필/업적/일일보너스 통합
 ├── components/                   # 게임 엔티티 (Flame PositionComponent)
 │   ├── runner_player.dart        # 비숏 — 자동 달리기, 점프, 자동 공격, 충돌
 │   ├── ground_segment.dart       # 무한 반복 바닥 블록 (400px 단위)
-│   ├── enemy.dart                # 몬스터 — 바닥/공중, HP, 코인 드랍, 황금 적
+│   ├── enemy.dart                # 몬스터 — 바닥/공중, HP, 코인 드랍, 황금 적, 업적 추적
 │   ├── coin.dart                 # 코인 — 호버 애니, 수집 팝업 "+N"
 │   ├── obstacle.dart             # 바위 장애물 — 충돌 시 2초간 속도 50%
 │   ├── parallax_layer.dart       # 3레이어 프로시저럴 패럴랙스 배경
 │   ├── companion_pickup.dart     # 필드 동료 픽업 — 희귀도 글로우, 수집 팝업
-│   ├── boss.dart                 # 보스 — 500m마다, HP바, 자동+탭 공격, 10초 제한
+│   ├── boss.dart                 # 보스 — 500m마다, HP바, 자동+탭 공격, 10초 제한, 업적 추적
+│   ├── treasure_box.dart         # ★ 보물상자 — 3등급(일반/레어/에픽), 코인 폭발, 필드 스폰
 │   ├── weather_effect.dart       # 날씨 파티클 — 비/눈/폭풍/무지개 + 시간대 오버레이
 │   └── particle_effect.dart      # FX 파티클 — 코인수집/적처치/보스폭발/먼지
 ├── data/                         # ★ 데이터 정의 — 컨텐츠 추가 시 여기만 수정
@@ -43,7 +44,8 @@ lib/
 │   ├── region_data.dart          # 5개 지역 (초원/숲/사막/설산/화산)
 │   ├── upgrade_data.dart         # 일반 업그레이드 7종
 │   ├── soul_upgrade_data.dart    # 영구 업그레이드 13종
-│   └── companion_data.dart       # 동료 10종 (일반3/레어3/에픽2/전설2)
+│   ├── companion_data.dart       # 동료 10종 (일반3/레어3/에픽2/전설2)
+│   └── achievement_data.dart     # ★ 업적 46종 (전투/경제/진행/수집/특수 5카테고리)
 ├── renderers/                    # ★ 렌더링 분리 — 픽셀아트 스프라이트 교체 시 여기만 수정
 │   ├── player_renderer.dart      # 비숏 픽셀아트 스프라이트 (idle/run/jump/attack)
 │   ├── enemy_renderer.dart       # 적 20종 + 황금 적 픽셀아트 스프라이트
@@ -51,24 +53,29 @@ lib/
 │   ├── companion_renderer.dart   # 동료 10종 픽셀아트 스프라이트
 │   └── boss_renderer.dart        # 보스 5종 픽셀아트 스프라이트
 ├── systems/                      # 게임 시스템 (매니저 패턴)
-│   ├── level_generator.dart      # 절차적 레벨 생성 — 적/코인/장애물/동료/보스 배치
+│   ├── level_generator.dart      # 절차적 레벨 생성 — 적/코인/장애물/동료/보스/보물상자 배치
 │   ├── upgrade_manager.dart      # 일반 업글 — 레벨/구매/비용계산/배율 getter + upgradeIdFromName
 │   ├── ascension_manager.dart    # 초월 — 소울 계산, 영구 업글, 지역/장비 해금
 │   ├── companion_manager.dart    # 동료 — 수집/장착(1~4슬롯)/레벨업/버프 계산
 │   ├── weather_manager.dart      # 날씨(5종) + 시간대(4종) — 3~5분 주기 + 보너스
 │   ├── game_feel.dart            # ★ 게임필 — 스크린쉐이크/히트스탑/슬로모션/줌펀치/자동시스템
+│   ├── achievement_manager.dart  # ★ 업적 — 46종 마일스톤 추적, 보상 지급
+│   ├── daily_bonus_manager.dart  # ★ 일일 보너스 — 7일 주기 출석, 연속 배율
+│   ├── bonus_stage_manager.dart  # ★ 보너스 스테이지 — 코인 러시 구간 (8초)
 │   ├── ad_manager.dart           # 광고 스텁 — 실제 SDK 없이 API만 준비
 │   ├── offline_reward.dart       # 오프라인 보상 — CpS 기반, 최소60초~최대24시간
-│   └── save_manager.dart         # SharedPreferences 저장/로드 (동료는 JSON)
+│   └── save_manager.dart         # SharedPreferences 저장/로드 (동료/업적/일일보너스 JSON)
 ├── ui/                           # ★ Flutter 위젯 오버레이 — GameTheme 기반 통합 디자인 시스템
 │   ├── game_theme.dart           # ★ 통합 디자인 시스템 — 색상/타이포/버튼/패널/그라디언트/유틸
-│   ├── runner_hud.dart           # HUD — 부드러운 숫자롤링, 콤보미터(등급별), 보스HP, 글래스모피즘
-│   ├── upgrade_shop.dart         # 카드형 상점 — 아이콘+진행바+그라디언트 버튼+진입 애니메이션
-│   ├── soul_shop.dart            # 영구 상점 — 3탭(강화/지역/장비)+아이콘+지역 미리보기
+│   ├── runner_hud.dart           # HUD — 숫자롤링, 콤보미터, 보스HP, 보너스스테이지 배너, 업적버튼
+│   ├── upgrade_shop.dart         # ★ 상점 — x1/x10/MAX 벌크 구매, 카드+아이콘+진행바
+│   ├── soul_shop.dart            # ★ 스킬 트리 — 노드 기반 트리 레이아웃, 상세패널, 지역바
 │   ├── ascension_screen.dart     # 초월 — 파티클 폭발+글로우 펄스+소울 카운트업+시네마틱 전환
 │   ├── companion_screen.dart     # 동료 — 리스트+상세패널 분할뷰/레어도 뱃지/글로우 아바타
 │   ├── offline_popup.dart        # 복귀 — 코인 카운트업 롤링+그라디언트 버튼+진입 애니메이션
-│   └── main_menu.dart            # 타이틀 — ShaderMask 그라디언트+파티클 배경+펄스 글로우 버튼
+│   ├── achievement_screen.dart   # ★ 업적 — 5카테고리 탭, 진행률, 보상 표시
+│   ├── daily_bonus_popup.dart    # ★ 일일 보너스 — 7일 캘린더, 연속 보상, 카운트업
+│   └── main_menu.dart            # 타이틀 — ShaderMask 그라디언트+멀티컬러 파티클+업적 진행률
 └── utils/
     ├── constants.dart            # 월드크기(800x600), 물리(중력1100, 점프-520, 속도180)
     └── pixel_art.dart            # ★ 픽셀아트 유틸 — 문자맵 기반 스프라이트 렌더링
@@ -138,6 +145,28 @@ total = amount
 | 6 | 오프라인 보상 + 파티클 FX + 특수 이벤트 3종 | ✅ |
 | 7 | 픽셀아트 비주얼 전환 + 게임필 개선 | ✅ |
 | 8 | UI/UX 전면 리빌드 + 게임필 시스템 + 장비효과 + 자동시스템 | ✅ |
+| 9 | 업적 + 일일보너스 + 보물상자 + 보너스스테이지 + 벌크구매 + 스킬트리 | ✅ |
+
+## Phase 9 상세 (Idle Slayer급 기능 확장)
+
+### 새 파일
+- `data/achievement_data.dart` — 업적 46종 정의 (5카테고리: 전투/경제/진행/수집/특수)
+- `systems/achievement_manager.dart` — 마일스톤 추적 + 보상 지급 + 저장/로드
+- `systems/daily_bonus_manager.dart` — 7일 주기 출석, 연속 배율(Day7=x4), 소울 보상
+- `systems/bonus_stage_manager.dart` — 800m 간격 코인 러시 구간 (8초, 대량 코인 스폰)
+- `components/treasure_box.dart` — 필드 보물상자 (3등급: 일반/레어/에픽, 코인 폭발)
+- `ui/achievement_screen.dart` — 5카테고리 탭, 진행률 바, 보상 표시
+- `ui/daily_bonus_popup.dart` — 7일 캘린더, 연속 출석 배율, 소울 보상
+
+### 기존 파일 수정
+- **upgrade_shop.dart**: x1/x10/MAX 벌크 구매 버튼 추가
+- **soul_shop.dart**: 트리형 노드 기반 스킬 트리로 전면 리빌드 (4섹션: 코어/장비/자동화/지역)
+- **runner_hud.dart**: 보너스 스테이지 배너, 업적 버튼 추가
+- **main_menu.dart**: 업적 진행률 표시, 멀티컬러 파티클 배경
+- **runner_game.dart**: 업적/일일보너스/보너스스테이지 매니저 연동
+- **save_manager.dart**: 업적/일일보너스 JSON 저장/로드
+- **level_generator.dart**: 보물상자 스폰 (5% 확률, 3등급 가중치)
+- **enemy.dart / boss.dart**: 업적 추적 호출 추가
 
 ## Phase 8 상세 (UI/UX/시스템 리빌드)
 
@@ -180,8 +209,8 @@ total = amount
 - **사운드**: flame_audio 의존성은 있으나 사용 안 함
 - **실제 광고**: google_mobile_ads SDK 미연동 (스텁만)
 - **온보딩**: 말풍선 튜토리얼 없음
-- **업적/퀘스트**: 미구현
-- **보물상자/코인 러시**: 미니이벤트 미구현
+- **업적 보상 수령**: 업적 달성 시 보상 자동 지급 미구현 (추적만 됨)
+- **미니게임**: Idle Slayer의 Chest Hunt / Ascending Heights 같은 미니게임 미구현
 
 ---
 
