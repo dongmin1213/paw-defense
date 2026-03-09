@@ -24,7 +24,7 @@ class BalanceConfig {
 
   // === 속도 ===
   static double speedMultiplier(double distance) {
-    return 1.0 + 0.15 * log(1.0 + distance / 200.0);
+    return 1.0 + 0.25 * log(1.0 + distance / 150.0);
   }
 
   // === 초월 ===

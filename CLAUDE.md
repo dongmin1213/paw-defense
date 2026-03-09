@@ -44,12 +44,12 @@ lib/
 │   ├── upgrade_data.dart         # 일반 업그레이드 7종
 │   ├── soul_upgrade_data.dart    # 영구 업그레이드 13종
 │   └── companion_data.dart       # 동료 10종 (일반3/레어3/에픽2/전설2)
-├── renderers/                    # ★ 렌더링 분리 — 스프라이트 교체 시 여기만 수정
-│   ├── player_renderer.dart      # 비숏 Canvas 드로잉
-│   ├── enemy_renderer.dart       # 적 20종 + 황금 적 Canvas 드로잉
-│   ├── coin_renderer.dart        # 코인 Canvas 드로잉
-│   ├── companion_renderer.dart   # 동료 10종 Canvas 드로잉
-│   └── boss_renderer.dart        # 보스 5종 Canvas 드로잉
+├── renderers/                    # ★ 렌더링 분리 — 픽셀아트 스프라이트 교체 시 여기만 수정
+│   ├── player_renderer.dart      # 비숏 픽셀아트 스프라이트 (idle/run/jump/attack)
+│   ├── enemy_renderer.dart       # 적 20종 + 황금 적 픽셀아트 스프라이트
+│   ├── coin_renderer.dart        # 코인 픽셀아트 (12x12, 외곽선+하이라이트)
+│   ├── companion_renderer.dart   # 동료 10종 픽셀아트 스프라이트
+│   └── boss_renderer.dart        # 보스 5종 픽셀아트 스프라이트
 ├── systems/                      # 게임 시스템 (매니저 패턴)
 │   ├── level_generator.dart      # 절차적 레벨 생성 — 적/코인/장애물/동료/보스 배치
 │   ├── upgrade_manager.dart      # 일반 업글 — 레벨/구매/비용계산/배율 getter
@@ -68,7 +68,8 @@ lib/
 │   ├── offline_popup.dart        # 오프라인 복귀 팝업 — 수령/x2 광고
 │   └── main_menu.dart            # 타이틀 화면 — 시작, 통계, 소울상점
 └── utils/
-    └── constants.dart            # 월드크기(800x600), 물리(중력980, 점프-420)
+    ├── constants.dart            # 월드크기(800x600), 물리(중력1100, 점프-520, 속도180)
+    └── pixel_art.dart            # ★ 픽셀아트 유틸 — 문자맵 기반 스프라이트 렌더링
 ```
 
 ---
@@ -109,9 +110,9 @@ total = amount
 |------|-----|------|
 | 월드 크기 | 800x600 | FixedResolutionViewport |
 | 바닥 Y | 500 | 지면 높이 |
-| 기본 속도 | 120px/s | 플레이어 이동 속도 |
-| 중력 | 980 | 낙하 가속도 |
-| 점프력 | -420 | 점프 초기 속도 |
+| 기본 속도 | 180px/s | 플레이어 이동 속도 |
+| 중력 | 1100 | 낙하 가속도 |
+| 점프력 | -520 | 점프 초기 속도 |
 | 업글 비용배율 | 1.15^lv | 레벨당 15% 증가 |
 | 공중적 코인 | x3 | 점프 처치 보너스 |
 | 콤보 리셋 | 3초 | 미처치 시 리셋 |
@@ -132,6 +133,7 @@ total = amount
 | 4 | 동료 10종 + 보스 5종 + 황금 적 + 동료 장착/도감 | ✅ |
 | 5 | 날씨/시간(4시간대+5날씨) + 광고 스텁 | ✅ |
 | 6 | 오프라인 보상 + 파티클 FX + 특수 이벤트 3종 | ✅ |
+| 7 | 픽셀아트 비주얼 전환 + 게임필 개선 | ✅ |
 
 ## 미구현 (TODO)
 
@@ -157,16 +159,37 @@ class Enemy extends PositionComponent
 }
 ```
 
-### Renderer 패턴
+### Renderer 패턴 (픽셀아트)
 ```dart
 class EnemyRenderer {
   static void render(Canvas canvas, Size size, EnemyData data, {
     required double animTimer, required bool isHit, required bool isGolden,
-  }) { /* Canvas API 프로시저럴 드로잉 */ }
+  }) { /* PixelArt.drawCentered() 기반 스프라이트 렌더링 */ }
 }
 ```
 - 모든 렌더러는 **static 메서드**만. 인스턴스 없음.
-- 스프라이트 교체 시 렌더러 파일만 수정.
+- 스프라이트는 **문자열 배열 + 색상 팔레트 맵** 방식으로 정의.
+- `PixelArt.drawCentered()` 호출로 렌더링.
+- 새 스프라이트 추가 시 문자열 배열 + 팔레트만 정의하면 됨.
+
+### PixelArt 유틸리티 패턴
+```dart
+// 스프라이트 정의 (문자 = 팔레트 키, '.' = 투명)
+static const _sprite = [
+  '..OOO..',
+  '.OOOOO.',
+  '.OOEOO.',
+  '.OOOOO.',
+  '..OOO..',
+];
+static const _palette = {
+  'O': Color(0xFF4CAF50),
+  'E': Color(0xFF1A1A1A),
+};
+
+// 렌더링
+PixelArt.drawCentered(canvas, _sprite, _palette, size, pixelSize: px);
+```
 
 ### Data 패턴
 ```dart

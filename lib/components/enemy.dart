@@ -1,13 +1,12 @@
 import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
+import '../renderers/enemy_renderer.dart';
 import '../utils/constants.dart';
-import '../utils/sprite_loader.dart';
 import 'runner_player.dart';
 import 'coin.dart';
 
@@ -24,8 +23,6 @@ class Enemy extends PositionComponent
 
   static const double goldenMultiplier = 10.0;
 
-  SpriteAnimationTicker? _ticker;
-
   Enemy({
     required this.data,
     required Vector2 spawnPosition,
@@ -40,20 +37,12 @@ class Enemy extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox());
-
-    final anim = await SpriteLoader.loadAnimation(
-      'enemy_${data.id}.png',
-      frameWidth: 32, frameHeight: 32,
-      frameCount: 4, stepTime: 0.2,
-    );
-    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
-    _ticker?.update(dt);
 
     // Air enemies hover
     if (data.type == EnemyType.air) {
@@ -129,22 +118,13 @@ class Enemy extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    // Golden glow effect
-    if (isGolden) {
-      final glowPaint = Paint()
-        ..color = const Color(0xFFFFD600).withValues(alpha: ((_sin(_animTimer * 5) * 0.2 + 0.3).clamp(0.0, 1.0)));
-      canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.6, glowPaint);
-    }
-
-    final sprite = _ticker?.getSprite();
-    if (sprite != null) {
-      sprite.render(canvas, size: size);
-      if (_isHit) {
-        final flashPaint = Paint()
-          ..color = const Color(0xAAFFFFFF)
-          ..blendMode = BlendMode.srcATop;
-        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), flashPaint);
-      }
-    }
+    EnemyRenderer.render(
+      canvas,
+      Size(size.x, size.y),
+      data,
+      animTimer: _animTimer,
+      isHit: _isHit,
+      isGolden: isGolden,
+    );
   }
 }

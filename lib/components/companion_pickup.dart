@@ -3,11 +3,10 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flame/sprite.dart';
 
 import '../game/runner_game.dart';
 import '../data/companion_data.dart';
-import '../utils/sprite_loader.dart';
+import '../renderers/companion_renderer.dart';
 
 class CompanionPickup extends PositionComponent
     with HasGameReference<RunnerGame>, CollisionCallbacks {
@@ -16,8 +15,6 @@ class CompanionPickup extends PositionComponent
   double _animTimer = 0;
   bool _collected = false;
   double _collectAnim = 0;
-
-  SpriteAnimationTicker? _ticker;
 
   CompanionPickup({
     required this.data,
@@ -30,20 +27,12 @@ class CompanionPickup extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox(isSolid: true));
-
-    final anim = await SpriteLoader.loadAnimation(
-      'companion_${data.id}.png',
-      frameWidth: 20, frameHeight: 20,
-      frameCount: 4, stepTime: 0.2,
-    );
-    _ticker = anim.createTicker();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
-    _ticker?.update(dt);
 
     // Float hover
     position.y = spawnPosition.y + sin(_animTimer * 3) * 4;
@@ -83,31 +72,28 @@ class CompanionPickup extends PositionComponent
 
     // Rarity glow
     final rarityColor = CompanionDatabase.rarityColor(data.rarity);
+    final glowAlpha = (sin(_animTimer * 4) * 0.2 + 0.3).clamp(0.0, 1.0);
     final glowPaint = Paint()
-      ..color = rarityColor.withValues(alpha: (sin(_animTimer * 4) * 0.2 + 0.3).clamp(0, 1));
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), 16, glowPaint);
+      ..color = rarityColor.withValues(alpha: glowAlpha)
+      ..isAntiAlias = false;
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(size.x / 2, size.y / 2), width: 30, height: 30),
+      glowPaint,
+    );
 
-    // Render companion sprite
-    final sprite = _ticker?.getSprite();
-    if (sprite != null) {
-      // Center the 20x20 sprite in the 28x28 component
-      canvas.save();
-      canvas.translate(4, 4);
-      sprite.render(canvas, size: Vector2(20, 20));
-      canvas.restore();
-    }
+    // Render companion pixel art
+    CompanionRenderer.render(canvas, data.id, Size(size.x, size.y), _animTimer);
 
-    // Rarity border
+    // Rarity border (pixel style - square)
     final borderPaint = Paint()
       ..color = rarityColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), 14, borderPaint);
-
-    // "!" indicator
-    final exclamation = sin(_animTimer * 5) * 2;
-    final textPaint = Paint()..color = const Color(0xFFFFD600);
-    canvas.drawCircle(Offset(size.x / 2, -4 + exclamation), 3, textPaint);
+      ..strokeWidth = 1.5
+      ..isAntiAlias = false;
+    canvas.drawRect(
+      Rect.fromLTWH(1, 1, size.x - 2, size.y - 2),
+      borderPaint,
+    );
   }
 }
 
@@ -138,20 +124,17 @@ class _CompanionPopup extends PositionComponent with HasGameReference<RunnerGame
     final alpha = (1.0 - (_timer / 2.0)).clamp(0.0, 1.0);
     final rarityColor = CompanionDatabase.rarityColor(companionData.rarity);
 
-    final bgPaint = Paint()..color = Color.fromRGBO(0, 0, 0, 0.7 * alpha);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(-20, 0, 80, 24), const Radius.circular(6)),
-      bgPaint,
-    );
+    final bgPaint = Paint()
+      ..color = Color.fromRGBO(0, 0, 0, 0.7 * alpha)
+      ..isAntiAlias = false;
+    canvas.drawRect(Rect.fromLTWH(-20, 0, 80, 24), bgPaint);
 
     final borderPaint = Paint()
       ..color = rarityColor.withValues(alpha: alpha)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(-20, 0, 80, 24), const Radius.circular(6)),
-      borderPaint,
-    );
+      ..strokeWidth = 1
+      ..isAntiAlias = false;
+    canvas.drawRect(Rect.fromLTWH(-20, 0, 80, 24), borderPaint);
 
     final text = isNew ? '${companionData.name} GET!' : '${companionData.name} +1';
     final builder = ParagraphBuilder(ParagraphStyle(

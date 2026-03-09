@@ -89,7 +89,7 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
       final data = _weightedRandom(pool);
 
       final y = isAir
-          ? GameConstants.groundY - 80 - _rng.nextDouble() * 60
+          ? GameConstants.groundY - 60 - _rng.nextDouble() * 30
           : GameConstants.groundY - data.height;
 
       // Golden enemy chance (2%, or 100% during golden hour)

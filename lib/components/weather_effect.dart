@@ -106,19 +106,26 @@ class WeatherEffect extends PositionComponent with HasGameReference<RunnerGame> 
       final alpha = (p.life / 3.0).clamp(0.0, 1.0);
       final paint = Paint()..color = _particleColor(weather, alpha, p);
 
+      paint.isAntiAlias = false;
       if (weather == WeatherType.rain || weather == WeatherType.storm) {
-        // Rain = vertical lines
-        canvas.drawLine(
-          Offset(p.x, p.y),
-          Offset(p.x + p.vx * 0.02, p.y + p.size * 4),
-          paint..strokeWidth = p.size * 0.5,
+        // Rain = pixel vertical lines
+        final len = p.size * 4;
+        canvas.drawRect(
+          Rect.fromLTWH(p.x, p.y, max(1, p.size * 0.5), len),
+          paint,
         );
       } else if (weather == WeatherType.snow) {
-        // Snow = circles
-        canvas.drawCircle(Offset(p.x, p.y), p.size, paint);
+        // Snow = pixel squares
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(p.x, p.y), width: p.size * 2, height: p.size * 2),
+          paint,
+        );
       } else if (weather == WeatherType.rainbow) {
-        // Rainbow = colorful sparkles
-        canvas.drawCircle(Offset(p.x, p.y), p.size, paint);
+        // Rainbow = colorful pixel sparkles
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(p.x, p.y), width: p.size * 2, height: p.size * 2),
+          paint,
+        );
       }
     }
 

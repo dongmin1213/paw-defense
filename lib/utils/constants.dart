@@ -8,9 +8,9 @@ class GameConstants {
   static const double groundHeight = 100.0;
 
   // Physics
-  static const double gravity = 980.0;
-  static const double basePlayerSpeed = 120.0;
-  static const double baseJumpForce = -420.0;
+  static const double gravity = 1100.0;
+  static const double basePlayerSpeed = 180.0;
+  static const double baseJumpForce = -520.0;
 
   // Player
   static const double playerWidth = 36.0;
