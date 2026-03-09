@@ -86,6 +86,8 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
           _buildWeatherInfo(game),
           _buildActionButtons(game),
           _buildModeIndicator(game),
+          if (game.levelGenerator.isDangerZone || game.levelGenerator.isPeaceZone)
+            _buildZoneIndicator(game),
         ],
       ),
     );
@@ -417,6 +419,12 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
               onTap: () => game.openSoulShop(),
             ),
           _PixelActionButton(
+            icon: Icons.assignment,
+            label: '${game.missionManager.completedDailyCount}/3',
+            color: GameTheme.accent,
+            onTap: () => game.openMissionScreen(),
+          ),
+          _PixelActionButton(
             icon: Icons.emoji_events_rounded,
             label: '${game.achievementManager.completedCount}',
             color: GameTheme.accentGold,
@@ -458,6 +466,45 @@ class _RunnerHudState extends State<RunnerHud> with TickerProviderStateMixin {
                   : GameTheme.textMuted,
               letterSpacing: 2,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoneIndicator(RunnerGame game) {
+    final isDanger = game.levelGenerator.isDangerZone;
+    final color = isDanger ? GameTheme.accentRed : GameTheme.accentGreen;
+    final label = isDanger ? 'DANGER x3' : 'PEACE';
+    final icon = isDanger ? Icons.warning_amber_rounded : Icons.park;
+
+    return Positioned(
+      top: 28,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: GameTheme.pixelCardDecoration(
+            fillColor: color.withValues(alpha: 0.2),
+            borderColor: color.withValues(alpha: 0.5),
+            glow: true,
+            glowColor: color,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 12),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GameTheme.pixel(
+                  fontSize: 7,
+                  color: color,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -110,6 +110,7 @@ class TreasureBox extends PositionComponent
 
     // 업적 추적
     game.achievementManager.onBoxOpened();
+    game.missionManager.onBoxOpened();
     game.soundManager.playTreasureOpen();
 
     // 코인 폭발 — 등급에 비례하는 양

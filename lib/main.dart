@@ -13,6 +13,7 @@ import 'ui/companion_screen.dart';
 import 'ui/offline_popup.dart';
 import 'ui/achievement_screen.dart';
 import 'ui/daily_bonus_popup.dart';
+import 'ui/mission_screen.dart';
 import 'ui/ui_effects.dart';
 
 void main() async {
@@ -115,6 +116,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             },
             'AchievementScreen': (context, game) => AchievementScreen(game: game as RunnerGame),
             'DailyBonus': (context, game) => DailyBonusPopup(game: game as RunnerGame),
+            'MissionScreen': (context, game) => MissionScreen(game: game as RunnerGame),
           },
         ),
       ),

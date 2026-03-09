@@ -27,6 +27,7 @@ import '../ui/ui_effects.dart';
 import '../systems/achievement_manager.dart';
 import '../systems/daily_bonus_manager.dart';
 import '../systems/bonus_stage_manager.dart';
+import '../systems/mission_manager.dart';
 import '../data/balance_config.dart';
 import '../data/region_data.dart';
 import '../utils/constants.dart';
@@ -44,6 +45,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   late GameFeelSystem gameFeel;
   final AchievementManager achievementManager = AchievementManager();
   final DailyBonusManager dailyBonusManager = DailyBonusManager();
+  final MissionManager missionManager = MissionManager();
   late BonusStageManager bonusStageManager;
   late SoundManager soundManager;
 
@@ -95,6 +97,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     saveManager.loadCompanions(companionManager);
     saveManager.loadAchievements(achievementManager);
     saveManager.loadDailyBonus(dailyBonusManager);
+    saveManager.loadMissions(missionManager);
     currentRegionId = saveManager.currentRegion;
 
     // Initialize ad manager
@@ -178,6 +181,9 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
 
     // Apply saved upgrades
     applyUpgrades();
+
+    // Initialize daily missions
+    missionManager.checkDailyReset();
 
     // Show HUD overlay
     overlays.add('RunnerHud');
@@ -268,6 +274,12 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     achievementManager.onRegionUpdate(ascensionManager.unlockedRegionIds.length);
     achievementManager.onAscension(ascensionManager.ascensionCount);
     achievementManager.checkAll();
+
+    // Mission tracking
+    missionManager.onComboUpdate(combo);
+    missionManager.onDistanceUpdate(distanceInMeters);
+    // 미션 완료 보상 지급
+    _processMissionRewards();
 
     // Auto-save every 30 seconds
     _saveTimer += dt;
@@ -387,12 +399,15 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     final rainbowMult = weatherManager.currentWeather == WeatherType.rainbow ? 2.0 : 1.0;
     // 장갑 장비 효과: 처치 시 추가 코인 +30%
     final gauntletMult = ascensionManager.hasGauntlet ? 1.3 : 1.0;
+    // 위험 구간 보너스
+    final zoneMult = levelGenerator.zoneCoinMultiplier;
     final total = amount * comboMult * regionMult * activeBonus * upgradeMult
         * soulMult * companionMult * weatherCoinMult * timeCoinMult * goldenMult
-        * rainbowMult * gauntletMult;
+        * rainbowMult * gauntletMult * zoneMult;
 
     coins += total;
     totalCoinsEarned += total;
+    missionManager.onCoinsCollected(total);
   }
 
   void addCombo(int amount) {
@@ -539,6 +554,40 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
     saveGame();
   }
 
+  // === Mission Screen ===
+
+  void openMissionScreen() {
+    overlays.add('MissionScreen');
+    pauseEngine();
+  }
+
+  void closeMissionScreen() {
+    overlays.remove('MissionScreen');
+    resumeEngine();
+  }
+
+  void _processMissionRewards() {
+    final completed = missionManager.recentlyCompleted;
+    if (completed.isEmpty) return;
+
+    for (final mission in completed) {
+      if (mission.coinReward > 0) {
+        coins += mission.coinReward;
+        totalCoinsEarned += mission.coinReward;
+      }
+      if (mission.soulReward > 0) {
+        ascensionManager.souls += mission.soulReward;
+      }
+      UIEffectManager.instance.showAchievementToast(
+        name: '${mission.name}',
+        description: mission.description,
+        coinReward: mission.coinReward,
+        soulReward: mission.soulReward,
+      );
+    }
+    missionManager.clearRecentlyCompleted();
+  }
+
   // === Region Change ===
 
   void changeRegion(String regionId) {
@@ -594,6 +643,7 @@ class RunnerGame extends FlameGame with HasCollisionDetection, TapCallbacks {
       companionManager: companionManager,
       achievementManager: achievementManager,
       dailyBonusManager: dailyBonusManager,
+      missionManager: missionManager,
       currentRegion: currentRegionId,
     );
   }

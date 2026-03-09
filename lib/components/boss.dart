@@ -177,6 +177,9 @@ class Boss extends PositionComponent
     // 업적 추적
     game.achievementManager.onBossKill();
 
+    // 미션 추적 — 보스 처치 시간 계산
+    game.missionManager.onBossKill(_timer);
+
     // 보스 소울 보상
     if (soulReward > 0) {
       game.ascensionManager.souls += soulReward.toInt();

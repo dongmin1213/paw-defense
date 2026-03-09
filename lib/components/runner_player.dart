@@ -138,6 +138,7 @@ class RunnerPlayer extends PositionComponent
       animTimer: _animTimer,
       isJumping: !_isOnGround,
       isAttacking: _isAttacking,
+      combo: game.combo,
     );
   }
 
@@ -155,6 +156,7 @@ class RunnerPlayer extends PositionComponent
       applySlowdown();
       game.gameFeel.onObstacleHit();
       game.soundManager.playObstacleHit();
+      game.missionManager.onObstacleHit();
     } else if (other is Coin) {
       other.collect();
     } else if (other is CompanionPickup) {
