@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../classes/player_class.dart';
+import '../data/game_data.dart';
 import '../game/boss_rush_game.dart';
 import '../bosses/boss_factory.dart';
 import '../main.dart';
@@ -114,60 +115,83 @@ class _StageNode extends StatelessWidget {
     final stageName = StageThemes.getStageName(stageIndex);
     final bossName = BossFactory.getBossName(stageIndex);
     final bgColor = StageThemes.getBackgroundColor(stageIndex);
+    final isUnlocked = GameData.instance.isStageUnlocked(stageIndex);
+    final isCleared = stageIndex <= GameData.instance.maxClearedStage;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => GameScreen(
-              stageIndex: stageIndex,
-              playerClass: playerClass,
-            ),
-          ),
-        );
-      },
+      onTap: isUnlocked
+          ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => GameScreen(
+                    stageIndex: stageIndex,
+                    playerClass: playerClass,
+                  ),
+                ),
+              );
+            }
+          : null,
       child: Container(
         width: 100,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: isUnlocked ? bgColor : Colors.grey.shade900,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.amber.withValues(alpha: 0.5),
-            width: 1.5,
+            color: isCleared
+                ? Colors.amber
+                : isUnlocked
+                    ? Colors.amber.withValues(alpha: 0.5)
+                    : Colors.white12,
+            width: isCleared ? 2 : 1.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: bgColor.withValues(alpha: 0.4),
-              blurRadius: 8,
-              spreadRadius: 1,
-            ),
-          ],
+          boxShadow: isUnlocked
+              ? [
+                  BoxShadow(
+                    color: bgColor.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '${stageIndex + 1}',
-              style: const TextStyle(
-                color: Colors.amber,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            if (!isUnlocked)
+              const Icon(Icons.lock, color: Colors.white24, size: 28)
+            else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${stageIndex + 1}',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isCleared) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle, color: Colors.greenAccent, size: 14),
+                  ],
+                ],
               ),
-            ),
+            ],
             const SizedBox(height: 4),
             Text(
-              stageName,
+              isUnlocked ? stageName : '???',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isUnlocked ? Colors.white : Colors.white24,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              bossName,
+              isUnlocked ? bossName : '',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white54,

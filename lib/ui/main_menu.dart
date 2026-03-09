@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../data/game_data.dart';
 import 'class_select_screen.dart';
+import 'shop_screen.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
@@ -70,6 +72,31 @@ class MainMenuScreen extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+              const SizedBox(height: 16),
+              _MenuButton(
+                label: 'SHOP',
+                color: Colors.cyan,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ShopScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              // Coin display
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${GameData.instance.totalCoins}',
+                    style: const TextStyle(color: Colors.amber, fontSize: 16),
+                  ),
+                ],
               ),
             ],
           ),

@@ -113,7 +113,30 @@ class Enemy extends PositionComponent
     hp -= damage;
     _hitFlash = 0.1;
 
+    // Damage popup
+    game.spawnDamageText(
+      Vector2(position.x + size.x / 2, position.y),
+      damage,
+    );
+
     if (hp <= 0) {
+      // Death effect
+      final color = type == EnemyType.slime
+          ? Colors.green
+          : type == EnemyType.bat
+              ? Colors.purple
+              : Colors.grey;
+      game.spawnDeathEffect(
+        Vector2(position.x + size.x / 2, position.y + size.y / 2),
+        color,
+      );
+      // Drop coins
+      final coinCount = type == EnemyType.slime ? 2
+          : type == EnemyType.bat ? 3 : 5;
+      game.spawnCoins(
+        Vector2(position.x + size.x / 2, position.y + size.y / 2),
+        coinCount,
+      );
       game.onEnemyDefeated(this);
       removeFromParent();
     }

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../data/game_data.dart';
 
 enum PlayerClassType { knight, assassin, archer, mage, gunner }
 
@@ -98,4 +99,9 @@ class PlayerClassData {
   };
 
   static PlayerClassData get(PlayerClassType type) => classes[type]!;
+
+  // Effective stats with upgrades applied
+  double get effectiveSpeed => speed * GameData.instance.speedMultiplier;
+  double get effectiveAttackDamage => attackDamage * GameData.instance.attackMultiplier;
+  double get effectiveSpecialDamage => specialDamage * GameData.instance.attackMultiplier;
 }

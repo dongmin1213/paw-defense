@@ -34,14 +34,25 @@ abstract class BossBase extends PositionComponent with HasGameReference<BossRush
     currentHp -= damage;
     _hitFlashTimer = 0.1;
 
+    // Damage popup
+    final isCrit = damage >= 10;
+    game.spawnDamageText(
+      Vector2(position.x + size.x / 2, position.y),
+      damage,
+      isCritical: isCrit,
+    );
+    if (isCrit) {
+      game.triggerHitStop(duration: 0.04);
+    }
+
     // Phase transitions
     final phaseThreshold = maxHp / totalPhases;
     final newPhase = (totalPhases - (currentHp / phaseThreshold).floor()).clamp(1, totalPhases);
     if (newPhase > currentPhase) {
       currentPhase = newPhase;
       onPhaseChange(currentPhase);
-      // Strong shake on phase change
       game.triggerShake(intensity: 6.0, duration: 0.3);
+      game.triggerHitStop(duration: 0.08);
     }
 
     if (currentHp <= 0) {
@@ -49,6 +60,17 @@ abstract class BossBase extends PositionComponent with HasGameReference<BossRush
       isDefeated = true;
       onDefeat();
       game.triggerShake(intensity: 8.0, duration: 0.4);
+      game.triggerHitStop(duration: 0.1);
+      game.spawnDeathEffect(
+        Vector2(position.x + size.x / 2, position.y + size.y / 2),
+        Colors.red,
+      );
+      // Boss coin shower
+      game.spawnCoins(
+        Vector2(position.x + size.x / 2, position.y + size.y / 2),
+        15 + game.stageIndex * 5,
+        valueEach: 3 + game.stageIndex,
+      );
       game.onBossDefeated();
     }
   }

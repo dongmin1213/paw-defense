@@ -2,12 +2,14 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'classes/player_class.dart';
+import 'data/game_data.dart';
 import 'game/boss_rush_game.dart';
 import 'ui/game_overlay.dart';
 import 'ui/main_menu.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await GameData.instance.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -171,6 +173,18 @@ class _VictoryScreen extends StatelessWidget {
             Text(
               StageThemes.getStageName(stageIndex),
               style: const TextStyle(color: Colors.white60, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  '+${game.coinsEarned}',
+                  style: const TextStyle(color: Colors.amber, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             TextButton(

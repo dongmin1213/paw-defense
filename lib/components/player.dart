@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/boss_rush_game.dart';
 import '../classes/player_class.dart';
+import '../data/game_data.dart';
 import '../utils/constants.dart';
 import 'class_attacks.dart';
 
@@ -73,7 +74,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
     if (isDashing) return;
 
     if (moveDirection != 0) {
-      position.x += moveDirection * classData.speed * dt;
+      position.x += moveDirection * classData.effectiveSpeed * dt;
       facingDirection = moveDirection > 0 ? 1 : -1;
     }
   }
@@ -83,7 +84,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
       isDashing = true;
       isInvincible = true;
       _dashTimer = GameConstants.playerDashDuration;
-      _dashCooldownTimer = GameConstants.playerDashCooldown;
+      _dashCooldownTimer = GameConstants.playerDashCooldown * GameData.instance.dashCdMultiplier;
       wantsDash = false;
     }
 
@@ -151,7 +152,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
     switch (classData.type) {
       case PlayerClassType.knight:
         game.world.add(MeleeSlash(
-          damage: classData.attackDamage,
+          damage: classData.effectiveAttackDamage,
           direction: facingDirection,
           startPosition: Vector2(
             facingDirection > 0 ? position.x + size.x - 10 : position.x - 40,
@@ -162,14 +163,14 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
 
       case PlayerClassType.assassin:
         game.world.add(DaggerStrike(
-          damage: classData.attackDamage,
+          damage: classData.effectiveAttackDamage,
           direction: facingDirection,
           startPosition: spawnPos - Vector2(0, 10),
         ));
         break;
 
       case PlayerClassType.archer:
-        final dmg = charged ? classData.attackDamage * 2.5 : classData.attackDamage;
+        final dmg = charged ? classData.effectiveAttackDamage * 2.5 : classData.effectiveAttackDamage;
         game.world.add(Arrow(
           damage: dmg,
           direction: facingDirection,
@@ -180,7 +181,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
 
       case PlayerClassType.mage:
         game.world.add(MagicBolt(
-          damage: classData.attackDamage,
+          damage: classData.effectiveAttackDamage,
           direction: facingDirection,
           startPosition: spawnPos - Vector2(0, 8),
           isFire: isFire,
@@ -189,7 +190,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
 
       case PlayerClassType.gunner:
         game.world.add(Cannonball(
-          damage: classData.attackDamage,
+          damage: classData.effectiveAttackDamage,
           direction: facingDirection,
           startPosition: spawnPos - Vector2(0, 7),
         ));
@@ -219,7 +220,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
         position.x -= facingDirection * 80;
         _clampPosition();
         game.world.add(Arrow(
-          damage: classData.attackDamage * 1.5,
+          damage: classData.effectiveAttackDamage * 1.5,
           direction: facingDirection,
           startPosition: Vector2(
             position.x + (facingDirection > 0 ? size.x : 0),
@@ -237,7 +238,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
       case PlayerClassType.gunner:
         // Knockback shot
         game.world.add(Cannonball(
-          damage: classData.attackDamage * 1.5,
+          damage: classData.effectiveAttackDamage * 1.5,
           direction: facingDirection,
           startPosition: Vector2(
             position.x + (facingDirection > 0 ? size.x : 0),
@@ -265,7 +266,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
       case PlayerClassType.knight:
         // Ground smash - forward shockwave
         game.world.add(MeleeSlash(
-          damage: classData.specialDamage,
+          damage: classData.effectiveSpecialDamage,
           direction: facingDirection,
           startPosition: Vector2(
             facingDirection > 0 ? position.x + size.x : position.x - 80,
@@ -281,7 +282,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
           Future.delayed(Duration(milliseconds: (delay * 1000).toInt()), () {
             if (!isMounted) return;
             game.world.add(DaggerStrike(
-              damage: classData.specialDamage / 8,
+              damage: classData.effectiveSpecialDamage / 8,
               direction: facingDirection,
               startPosition: Vector2(
                 position.x + (facingDirection > 0 ? size.x : 0),
@@ -294,13 +295,13 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
 
       case PlayerClassType.archer:
         // Arrow rain
-        game.world.add(ArrowRain(damage: classData.specialDamage));
+        game.world.add(ArrowRain(damage: classData.effectiveSpecialDamage));
         break;
 
       case PlayerClassType.mage:
         // Meteor
         game.world.add(Meteor(
-          damage: classData.specialDamage,
+          damage: classData.effectiveSpecialDamage,
           center: Vector2(GameConstants.worldWidth / 2, GameConstants.worldHeight / 2),
         ));
         break;
@@ -308,7 +309,7 @@ class Player extends RectangleComponent with HasGameReference<BossRushGame>, Col
       case PlayerClassType.gunner:
         // Barrage - big explosion
         game.world.add(Cannonball(
-          damage: classData.specialDamage,
+          damage: classData.effectiveSpecialDamage,
           direction: facingDirection,
           startPosition: Vector2(
             position.x + (facingDirection > 0 ? size.x : 0),

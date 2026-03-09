@@ -43,6 +43,7 @@ class _TopHudState extends State<_TopHud> with SingleTickerProviderStateMixin {
   int _lastHp = 0;
   double _lastGauge = 0;
   double _lastBossHp = -1;
+  int _lastCoins = 0;
   GamePhase _lastPhase = GamePhase.exploration;
 
   @override
@@ -65,11 +66,13 @@ class _TopHudState extends State<_TopHud> with SingleTickerProviderStateMixin {
     if (g.playerHp != _lastHp ||
         g.specialGauge != _lastGauge ||
         g.currentPhase != _lastPhase ||
-        bossHp != _lastBossHp) {
+        bossHp != _lastBossHp ||
+        g.coinsEarned != _lastCoins) {
       _lastHp = g.playerHp;
       _lastGauge = g.specialGauge;
       _lastPhase = g.currentPhase;
       _lastBossHp = bossHp;
+      _lastCoins = g.coinsEarned;
       if (mounted) setState(() {});
     }
   }
@@ -83,6 +86,19 @@ class _TopHudState extends State<_TopHud> with SingleTickerProviderStateMixin {
         _buildPlayerHp(),
         const SizedBox(width: 12),
         _buildSpecialGauge(),
+        const SizedBox(width: 8),
+        // Coin counter
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.monetization_on, color: Colors.amber, size: 14),
+            const SizedBox(width: 3),
+            Text(
+              '${widget.game.coinsEarned}',
+              style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         const SizedBox(width: 8),
         // Phase indicator
         Container(

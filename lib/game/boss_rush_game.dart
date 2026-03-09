@@ -6,9 +6,13 @@ import 'package:flutter/material.dart';
 import '../components/player.dart';
 import '../components/ground.dart';
 import '../components/enemy.dart';
+import '../components/damage_text.dart';
+import '../components/death_effect.dart';
+import '../components/coin.dart';
 import '../bosses/boss_base.dart';
 import '../bosses/boss_factory.dart';
 import '../classes/player_class.dart';
+import '../data/game_data.dart';
 import '../utils/constants.dart';
 
 enum GamePhase { exploration, boss }
@@ -34,6 +38,12 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
   double _shakeTimer = 0;
   double _shakeIntensity = 0;
 
+  // Hit stop
+  double _hitStopTimer = 0;
+
+  // Coins collected this run
+  int coinsEarned = 0;
+
   BossRushGame({
     required this.stageIndex,
     required this.playerClass,
@@ -48,7 +58,7 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
     await super.onLoad();
 
     classData = PlayerClassData.get(playerClass);
-    playerHp = classData.maxHp;
+    playerHp = classData.maxHp + GameData.instance.bonusMaxHp;
 
     camera.viewfinder.anchor = Anchor.topLeft;
     camera.viewport = FixedResolutionViewport(
@@ -125,6 +135,12 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
 
   @override
   void update(double dt) {
+    // Hit stop: freeze game briefly
+    if (_hitStopTimer > 0) {
+      _hitStopTimer -= dt;
+      return; // Skip all updates
+    }
+
     super.update(dt);
 
     if (_shakeTimer > 0) {
@@ -145,6 +161,35 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
     _shakeTimer = duration;
   }
 
+  void triggerHitStop({double duration = 0.05}) {
+    _hitStopTimer = duration;
+  }
+
+  void spawnDamageText(Vector2 position, double damage, {bool isCritical = false}) {
+    world.add(DamageText(
+      position: position.clone(),
+      damage: damage,
+      isCritical: isCritical,
+    ));
+  }
+
+  void spawnDeathEffect(Vector2 center, Color color) {
+    world.add(DeathEffect(center: center.clone(), color: color));
+  }
+
+  void addCoins(int amount) {
+    coinsEarned += amount;
+  }
+
+  void spawnCoins(Vector2 center, int count, {int valueEach = 1}) {
+    for (int i = 0; i < count; i++) {
+      world.add(Coin(
+        startPosition: center.clone(),
+        value: valueEach,
+      ));
+    }
+  }
+
   void onPlayerHit() {
     if (player.isInvincible || isGameOver) return;
 
@@ -158,7 +203,8 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
   }
 
   void addSpecialGauge(double amount) {
-    specialGauge = (specialGauge + amount).clamp(0, GameConstants.specialGaugeMax);
+    final boosted = amount * GameData.instance.gaugeMultiplier;
+    specialGauge = (specialGauge + boosted).clamp(0, GameConstants.specialGaugeMax);
   }
 
   bool useSpecialAttack() {
@@ -172,6 +218,9 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
   void onBossDefeated() {
     if (isVictory) return;
     isVictory = true;
+    // Persist progress
+    GameData.instance.addCoins(coinsEarned);
+    GameData.instance.clearStage(stageIndex);
     overlays.add('Victory');
     pauseEngine();
   }
@@ -186,12 +235,14 @@ class BossRushGame extends FlameGame with HasCollisionDetection {
   void resetGame() {
     isGameOver = false;
     isVictory = false;
-    playerHp = classData.maxHp;
+    playerHp = classData.maxHp + GameData.instance.bonusMaxHp;
     specialGauge = 0;
     currentPhase = GamePhase.exploration;
     _bossSpawned = false;
     _enemies.clear();
     _shakeTimer = 0;
+    _hitStopTimer = 0;
+    coinsEarned = 0;
     camera.viewfinder.position = Vector2.zero();
 
     world.removeAll(world.children.toList());
