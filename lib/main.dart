@@ -13,6 +13,7 @@ import 'ui/companion_screen.dart';
 import 'ui/offline_popup.dart';
 import 'ui/achievement_screen.dart';
 import 'ui/daily_bonus_popup.dart';
+import 'ui/ui_effects.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,25 +96,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GameWidget(
-        game: _game,
-        overlayBuilderMap: {
-          'MainMenu': (context, game) => MainMenu(game: game as RunnerGame),
-          'RunnerHud': (context, game) => RunnerHud(game: game as RunnerGame),
-          'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
-          'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
-          'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
-          'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
-          'OfflinePopup': (context, game) {
-            final g = game as RunnerGame;
-            return OfflinePopup(
-              game: g,
-              reward: g.pendingOfflineReward!,
-            );
+      body: UIEffectOverlay(
+        child: GameWidget(
+          game: _game,
+          overlayBuilderMap: {
+            'MainMenu': (context, game) => MainMenu(game: game as RunnerGame),
+            'RunnerHud': (context, game) => RunnerHud(game: game as RunnerGame),
+            'UpgradeShop': (context, game) => UpgradeShop(game: game as RunnerGame),
+            'SoulShop': (context, game) => SoulShop(game: game as RunnerGame),
+            'AscensionScreen': (context, game) => AscensionScreen(game: game as RunnerGame),
+            'CompanionScreen': (context, game) => CompanionScreen(game: game as RunnerGame),
+            'OfflinePopup': (context, game) {
+              final g = game as RunnerGame;
+              return OfflinePopup(
+                game: g,
+                reward: g.pendingOfflineReward!,
+              );
+            },
+            'AchievementScreen': (context, game) => AchievementScreen(game: game as RunnerGame),
+            'DailyBonus': (context, game) => DailyBonusPopup(game: game as RunnerGame),
           },
-          'AchievementScreen': (context, game) => AchievementScreen(game: game as RunnerGame),
-          'DailyBonus': (context, game) => DailyBonusPopup(game: game as RunnerGame),
-        },
+        ),
       ),
     );
   }

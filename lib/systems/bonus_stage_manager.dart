@@ -2,8 +2,10 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
+import 'dart:ui' show Color;
 import '../game/runner_game.dart';
 import '../components/coin.dart';
+import '../ui/ui_effects.dart';
 import '../utils/constants.dart';
 
 /// 보너스 스테이지 — 일정 거리마다 코인 러시 구간
@@ -43,6 +45,18 @@ class BonusStageManager extends Component with HasGameReference<RunnerGame> {
 
     game.achievementManager.onBonusStage();
     game.gameFeel.shake(intensity: 4, duration: 0.2);
+    game.soundManager.playBonusStageStart();
+    UIEffectManager.instance.spawnImpactText(
+      text: 'BONUS STAGE!',
+      color: const Color(0xFFFFD54F),
+      fontSize: 22,
+      duration: 1.5,
+    );
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFFFFD54F),
+      duration: 0.2,
+      maxAlpha: 0.3,
+    );
   }
 
   void _updateActiveStage(double dt) {

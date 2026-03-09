@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class AscensionScreen extends StatefulWidget {
   final RunnerGame game;

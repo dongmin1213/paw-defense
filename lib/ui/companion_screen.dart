@@ -3,6 +3,7 @@ import '../game/runner_game.dart';
 import '../data/companion_data.dart';
 import '../systems/companion_manager.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class CompanionScreen extends StatefulWidget {
   final RunnerGame game;
@@ -391,6 +392,11 @@ class _CompanionScreenState extends State<CompanionScreen>
                   manager.unequip(owned.id);
                 } else {
                   manager.equip(owned.id);
+                  widget.game.soundManager.playEquip();
+                  UIEffectManager.instance.spawnGlowRing(
+                    center: const Offset(600, 300),
+                    color: rarityColor,
+                  );
                 }
                 widget.game.saveGame();
                 setState(() {});
@@ -499,6 +505,13 @@ class _CompanionScreenState extends State<CompanionScreen>
     if (cost > 0) {
       widget.game.coins -= cost;
       widget.game.saveGame();
+      widget.game.soundManager.playLevelUp();
+      UIEffectManager.instance.spawnParticleBurst(
+        position: const Offset(600, 250),
+        color: const Color(0xFFFF9800),
+        count: 10,
+        spread: 50,
+      );
       setState(() {});
     }
   }

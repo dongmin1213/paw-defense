@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../data/upgrade_data.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class UpgradeShop extends StatefulWidget {
   final RunnerGame game;
@@ -163,6 +164,21 @@ class _UpgradeShopState extends State<UpgradeShop>
     if (bought > 0) {
       game.applyUpgrades();
       game.saveGame();
+      game.soundManager.playPurchase();
+      UIEffectManager.instance.spawnParticleBurst(
+        position: const Offset(400, 300),
+        color: const Color(0xFF66BB6A),
+        count: 8,
+        spread: 40,
+      );
+      if (bought >= 10) {
+        UIEffectManager.instance.spawnImpactText(
+          text: 'x$bought UPGRADE!',
+          color: const Color(0xFF66BB6A),
+          fontSize: 16,
+          duration: 1.0,
+        );
+      }
       setState(() {});
     }
   }

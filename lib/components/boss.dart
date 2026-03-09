@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 
 import '../game/runner_game.dart';
 import '../renderers/boss_renderer.dart';
+import '../ui/ui_effects.dart';
 import 'coin.dart';
 
 class Boss extends PositionComponent
@@ -134,6 +135,7 @@ class Boss extends PositionComponent
     hp -= damage;
     // 게임필 — 보스 피격
     game.gameFeel.onBossHit();
+    game.soundManager.playBossHit();
     if (hp <= 0) {
       hp = 0;
       _die();
@@ -157,12 +159,33 @@ class Boss extends PositionComponent
     game.addCombo(5);
     // 게임필 — 보스 처치 극적 연출
     game.gameFeel.onBossKill();
+    game.soundManager.playBossKill();
+
+    // UI 이펙트 — 스크린 플래시 + 임팩트 텍스트
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFFE53935),
+      duration: 0.4,
+      maxAlpha: 0.6,
+    );
+    UIEffectManager.instance.spawnImpactText(
+      text: 'BOSS KILL!',
+      color: const Color(0xFFFFD54F),
+      fontSize: 26,
+      duration: 1.8,
+    );
+
     // 업적 추적
     game.achievementManager.onBossKill();
 
     // 보스 소울 보상
     if (soulReward > 0) {
       game.ascensionManager.souls += soulReward.toInt();
+      UIEffectManager.instance.spawnFloatingText(
+        text: '+${soulReward.toInt()} SOUL',
+        position: Offset(position.x.toDouble(), position.y.toDouble() - 30),
+        color: const Color(0xFFCE93D8),
+        fontSize: 14,
+      );
     }
 
     game.particleEffect.spawnBossExplosion(

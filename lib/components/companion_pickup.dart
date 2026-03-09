@@ -58,6 +58,7 @@ class CompanionPickup extends PositionComponent
     _collected = true;
 
     final isNew = game.companionManager.addCompanion(data.id);
+    game.soundManager.playCompanionGet();
 
     game.world.add(_CompanionPopup(
       companionData: data,

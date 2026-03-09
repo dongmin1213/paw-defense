@@ -6,6 +6,7 @@ import '../game/runner_game.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
 import '../renderers/enemy_renderer.dart';
+import '../ui/ui_effects.dart';
 import '../utils/constants.dart';
 import 'runner_player.dart';
 import 'coin.dart';
@@ -102,6 +103,18 @@ class Enemy extends PositionComponent
       isGolden: isGolden,
       isAir: data.type == EnemyType.air,
     );
+
+    // 사운드
+    game.soundManager.playEnemyKill(isGolden: isGolden);
+
+    // UI 이펙트 — 황금 적 처치 시 스크린 플래시 + 임팩트 텍스트
+    if (isGolden) {
+      UIEffectManager.instance.screenFlash(
+        color: const Color(0xFFFFD54F),
+        duration: 0.2,
+        maxAlpha: 0.4,
+      );
+    }
 
     // 업적 추적
     game.achievementManager.onEnemyKill(

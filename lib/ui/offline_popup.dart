@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../systems/offline_reward.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class OfflinePopup extends StatefulWidget {
   final RunnerGame game;
@@ -197,6 +198,13 @@ class _OfflinePopupState extends State<OfflinePopup>
   void _collect(double multiplier) {
     widget.game.coins += widget.reward.coins * multiplier;
     widget.game.totalCoinsEarned += widget.reward.coins * multiplier;
+    widget.game.soundManager.playCoinCollect(isBig: true);
+    UIEffectManager.instance.spawnParticleBurst(
+      position: const Offset(400, 300),
+      color: const Color(0xFFFFD54F),
+      count: 16,
+      spread: 60,
+    );
     widget.game.closeOfflinePopup();
   }
 

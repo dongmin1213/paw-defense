@@ -148,6 +148,7 @@ class RunnerPlayer extends PositionComponent
       }
       applySlowdown();
       game.gameFeel.onObstacleHit();
+      game.soundManager.playObstacleHit();
     } else if (other is Coin) {
       other.collect();
     } else if (other is CompanionPickup) {

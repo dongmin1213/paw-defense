@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game/runner_game.dart';
 import '../systems/daily_bonus_manager.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class DailyBonusPopup extends StatefulWidget {
   final RunnerGame game;
@@ -278,6 +279,21 @@ class _DailyBonusPopupState extends State<DailyBonusPopup>
     }
     widget.game.achievementManager.onDailyStreak(result.streak);
     widget.game.saveGame();
+
+    // 사운드 + UI 이펙트
+    widget.game.soundManager.playDailyClaim();
+    UIEffectManager.instance.spawnParticleBurst(
+      position: const Offset(400, 300),
+      color: const Color(0xFFFFD54F),
+      count: 16,
+      spread: 60,
+    );
+    UIEffectManager.instance.screenFlash(
+      color: const Color(0xFFFFD54F),
+      duration: 0.25,
+      maxAlpha: 0.3,
+    );
+
     setState(() {
       _claimed = true;
       _result = result;

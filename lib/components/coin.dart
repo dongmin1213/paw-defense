@@ -66,6 +66,7 @@ class Coin extends PositionComponent
     _popupAlpha = 1.0;
 
     game.addCoins(value);
+    game.soundManager.playCoinCollect(isBig: value >= 10);
 
     // Collect particles
     game.particleEffect.spawnCoinCollect(position.x, position.y);

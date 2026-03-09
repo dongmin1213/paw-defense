@@ -3,6 +3,7 @@ import '../game/runner_game.dart';
 import '../data/soul_upgrade_data.dart';
 import '../data/region_data.dart';
 import 'game_theme.dart';
+import 'ui_effects.dart';
 
 class SoulShop extends StatefulWidget {
   final RunnerGame game;
@@ -553,6 +554,17 @@ class _SoulShopState extends State<SoulShop>
     final cost = widget.game.ascensionManager.buySoulUpgrade(id);
     if (cost > 0) {
       widget.game.saveGame();
+      widget.game.soundManager.playPurchase();
+      UIEffectManager.instance.spawnParticleBurst(
+        position: const Offset(400, 300),
+        color: const Color(0xFFCE93D8),
+        count: 12,
+        spread: 50,
+      );
+      UIEffectManager.instance.spawnGlowRing(
+        center: const Offset(400, 300),
+        color: const Color(0xFFCE93D8),
+      );
       setState(() {});
     }
   }

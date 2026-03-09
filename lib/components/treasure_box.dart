@@ -109,6 +109,7 @@ class TreasureBox extends PositionComponent
 
     // 업적 추적
     game.achievementManager.onBoxOpened();
+    game.soundManager.playTreasureOpen();
 
     // 코인 폭발
     final rng = Random();
