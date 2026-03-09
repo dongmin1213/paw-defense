@@ -15,17 +15,22 @@ class ParticleEffect extends PositionComponent with HasGameReference<RunnerGame>
   /// Spawn coin collect burst at world position
   void spawnCoinCollect(double wx, double wy) {
     final rng = Random();
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 10; i++) {
       final angle = rng.nextDouble() * 2 * pi;
-      final speed = 40 + rng.nextDouble() * 60;
+      final speed = 50 + rng.nextDouble() * 80;
+      final colors = [
+        const Color(0xFFFFD700),
+        const Color(0xFFFFE44D),
+        const Color(0xFFFFFFFF),
+      ];
       _particles.add(_FxParticle(
         x: wx,
         y: wy,
         vx: cos(angle) * speed,
-        vy: sin(angle) * speed - 30,
-        size: 2 + rng.nextDouble() * 2,
-        life: 0.4 + rng.nextDouble() * 0.3,
-        color: const Color(0xFFFFD700),
+        vy: sin(angle) * speed - 50,
+        size: 3 + rng.nextDouble() * 3,
+        life: 0.5 + rng.nextDouble() * 0.3,
+        color: colors[rng.nextInt(colors.length)],
       ));
     }
   }
@@ -132,11 +137,13 @@ class ParticleEffect extends PositionComponent with HasGameReference<RunnerGame>
     canvas.save();
     canvas.translate(-cameraX, 0);
 
+    final paint = Paint()..isAntiAlias = false;
     for (final p in _particles) {
       final alpha = (p.life * 2.5).clamp(0.0, 1.0);
-      final paint = Paint()
-        ..color = p.color.withValues(alpha: alpha * (p.color.a / 255.0));
-      canvas.drawCircle(Offset(p.x, p.y), p.size * alpha, paint);
+      paint.color = p.color.withValues(alpha: alpha * (p.color.a / 255.0));
+      final s = p.size * alpha;
+      // Pixel art style: square particles
+      canvas.drawRect(Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: s), paint);
     }
 
     canvas.restore();

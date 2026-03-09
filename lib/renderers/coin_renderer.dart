@@ -1,35 +1,68 @@
 import 'dart:ui';
 import 'dart:math';
+import '../utils/pixel_art.dart';
 
 class CoinRenderer {
+  // Big detailed coin sprite (12x12 pixels)
+  static const _coin1 = [
+    '....OOOO....',
+    '..OOyyyyOO..',
+    '.OyyyYYyyyO.',
+    'OyyYYYYYYyyO',
+    'OyYYYsYYYYyO',
+    'OyYYYYYYYYyO',
+    'OyYYYYYYYYyO',
+    'OyYYYYsYYYyO',
+    'OyyYYYYYYyyO',
+    '.OyyyYYyyyO.',
+    '..OOyyyyOO..',
+    '....OOOO....',
+  ];
+
+  // Alternate frame for rotation effect
+  static const _coin2 = [
+    '....OOOO....',
+    '..OOyyyyOO..',
+    '.OyyyYYyyyO.',
+    'OyyYYYYYYyyO',
+    'OyYYYYYsYYyO',
+    'OyYYYYYYYYyO',
+    'OyYYYYYYYYyO',
+    'OyYYsYYYYYyO',
+    'OyyYYYYYYyyO',
+    '.OyyyYYyyyO.',
+    '..OOyyyyOO..',
+    '....OOOO....',
+  ];
+
+  static const _palette = {
+    'O': Color(0xFF8B6914), // Dark outline
+    'y': Color(0xFFDAA520), // Mid gold
+    'Y': Color(0xFFFFD700), // Bright gold
+    's': Color(0xFFFFECB3), // Shine highlight
+  };
+
+  static const _goldenPalette = {
+    'O': Color(0xFF6B4E00), // Darker outline
+    'y': Color(0xFFFFB300), // Mid gold brighter
+    'Y': Color(0xFFFFD740), // Even brighter
+    's': Color(0xFFFFFFFF), // White shine
+  };
+
   static void render(Canvas canvas, Size size, {required double animTimer, bool isGolden = false}) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final radius = size.width * 0.4;
+    final frame = (animTimer * 3).toInt() % 2;
+    final sprite = frame == 0 ? _coin1 : _coin2;
+    final palette = isGolden ? _goldenPalette : _palette;
 
-    // Glow
-    final glowPaint = Paint()
-      ..color = (isGolden ? const Color(0x40FFD700) : const Color(0x30FFD700))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(Offset(cx, cy), radius + 3, glowPaint);
+    final spriteW = sprite[0].length;
+    final spriteH = sprite.length;
+    final px = min(size.width / spriteW, size.height / spriteH);
 
-    // Coin body
-    final coinColor = isGolden ? const Color(0xFFFFD700) : const Color(0xFFFFC107);
-    final coinPaint = Paint()..color = coinColor;
-    canvas.drawCircle(Offset(cx, cy), radius, coinPaint);
+    // Glow for golden
+    if (isGolden) {
+      PixelArt.drawGlow(canvas, size, const Color(0x40FFD700), size.width * 0.5);
+    }
 
-    // Inner circle
-    final innerPaint = Paint()
-      ..color = isGolden ? const Color(0xFFFFE54C) : const Color(0xFFFFD54F)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(Offset(cx, cy), radius * 0.7, innerPaint);
-
-    // Shine highlight (rotating)
-    final shineAngle = animTimer * 3;
-    final shineX = cx + cos(shineAngle) * radius * 0.3;
-    final shineY = cy + sin(shineAngle) * radius * 0.3 - radius * 0.15;
-    final shinePaint = Paint()..color = const Color(0x80FFFFFF);
-    canvas.drawCircle(Offset(shineX, shineY), radius * 0.25, shinePaint);
+    PixelArt.drawCentered(canvas, sprite, palette, size, pixelSize: px);
   }
 }

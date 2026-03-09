@@ -1,344 +1,618 @@
 import 'dart:ui';
 import 'dart:math';
 import '../data/enemy_data.dart';
+import '../utils/pixel_art.dart';
 
 class EnemyRenderer {
   static void render(Canvas canvas, Size size, EnemyData data, {required double animTimer, bool isHit = false, bool isGolden = false}) {
-    final color = isHit ? const Color(0xFFFFFFFF) : (isGolden ? const Color(0xFFFFD600) : data.color);
-    final accent = isHit ? const Color(0xFFFFFFFF) : (isGolden ? const Color(0xFFFFE082) : data.accentColor);
+    if (isGolden && !isHit) {
+      PixelArt.drawGlow(canvas, size, const Color(0x40FFD600), size.width * 0.5);
+    }
 
-    switch (data.id) {
-      // Meadow
-      case 'slime': _renderSlime(canvas, size, color, accent, animTimer); break;
-      case 'mushroom': _renderMushroom(canvas, size, color, accent, animTimer); break;
-      case 'bird': _renderBird(canvas, size, color, accent, animTimer); break;
-      case 'butterfly': _renderButterfly(canvas, size, color, accent, animTimer); break;
-      // Forest
-      case 'goblin': _renderGoblin(canvas, size, color, accent, animTimer); break;
-      case 'spider': _renderSpider(canvas, size, color, accent, animTimer); break;
-      case 'bat': _renderBat(canvas, size, color, accent, animTimer); break;
-      case 'fairy': _renderFairy(canvas, size, color, accent, animTimer); break;
-      // Desert
-      case 'scorpion': _renderScorpion(canvas, size, color, accent, animTimer); break;
-      case 'mummy': _renderMummy(canvas, size, color, accent, animTimer); break;
-      case 'eagle': _renderEagle(canvas, size, color, accent, animTimer); break;
-      case 'sand_spirit': _renderSpirit(canvas, size, color, accent, animTimer); break;
-      // Snowfield
-      case 'snow_golem': _renderGolem(canvas, size, color, accent, animTimer); break;
-      case 'wolf': _renderWolf(canvas, size, color, accent, animTimer); break;
-      case 'snow_owl': _renderOwl(canvas, size, color, accent, animTimer); break;
-      case 'ice_spirit': _renderSpirit(canvas, size, color, accent, animTimer); break;
-      // Volcano
-      case 'fire_imp': _renderImp(canvas, size, color, accent, animTimer); break;
-      case 'dragonkin': _renderDragonkin(canvas, size, color, accent, animTimer); break;
-      case 'fire_bat': _renderBat(canvas, size, color, accent, animTimer); break;
-      case 'phoenix': _renderPhoenix(canvas, size, color, accent, animTimer); break;
-      default: _renderGeneric(canvas, size, color, accent, animTimer, data.type);
+    // Get sprite and palette for this enemy
+    final spriteData = _getSpriteData(data.id, animTimer);
+    final palette = isHit
+        ? _whitePalette(spriteData.palette)
+        : (isGolden ? _goldenPalette(spriteData.palette) : spriteData.palette);
+
+    final sprite = spriteData.frames;
+    if (sprite.isEmpty) return;
+
+    final spriteW = sprite[0].length;
+    final spriteH = sprite.length;
+    final px = min(size.width / spriteW, size.height / spriteH);
+
+    PixelArt.drawCentered(canvas, sprite, palette, size, pixelSize: px);
+  }
+
+  static Map<String, Color> _whitePalette(Map<String, Color> original) {
+    return original.map((k, v) => MapEntry(k, const Color(0xFFFFFFFF)));
+  }
+
+  static Map<String, Color> _goldenPalette(Map<String, Color> original) {
+    return original.map((k, v) {
+      final brightness = (v.red * 0.299 + v.green * 0.587 + v.blue * 0.114) / 255;
+      if (brightness < 0.3) return MapEntry(k, const Color(0xFFB8860B)); // dark gold
+      if (brightness < 0.6) return MapEntry(k, const Color(0xFFDAA520)); // gold
+      return MapEntry(k, const Color(0xFFFFD700)); // bright gold
+    });
+  }
+
+  static _SpriteData _getSpriteData(String id, double t) {
+    final frame = (t * 4).toInt() % 2;
+    switch (id) {
+      case 'slime': return _slimeSprite(frame);
+      case 'mushroom': return _mushroomSprite();
+      case 'bird': return _birdSprite(frame);
+      case 'butterfly': return _butterflySprite(frame);
+      case 'goblin': return _goblinSprite(frame);
+      case 'spider': return _spiderSprite(frame);
+      case 'bat': return _batSprite(frame);
+      case 'fairy': return _fairySprite(frame);
+      case 'scorpion': return _scorpionSprite(frame);
+      case 'mummy': return _mummySprite(frame);
+      case 'eagle': return _eagleSprite(frame);
+      case 'sand_spirit': return _spiritSprite(const Color(0xFFFFC107), frame);
+      case 'snow_golem': return _golemSprite();
+      case 'wolf': return _wolfSprite(frame);
+      case 'snow_owl': return _owlSprite();
+      case 'ice_spirit': return _spiritSprite(const Color(0xFF81D4FA), frame);
+      case 'fire_imp': return _impSprite(frame);
+      case 'dragonkin': return _dragonkinSprite(frame);
+      case 'fire_bat': return _fireBatSprite(frame);
+      case 'phoenix': return _phoenixSprite(frame);
+      default: return _slimeSprite(frame);
     }
   }
 
-  // ========== Meadow ==========
+  // ========== MEADOW ==========
 
-  static void _renderSlime(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final bounce = sin(t * 4) * 2;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 2 + bounce), width: size.width * 0.85, height: size.height * 0.7 - bounce), Paint()..color = color);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 3, cy - 2 + bounce), width: size.width * 0.3, height: size.height * 0.25), Paint()..color = accent);
-    final ep = Paint()..color = const Color(0xFF1A1A1A);
-    canvas.drawCircle(Offset(cx - 4, cy - 1 + bounce), 2, ep);
-    canvas.drawCircle(Offset(cx + 4, cy - 1 + bounce), 2, ep);
+  static _SpriteData _slimeSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '....GGGG....',
+      '..GGGGGGGG..',
+      '.GGGgGGGGGG.',
+      '.GGgGGGGGGG.',
+      'GGGGEEGEEGGG',
+      'GGGGGGGGGGG.',
+      '.GGGGMMGGGG.',
+      '..GGGGGGGG..',
+      '...GGGGGG...',
+      '....GGGG....',
+    ] : [
+      '....GGGG....',
+      '..GGGGGGGG..',
+      '.GGGgGGGGGG.',
+      '.GGgGGGGGGG.',
+      'GGGGEEGEEGGG',
+      'GGGGGGGGGGG.',
+      '.GGGGMMGGGG.',
+      '..GGGGGGGG..',
+      '..GGGGGGGG..',
+      '.GGGGGGGGGG.',
+    ];
+    return _SpriteData(sprites, {
+      'G': const Color(0xFF4CAF50),
+      'g': const Color(0xFF81C784),
+      'E': const Color(0xFF1A1A1A),
+      'M': const Color(0xFF2E7D32),
+    });
   }
 
-  static void _renderMushroom(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2;
-    canvas.drawRect(Rect.fromLTWH(cx - 4, size.height * 0.4, 8, size.height * 0.6), Paint()..color = const Color(0xFFF5E6D0));
-    canvas.drawArc(Rect.fromCenter(center: Offset(cx, size.height * 0.4), width: size.width * 0.9, height: size.height * 0.7), pi, pi, true, Paint()..color = color);
-    final sp = Paint()..color = accent;
-    canvas.drawCircle(Offset(cx - 4, size.height * 0.25), 3, sp);
-    canvas.drawCircle(Offset(cx + 5, size.height * 0.2), 2, sp);
-    final ep = Paint()..color = const Color(0xFF1A1A1A);
-    canvas.drawCircle(Offset(cx - 3, size.height * 0.5), 1.5, ep);
-    canvas.drawCircle(Offset(cx + 3, size.height * 0.5), 1.5, ep);
+  static _SpriteData _mushroomSprite() {
+    return _SpriteData([
+      '....RRRRRR....',
+      '..RRRrRRrRRR..',
+      '.RRRRrRRRrRRR.',
+      'RRRRRRRRRRRRRR',
+      '......SSSS....',
+      '......SSSS....',
+      '.....EESEESS..',
+      '......SSSS....',
+      '......SSSS....',
+      '......SSSS....',
+      '.....SSSSSS...',
+    ], {
+      'R': const Color(0xFFE57373),
+      'r': const Color(0xFFFFCDD2),
+      'S': const Color(0xFFF5E6D0),
+      'E': const Color(0xFF1A1A1A),
+    });
   }
 
-  static void _renderBird(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final wf = sin(t * 10) * 0.4;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: size.width * 0.7, height: size.height * 0.6), Paint()..color = color);
-    canvas.drawPath(Path()..moveTo(cx - 2, cy - 2)..lineTo(cx - size.width * 0.4, cy - size.height * 0.5 + wf * 10)..lineTo(cx + 2, cy - 4)..close(), Paint()..color = accent);
-    canvas.drawPath(Path()..moveTo(cx + size.width * 0.35, cy - 1)..lineTo(cx + size.width * 0.5, cy + 1)..lineTo(cx + size.width * 0.35, cy + 3)..close(), Paint()..color = const Color(0xFFFF9800));
-    canvas.drawCircle(Offset(cx + 5, cy - 2), 1.5, Paint()..color = const Color(0xFF1A1A1A));
+  static _SpriteData _birdSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '..........BB..',
+      '.....BBBBBBB..',
+      '...BBBBBBBBBo.',
+      '..wBBBEBBBBBo.',
+      '.wwBBBBBBBBB..',
+      '..wBBBBBBBBB..',
+      '...BBBBBBBBB..',
+      '....BBBBB.....',
+    ] : [
+      '..ww..........',
+      '..wwBBBBBBBB..',
+      '...BBBBBBBBBo.',
+      '....BBEBBBBBo.',
+      '....BBBBBBBB..',
+      '...BBBBBBBBB..',
+      '....BBBBB.....',
+      '...............',
+    ];
+    return _SpriteData(sprites, {
+      'B': const Color(0xFF42A5F5),
+      'w': const Color(0xFF90CAF9),
+      'E': const Color(0xFF1A1A1A),
+      'o': const Color(0xFFFF9800),
+    });
   }
 
-  static void _renderButterfly(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final ws = 0.7 + sin(t * 8) * 0.3;
-    final wp = Paint()..color = color;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 5, cy - 2), width: size.width * 0.4 * ws, height: size.height * 0.7), wp);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 5, cy - 2), width: size.width * 0.4 * ws, height: size.height * 0.7), wp);
-    final bp = Paint()..color = const Color(0xFF4A4A4A)..strokeWidth = 2..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(cx, cy - 6), Offset(cx, cy + 6), bp);
-    canvas.drawLine(Offset(cx, cy - 6), Offset(cx - 4, cy - 10), bp);
-    canvas.drawLine(Offset(cx, cy - 6), Offset(cx + 4, cy - 10), bp);
+  static _SpriteData _butterflySprite(int frame) {
+    final sprites = frame == 0 ? [
+      '.PP...PP.',
+      'PPPP.PPPP',
+      'PPpP.PpPP',
+      'PPPP.PPPP',
+      '.PP.B.PP.',
+      '....B....',
+      '...BBB...',
+      'a..B.B..a',
+    ] : [
+      '....B....',
+      '.PP.B.PP.',
+      'PPpP.PpPP',
+      'PPPP.PPPP',
+      '.PP.B.PP.',
+      '....B....',
+      '...BBB...',
+      'a..B.B..a',
+    ];
+    return _SpriteData(sprites, {
+      'P': const Color(0xFFCE93D8),
+      'p': const Color(0xFFF3E5F5),
+      'B': const Color(0xFF4A4A4A),
+      'a': const Color(0xFFCE93D8),
+    });
   }
 
-  // ========== Forest ==========
+  // ========== FOREST ==========
 
-  static void _renderGoblin(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final sway = sin(t * 5) * 1.5;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + sway, cy + 4), width: size.width * 0.7, height: size.height * 0.6), Paint()..color = color);
-    // Head
-    canvas.drawCircle(Offset(cx + sway, cy - size.height * 0.15), size.width * 0.28, Paint()..color = color);
-    // Ears (pointy)
-    final earP = Paint()..color = accent;
-    canvas.drawPath(Path()..moveTo(cx - 8 + sway, cy - size.height * 0.2)..lineTo(cx - 14 + sway, cy - size.height * 0.45)..lineTo(cx - 3 + sway, cy - size.height * 0.25)..close(), earP);
-    canvas.drawPath(Path()..moveTo(cx + 8 + sway, cy - size.height * 0.2)..lineTo(cx + 14 + sway, cy - size.height * 0.45)..lineTo(cx + 3 + sway, cy - size.height * 0.25)..close(), earP);
-    // Eyes
-    final ep = Paint()..color = const Color(0xFFFF0000);
-    canvas.drawCircle(Offset(cx - 3 + sway, cy - size.height * 0.18), 2, ep);
-    canvas.drawCircle(Offset(cx + 3 + sway, cy - size.height * 0.18), 2, ep);
+  static _SpriteData _goblinSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '..e.....e..',
+      '.eee...eee.',
+      '..GGGGGGG..',
+      '.GGGGGGGGG.',
+      '.GGREEREGGG',
+      '.GGGGGGGGG.',
+      '.GGGMMGGGG.',
+      '..GGGGGGG..',
+      '..GGGGGGG..',
+      '..GG...GG..',
+      '..GG...GG..',
+    ] : [
+      '..e.....e..',
+      '.eee...eee.',
+      '..GGGGGGG..',
+      '.GGGGGGGGG.',
+      '.GGREEREGGG',
+      '.GGGGGGGGG.',
+      '.GGGMMGGGG.',
+      '..GGGGGGG..',
+      '..GGGGGGG..',
+      '.GG.....GG.',
+      '.GG.....GG.',
+    ];
+    return _SpriteData(sprites, {
+      'G': const Color(0xFF558B2F),
+      'e': const Color(0xFF8BC34A),
+      'E': const Color(0xFFFF0000),
+      'R': const Color(0xFFFF0000),
+      'M': const Color(0xFF33691E),
+    });
   }
 
-  static void _renderSpider(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: size.width * 0.6, height: size.height * 0.5), Paint()..color = color);
-    // Legs (4 pairs)
-    final lp = Paint()..color = accent..strokeWidth = 1.5..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 4; i++) {
-      final legX = cx - 6 + i * 4.0;
-      final legAnim = sin(t * 8 + i * 1.5) * 3;
-      canvas.drawLine(Offset(legX, cy), Offset(legX - 8, cy + 10 + legAnim), lp);
-      canvas.drawLine(Offset(legX, cy), Offset(legX + 8, cy + 10 - legAnim), lp);
-    }
-    // Eyes (8 dots)
-    final ep = Paint()..color = const Color(0xFFFF0000);
-    for (var i = 0; i < 4; i++) {
-      canvas.drawCircle(Offset(cx - 4 + i * 2.5, cy - 3), 1.2, ep);
-    }
+  static _SpriteData _spiderSprite(int frame) {
+    final f = frame == 0;
+    return _SpriteData([
+      f ? 'l...BBBB...l' : '.l..BBBB..l.',
+      f ? '.l.BBBBBB.l.' : 'l..BBBBBB..l',
+      f ? '..lBrBBrBl..' : '..lBrBBrBl..',
+      f ? 'l.BBBBBBBB.l' : '.lBBBBBBBB.l',
+      f ? '.l.BBBBBB.l.' : 'l..BBBBBB..l',
+      f ? '..l.BBBB.l..' : '..l.BBBB.l..',
+    ], {
+      'B': const Color(0xFF4E342E),
+      'r': const Color(0xFFFF0000),
+      'l': const Color(0xFF795548),
+    });
   }
 
-  static void _renderBat(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final wf = sin(t * 12) * 0.5;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: size.width * 0.4, height: size.height * 0.7), Paint()..color = color);
-    // Wings
-    final wp = Paint()..color = accent;
-    canvas.drawPath(Path()..moveTo(cx, cy)..lineTo(cx - size.width * 0.5, cy - size.height * 0.3 + wf * 12)..lineTo(cx - size.width * 0.3, cy + 2)..close(), wp);
-    canvas.drawPath(Path()..moveTo(cx, cy)..lineTo(cx + size.width * 0.5, cy - size.height * 0.3 + wf * 12)..lineTo(cx + size.width * 0.3, cy + 2)..close(), wp);
-    // Eyes
-    canvas.drawCircle(Offset(cx - 3, cy - 3), 1.5, Paint()..color = const Color(0xFFFF5252));
-    canvas.drawCircle(Offset(cx + 3, cy - 3), 1.5, Paint()..color = const Color(0xFFFF5252));
+  static _SpriteData _batSprite(int frame) {
+    final sprites = frame == 0 ? [
+      'ww......ww',
+      '.wwBBBBww.',
+      '..wBBBBw..',
+      '..BBEEBB..',
+      '..BBBBBB..',
+      '...BBBB...',
+    ] : [
+      '...........',
+      '..wBBBBw...',
+      '.wwBBBBww..',
+      '.wBBEEBBw..',
+      '..BBBBBB...',
+      '...BBBB....',
+      'ww......ww.',
+    ];
+    return _SpriteData(sprites, {
+      'B': const Color(0xFF37474F),
+      'w': const Color(0xFF78909C),
+      'E': const Color(0xFFFF5252),
+    });
   }
 
-  static void _renderFairy(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final glow = 0.5 + sin(t * 6) * 0.3;
-    // Glow
-    canvas.drawCircle(Offset(cx, cy), size.width * 0.45, Paint()..color = color.withValues(alpha: glow * 0.4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-    // Body
-    canvas.drawCircle(Offset(cx, cy), size.width * 0.2, Paint()..color = color);
-    // Wings
-    final ws = 0.6 + sin(t * 10) * 0.4;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 4, cy - 2), width: size.width * 0.35 * ws, height: size.height * 0.5), Paint()..color = accent.withValues(alpha: 0.7));
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 4, cy - 2), width: size.width * 0.35 * ws, height: size.height * 0.5), Paint()..color = accent.withValues(alpha: 0.7));
+  static _SpriteData _fairySprite(int frame) {
+    return _SpriteData([
+      '...*..*..',
+      '.www.www.',
+      '.wwwYwww.',
+      '..wYYYw..',
+      '..YYEYY..',
+      '..wYYYw..',
+      '.wwwYwww.',
+      '.www.www.',
+      '...*..*..',
+    ], {
+      'Y': const Color(0xFFFFEB3B),
+      'w': const Color(0xFFFFF9C4),
+      'E': const Color(0xFF7B1FA2),
+      '*': const Color(0xFFFFFFFF),
+    });
   }
 
-  // ========== Desert ==========
+  // ========== DESERT ==========
 
-  static void _renderScorpion(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 2), width: size.width * 0.6, height: size.height * 0.5), Paint()..color = color);
-    // Tail (curved up)
-    final tailAnim = sin(t * 4) * 0.2;
-    final tp = Paint()..color = accent..strokeWidth = 2.5..strokeCap = StrokeCap.round..style = PaintingStyle.stroke;
-    canvas.drawPath(Path()..moveTo(cx - size.width * 0.25, cy)..quadraticBezierTo(cx - size.width * 0.4, cy - size.height * 0.6 + tailAnim * 10, cx - size.width * 0.2, cy - size.height * 0.7), tp);
-    // Stinger
-    canvas.drawCircle(Offset(cx - size.width * 0.2, cy - size.height * 0.7), 2, Paint()..color = const Color(0xFFFF0000));
-    // Claws
-    final cp = Paint()..color = accent..strokeWidth = 2..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(cx + size.width * 0.2, cy), Offset(cx + size.width * 0.4, cy - 4), cp);
-    canvas.drawLine(Offset(cx + size.width * 0.4, cy - 4), Offset(cx + size.width * 0.35, cy - 8), cp);
-    // Eyes
-    canvas.drawCircle(Offset(cx + 3, cy - 2), 1.5, Paint()..color = const Color(0xFF1A1A1A));
+  static _SpriteData _scorpionSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '..r.............',
+      '..BB............',
+      '...BB...........',
+      '....BB..........',
+      '....BBBBBBBBB...',
+      '...BBBBEBBbBBcc.',
+      '...BBBBBBBBB.cc.',
+      '....BBBBBBB.....',
+    ] : [
+      '.r..............',
+      '..BB............',
+      '...BB...........',
+      '....BB..........',
+      '....BBBBBBBBB...',
+      '...BBBBEBBbBBcc.',
+      '...BBBBBBBBB.cc.',
+      '....BBBBBBB.....',
+    ];
+    return _SpriteData(sprites, {
+      'B': const Color(0xFFBF360C),
+      'b': const Color(0xFFFF8A65),
+      'E': const Color(0xFF1A1A1A),
+      'r': const Color(0xFFFF0000),
+      'c': const Color(0xFFBF360C),
+    });
   }
 
-  static void _renderMummy(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final sway = sin(t * 3) * 1;
-    // Body
-    canvas.drawRect(Rect.fromCenter(center: Offset(cx + sway, cy + 4), width: size.width * 0.5, height: size.height * 0.7), Paint()..color = color);
-    // Head
-    canvas.drawCircle(Offset(cx + sway, cy - size.height * 0.2), size.width * 0.22, Paint()..color = color);
-    // Bandage lines
-    final bp = Paint()..color = accent..strokeWidth = 1;
-    for (var i = 0; i < 4; i++) {
-      final y = cy - 4 + i * 8.0;
-      canvas.drawLine(Offset(cx - 8 + sway, y), Offset(cx + 8 + sway, y + 2), bp);
-    }
-    // Glowing eyes
-    canvas.drawCircle(Offset(cx - 3 + sway, cy - size.height * 0.22), 2, Paint()..color = const Color(0xFF00E676));
-    canvas.drawCircle(Offset(cx + 3 + sway, cy - size.height * 0.22), 2, Paint()..color = const Color(0xFF00E676));
+  static _SpriteData _mummySprite(int frame) {
+    final sprites = frame == 0 ? [
+      '...MMMM...',
+      '..MMMMMM..',
+      '..MGEMGM..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '..MM..MM..',
+      '..MM..MM..',
+    ] : [
+      '...MMMM...',
+      '..MMMMMM..',
+      '..MGEMGM..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '..bMMMMb..',
+      '..MMMMMM..',
+      '.MM....MM.',
+      '.MM....MM.',
+    ];
+    return _SpriteData(sprites, {
+      'M': const Color(0xFFD7CCC8),
+      'b': const Color(0xFF8D6E63),
+      'G': const Color(0xFF00E676),
+      'E': const Color(0xFF00E676),
+    });
   }
 
-  static void _renderEagle(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final wf = sin(t * 8) * 0.3;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: size.width * 0.5, height: size.height * 0.6), Paint()..color = color);
-    // Wide wings
-    final wp = Paint()..color = accent;
-    canvas.drawPath(Path()..moveTo(cx, cy - 2)..lineTo(cx - size.width * 0.5, cy - size.height * 0.2 + wf * 15)..lineTo(cx - size.width * 0.3, cy + 4)..close(), wp);
-    canvas.drawPath(Path()..moveTo(cx, cy - 2)..lineTo(cx + size.width * 0.5, cy - size.height * 0.2 + wf * 15)..lineTo(cx + size.width * 0.3, cy + 4)..close(), wp);
-    // Beak
-    canvas.drawPath(Path()..moveTo(cx + size.width * 0.25, cy - 2)..lineTo(cx + size.width * 0.4, cy)..lineTo(cx + size.width * 0.25, cy + 2)..close(), Paint()..color = const Color(0xFFFF9800));
-    canvas.drawCircle(Offset(cx + 6, cy - 3), 1.5, Paint()..color = const Color(0xFF1A1A1A));
+  static _SpriteData _eagleSprite(int frame) {
+    final sprites = frame == 0 ? [
+      'ww..........ww',
+      '.wwBBBBBBBBww.',
+      '..wBBBBBBBBw..',
+      '...BBBEBBBBB.o',
+      '...BBBBBBBBBo.',
+      '....BBBBBBB...',
+      '.....BBBBB....',
+    ] : [
+      '...............',
+      '..wBBBBBBBBw...',
+      '.wwBBBBBBBBww..',
+      '.wBBBEBBBBBBwo.',
+      '..BBBBBBBBBBo..',
+      '....BBBBBBB....',
+      'ww..BBBBB..ww..',
+    ];
+    return _SpriteData(sprites, {
+      'B': const Color(0xFF5D4037),
+      'w': const Color(0xFFA1887F),
+      'E': const Color(0xFF1A1A1A),
+      'o': const Color(0xFFFF9800),
+    });
   }
 
-  // ========== Shared: Spirit ==========
-
-  static void _renderSpirit(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final pulse = 0.8 + sin(t * 5) * 0.2;
-    // Glow aura
-    canvas.drawCircle(Offset(cx, cy), size.width * 0.4 * pulse, Paint()..color = color.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
-    // Core
-    canvas.drawCircle(Offset(cx, cy), size.width * 0.25 * pulse, Paint()..color = color);
-    // Inner
-    canvas.drawCircle(Offset(cx, cy - 2), size.width * 0.12, Paint()..color = accent);
-    // Eyes
-    canvas.drawCircle(Offset(cx - 3, cy - 1), 1.5, Paint()..color = const Color(0xFF1A1A1A));
-    canvas.drawCircle(Offset(cx + 3, cy - 1), 1.5, Paint()..color = const Color(0xFF1A1A1A));
-  }
-
-  // ========== Snowfield ==========
-
-  static void _renderGolem(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final shake = sin(t * 6) * 0.5;
-    // Body (big rectangle)
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(cx + shake, cy + 4), width: size.width * 0.75, height: size.height * 0.7), const Radius.circular(4)),
-      Paint()..color = color,
+  static _SpriteData _spiritSprite(Color baseColor, int frame) {
+    final light = Color.fromARGB(255,
+      min(255, baseColor.red + 60),
+      min(255, baseColor.green + 60),
+      min(255, baseColor.blue + 60),
     );
-    // Head
-    canvas.drawCircle(Offset(cx + shake, cy - size.height * 0.2), size.width * 0.25, Paint()..color = color);
-    // Ice crystals on head
-    canvas.drawCircle(Offset(cx - 5 + shake, cy - size.height * 0.35), 3, Paint()..color = accent);
-    canvas.drawCircle(Offset(cx + 5 + shake, cy - size.height * 0.32), 2.5, Paint()..color = accent);
-    // Eyes
-    canvas.drawCircle(Offset(cx - 4 + shake, cy - size.height * 0.22), 2, Paint()..color = const Color(0xFF42A5F5));
-    canvas.drawCircle(Offset(cx + 4 + shake, cy - size.height * 0.22), 2, Paint()..color = const Color(0xFF42A5F5));
-  }
-
-  static void _renderWolf(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final run = sin(t * 8) * 2;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 2), width: size.width * 0.8, height: size.height * 0.5), Paint()..color = color);
-    // Head
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + size.width * 0.25, cy - 3), width: size.width * 0.35, height: size.height * 0.4), Paint()..color = color);
-    // Ears
-    final ep = Paint()..color = accent;
-    canvas.drawPath(Path()..moveTo(cx + size.width * 0.18, cy - 8)..lineTo(cx + size.width * 0.15, cy - 16)..lineTo(cx + size.width * 0.25, cy - 8)..close(), ep);
-    canvas.drawPath(Path()..moveTo(cx + size.width * 0.3, cy - 8)..lineTo(cx + size.width * 0.32, cy - 16)..lineTo(cx + size.width * 0.38, cy - 8)..close(), ep);
-    // Eye
-    canvas.drawCircle(Offset(cx + size.width * 0.3, cy - 5), 1.5, Paint()..color = const Color(0xFFFFEB3B));
-    // Legs
-    final lp = Paint()..color = color..strokeWidth = 3..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(cx - 6, cy + 6), Offset(cx - 7, cy + 12 + run), lp);
-    canvas.drawLine(Offset(cx + 6, cy + 6), Offset(cx + 7, cy + 12 - run), lp);
-  }
-
-  static void _renderOwl(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 2), width: size.width * 0.6, height: size.height * 0.7), Paint()..color = color);
-    // Head
-    canvas.drawCircle(Offset(cx, cy - size.height * 0.15), size.width * 0.28, Paint()..color = color);
-    // Ear tufts
-    canvas.drawPath(Path()..moveTo(cx - 6, cy - size.height * 0.25)..lineTo(cx - 9, cy - size.height * 0.45)..lineTo(cx - 2, cy - size.height * 0.3)..close(), Paint()..color = accent);
-    canvas.drawPath(Path()..moveTo(cx + 6, cy - size.height * 0.25)..lineTo(cx + 9, cy - size.height * 0.45)..lineTo(cx + 2, cy - size.height * 0.3)..close(), Paint()..color = accent);
-    // Big eyes
-    final blink = sin(t * 2) > 0.95 ? 0.1 : 1.0;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 4, cy - size.height * 0.15), width: 6, height: 6 * blink), Paint()..color = const Color(0xFFFFD600));
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 4, cy - size.height * 0.15), width: 6, height: 6 * blink), Paint()..color = const Color(0xFFFFD600));
-    canvas.drawCircle(Offset(cx - 4, cy - size.height * 0.15), 1.5 * blink, Paint()..color = const Color(0xFF1A1A1A));
-    canvas.drawCircle(Offset(cx + 4, cy - size.height * 0.15), 1.5 * blink, Paint()..color = const Color(0xFF1A1A1A));
-  }
-
-  // ========== Volcano ==========
-
-  static void _renderImp(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final hop = sin(t * 7) * 2;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 3 + hop), width: size.width * 0.6, height: size.height * 0.55), Paint()..color = color);
-    // Head
-    canvas.drawCircle(Offset(cx, cy - size.height * 0.1 + hop), size.width * 0.23, Paint()..color = color);
-    // Horns
-    final hp = Paint()..color = const Color(0xFF4A0000)..strokeWidth = 2..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(cx - 5, cy - size.height * 0.2 + hop), Offset(cx - 8, cy - size.height * 0.4 + hop), hp);
-    canvas.drawLine(Offset(cx + 5, cy - size.height * 0.2 + hop), Offset(cx + 8, cy - size.height * 0.4 + hop), hp);
-    // Flame glow
-    canvas.drawCircle(Offset(cx, cy + hop), size.width * 0.15, Paint()..color = accent.withValues(alpha: 0.4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
-    // Eyes
-    canvas.drawCircle(Offset(cx - 3, cy - size.height * 0.12 + hop), 2, Paint()..color = const Color(0xFFFFD600));
-    canvas.drawCircle(Offset(cx + 3, cy - size.height * 0.12 + hop), 2, Paint()..color = const Color(0xFFFFD600));
-  }
-
-  static void _renderDragonkin(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final breathe = sin(t * 3) * 1;
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + 4 + breathe), width: size.width * 0.7, height: size.height * 0.6), Paint()..color = color);
-    // Head
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + size.width * 0.15, cy - size.height * 0.1), width: size.width * 0.4, height: size.height * 0.35), Paint()..color = color);
-    // Horns
-    final hp = Paint()..color = accent..strokeWidth = 2..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(cx + 4, cy - size.height * 0.2), Offset(cx, cy - size.height * 0.42), hp);
-    canvas.drawLine(Offset(cx + size.width * 0.2, cy - size.height * 0.2), Offset(cx + size.width * 0.28, cy - size.height * 0.42), hp);
-    // Tail
-    canvas.drawPath(
-      Path()..moveTo(cx - size.width * 0.3, cy + 5)..quadraticBezierTo(cx - size.width * 0.5, cy, cx - size.width * 0.4, cy - 8),
-      Paint()..color = color..strokeWidth = 3..style = PaintingStyle.stroke..strokeCap = StrokeCap.round,
+    final dark = Color.fromARGB(255,
+      (baseColor.red * 0.7).round(),
+      (baseColor.green * 0.7).round(),
+      (baseColor.blue * 0.7).round(),
     );
-    // Eye
-    canvas.drawCircle(Offset(cx + size.width * 0.2, cy - size.height * 0.14), 2, Paint()..color = const Color(0xFFFFD600));
+    return _SpriteData(frame == 0 ? [
+      '*...CC...*',
+      '..CCCCCC..',
+      '.CCCcCCCC.',
+      '.CCEECCCC.',
+      '.CCCcCCCC.',
+      '..CCCCCC..',
+      '...CCCC...',
+      '*........*',
+    ] : [
+      '...CC.....',
+      '..CCCCCC..',
+      '.CCCcCCCC.',
+      '.CCEECCCC.',
+      '.CCCcCCCC.',
+      '..CCCCCC..',
+      '...CCCC...',
+      '.....*....',
+    ], {
+      'C': baseColor,
+      'c': light,
+      'E': const Color(0xFF1A1A1A),
+      '*': light.withValues(alpha: 0.5),
+    });
   }
 
-  static void _renderPhoenix(Canvas canvas, Size size, Color color, Color accent, double t) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final wf = sin(t * 7) * 0.4;
-    // Flame aura
-    canvas.drawCircle(Offset(cx, cy), size.width * 0.4, Paint()..color = color.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-    // Body
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: size.width * 0.5, height: size.height * 0.55), Paint()..color = color);
-    // Wings (fiery)
-    final wp = Paint()..color = accent;
-    canvas.drawPath(Path()..moveTo(cx, cy - 2)..lineTo(cx - size.width * 0.5, cy - size.height * 0.3 + wf * 14)..lineTo(cx - size.width * 0.2, cy + 4)..close(), wp);
-    canvas.drawPath(Path()..moveTo(cx, cy - 2)..lineTo(cx + size.width * 0.5, cy - size.height * 0.3 + wf * 14)..lineTo(cx + size.width * 0.2, cy + 4)..close(), wp);
-    // Tail flames
-    final tailFlicker = sin(t * 15) * 3;
-    canvas.drawPath(Path()..moveTo(cx - size.width * 0.2, cy + 4)..lineTo(cx - size.width * 0.35, cy + 8 + tailFlicker)..lineTo(cx - size.width * 0.1, cy + 6)..close(), Paint()..color = const Color(0xFFFFD600));
-    // Head crest
-    canvas.drawCircle(Offset(cx + size.width * 0.15, cy - size.height * 0.15), size.width * 0.12, Paint()..color = color);
-    canvas.drawCircle(Offset(cx + size.width * 0.18, cy - size.height * 0.18), 1.5, Paint()..color = const Color(0xFF1A1A1A));
+  // ========== SNOWFIELD ==========
+
+  static _SpriteData _golemSprite() {
+    return _SpriteData([
+      '....iiii....',
+      '...GGGGGG...',
+      '..GGGGGGGG..',
+      '..GGEEGGGG..',
+      '..GGGGGGGG..',
+      '..GGGGGGGG..',
+      '.GGGGGGGGGG.',
+      '.GGGGGGGGGG.',
+      'GGGGGGGGGGGG',
+      'GGGGGGGGGGGG',
+      'GGGGGGGGGGGG',
+      '.GGG....GGG.',
+      '.GGG....GGG.',
+    ], {
+      'G': const Color(0xFFE0E0E0),
+      'i': const Color(0xFF90CAF9),
+      'E': const Color(0xFF42A5F5),
+    });
   }
 
-  // ========== Generic fallback ==========
-
-  static void _renderGeneric(Canvas canvas, Size size, Color color, Color accent, double t, EnemyType type) {
-    final cx = size.width / 2, cy = size.height / 2;
-    final anim = sin(t * 5) * 2;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy + anim), width: size.width * 0.7, height: size.height * 0.6), Paint()..color = color);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy - 2 + anim), width: size.width * 0.3, height: size.height * 0.2), Paint()..color = accent);
-    final ep = Paint()..color = const Color(0xFF1A1A1A);
-    canvas.drawCircle(Offset(cx - 3, cy - 2 + anim), 2, ep);
-    canvas.drawCircle(Offset(cx + 3, cy - 2 + anim), 2, ep);
+  static _SpriteData _wolfSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '....ee..ee.....',
+      '....WWWWWW.....',
+      '...WWWWWWWW....',
+      '...WWEYWWWW....',
+      '..WWWWWWWWWW...',
+      '..WWWWWWWWmm...',
+      '.WWWWWWWWWWWW..',
+      '.WWWWWWWWWWWW..',
+      '..WW......WW...',
+      '..WW......WW...',
+    ] : [
+      '....ee..ee.....',
+      '....WWWWWW.....',
+      '...WWWWWWWW....',
+      '...WWEYWWWW....',
+      '..WWWWWWWWWW...',
+      '..WWWWWWWWmm...',
+      '.WWWWWWWWWWWW..',
+      '.WWWWWWWWWWWW..',
+      '.WW........WW..',
+      '.WW........WW..',
+    ];
+    return _SpriteData(sprites, {
+      'W': const Color(0xFF78909C),
+      'e': const Color(0xFFB0BEC5),
+      'E': const Color(0xFFFFEB3B),
+      'Y': const Color(0xFFFFEB3B),
+      'm': const Color(0xFFB0BEC5),
+    });
   }
+
+  static _SpriteData _owlSprite() {
+    return _SpriteData([
+      '..e.....e..',
+      '..eWWWWWe..',
+      '..WWWWWWW..',
+      '.WWYYWWYYW.',
+      '.WWEPPEPPW.',
+      '.WWWWOWWWW.',
+      '..WbbbbbW..',
+      '..WWWWWWW..',
+      '...WWWWW...',
+      '...ff.ff...',
+    ], {
+      'W': const Color(0xFFF5F5F5),
+      'e': const Color(0xFFBBDEFB),
+      'Y': const Color(0xFFFFD600),
+      'P': const Color(0xFF1A1A1A),
+      'E': const Color(0xFFFFD600),
+      'b': const Color(0xFFE0E0E0),
+      'O': const Color(0xFFFF9800),
+      'f': const Color(0xFFFFCC80),
+    });
+  }
+
+  // ========== VOLCANO ==========
+
+  static _SpriteData _impSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '..h.....h..',
+      '...hhhhh...',
+      '..FFFFFFF..',
+      '.FFFFFFFFF.',
+      '.FFYYFFYYF.',
+      '.FFFFFFFFF.',
+      '.FFFMMFFFF.',
+      '..FFFFFFF..',
+      '..FFFFFFF..',
+      '..FF...FF..',
+      '..FF...FF..',
+    ] : [
+      '..h.....h..',
+      '...hhhhh...',
+      '..FFFFFFF..',
+      '.FFFFFFFFF.',
+      '.FFYYFFYYF.',
+      '.FFFFFFFFF.',
+      '.FFFMMFFFF.',
+      '..FFFFFFF..',
+      '..FFFFFFF..',
+      '...FF.FF...',
+      '..FF...FF..',
+    ];
+    return _SpriteData(sprites, {
+      'F': const Color(0xFFFF5722),
+      'h': const Color(0xFF4A0000),
+      'Y': const Color(0xFFFFD600),
+      'M': const Color(0xFFFF0000),
+    });
+  }
+
+  static _SpriteData _dragonkinSprite(int frame) {
+    return _SpriteData(frame == 0 ? [
+      '..hh....hh.......',
+      '..DDDDDDDDD......',
+      '.DDDDDDDDDDD.....',
+      '.DDDyDDDDDDD.....',
+      '.DDDDDDDDDDDDD...',
+      '..DDDbbbDDDDDDD..',
+      '..DDDDDDDDDDDDDD.',
+      '...DDDDDDDDDDDDD.',
+      '....DDDDDDDDDDDD.',
+      '...DD......DD.....',
+      '...DD......DD.....',
+    ] : [
+      '..hh....hh........',
+      '..DDDDDDDDD.......',
+      '.DDDDDDDDDDD......',
+      '.DDDyDDDDDDD......',
+      '.DDDDDDDDDDDDD....',
+      '..DDDbbbDDDDDDD...',
+      '..DDDDDDDDDDDDDD..',
+      '...DDDDDDDDDDDDD..',
+      '....DDDDDDDDDDDD..',
+      '..DD........DD.....',
+      '..DD........DD.....',
+    ], {
+      'D': const Color(0xFFB71C1C),
+      'h': const Color(0xFFEF5350),
+      'y': const Color(0xFFFFD600),
+      'b': const Color(0xFFFF8A65),
+    });
+  }
+
+  static _SpriteData _fireBatSprite(int frame) {
+    final sprites = frame == 0 ? [
+      'ww........ww',
+      '.wwFFFFFFww.',
+      '..wFFFFFFw..',
+      '..FFFEEFFF..',
+      '..FFFFFFFF..',
+      '...FFFFFF...',
+    ] : [
+      '.............',
+      '..wFFFFFFw...',
+      '.wwFFFFFFww..',
+      '.wFFFEEFFFw..',
+      '..FFFFFFFF...',
+      '...FFFFFF....',
+      'ww........ww.',
+    ];
+    return _SpriteData(sprites, {
+      'F': const Color(0xFFFF6F00),
+      'w': const Color(0xFFFFD54F),
+      'E': const Color(0xFFFFFFFF),
+    });
+  }
+
+  static _SpriteData _phoenixSprite(int frame) {
+    final sprites = frame == 0 ? [
+      '..cc............cc..',
+      '..cFFFFFFFFFFFFFc...',
+      '...FFFFFcFFFFFFF....',
+      '....FFFFFFFFcFFF....',
+      '....FFFFFEFFFFFF....',
+      '....FFFFFFFcFFFF....',
+      '.....FFFFFFFFFFF....',
+      '......FFFfFFF.......',
+      '.......FfFfF........',
+      '........fFf.........',
+      '.........f..........',
+    ] : [
+      '...............',
+      '..cFFFFFFFFFc..',
+      '.ccFFFFcFFFFcc.',
+      '.cFFFFFFFFcFFc.',
+      '..FFFFFEFFFF...',
+      '..FFFFFFFcFFF..',
+      '...FFFFFFFFFFF.',
+      '....FFFfFFF....',
+      '.....FfFfF.....',
+      'cc....fFf....cc',
+      '......f........',
+    ];
+    return _SpriteData(sprites, {
+      'F': const Color(0xFFFF8F00),
+      'c': const Color(0xFFFFECB3),
+      'f': const Color(0xFFFFD600),
+      'E': const Color(0xFF1A1A1A),
+    });
+  }
+}
+
+class _SpriteData {
+  final List<String> frames;
+  final Map<String, Color> palette;
+  _SpriteData(this.frames, this.palette);
 }
