@@ -230,7 +230,7 @@ class _UpgradeCard extends StatelessWidget {
       case UpgradeId.doubleJump:
         return Icons.flip;
       case UpgradeId.coinMagnet:
-        return Icons.magnet_outlined;
+        return Icons.attractions;
       case UpgradeId.comboRetain:
         return Icons.whatshot;
     }

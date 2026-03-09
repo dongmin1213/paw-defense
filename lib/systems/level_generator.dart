@@ -182,7 +182,7 @@ class LevelGenerator extends Component with HasGameReference<RunnerGame> {
     if (_rng.nextDouble() > coinChance) return;
 
     // 평화 구간에서는 코인 가치 증가
-    final coinValue = isPeaceZone ? 2 : 1;
+    final double coinValue = isPeaceZone ? 2.0 : 1.0;
     final pattern = _rng.nextInt(3);
     final baseX = startX + _rng.nextDouble() * GameConstants.segmentWidth * 0.5 + 50;
 

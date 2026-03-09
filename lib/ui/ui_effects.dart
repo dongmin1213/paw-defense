@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'game_theme.dart';
 
 /// UI 이펙트 매니저 — 구매/레벨업/수집 시 시각적 피드백
