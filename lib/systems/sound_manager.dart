@@ -1,14 +1,16 @@
+import 'package:flame_audio/flame_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sound and vibration settings manager.
 /// Manages BGM/SFX/vibration toggles and volume levels.
-/// Actual audio playback is handled via flame_audio when assets are available.
+/// Audio playback via flame_audio.
 class SoundManager {
   bool _bgmEnabled = true;
   bool _sfxEnabled = true;
   bool _vibrationEnabled = true;
   double _bgmVolume = 0.7;
   double _sfxVolume = 1.0;
+  bool _bgmPlaying = false;
 
   bool get bgmEnabled => _bgmEnabled;
   bool get sfxEnabled => _sfxEnabled;
@@ -18,6 +20,9 @@ class SoundManager {
 
   void setBgmEnabled(bool v) {
     _bgmEnabled = v;
+    if (!v) {
+      stopBgm();
+    }
     _save();
   }
 
@@ -33,6 +38,9 @@ class SoundManager {
 
   void setBgmVolume(double v) {
     _bgmVolume = v.clamp(0.0, 1.0);
+    if (_bgmPlaying) {
+      FlameAudio.bgm.audioPlayer.setVolume(_bgmVolume);
+    }
     _save();
   }
 
@@ -41,66 +49,81 @@ class SoundManager {
     _save();
   }
 
-  // === SFX playback stubs ===
-  // These will play actual sounds when audio assets are added.
-  // For now they respect the enabled/volume settings.
+  // === SFX playback ===
 
-  void playHit() {
+  void _playSfx(String file, {double volumeScale = 1.0}) {
     if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('hit.wav', volume: _sfxVolume);
+    try {
+      FlameAudio.play(file, volume: _sfxVolume * volumeScale);
+    } catch (_) {
+      // Silently ignore if file not found
+    }
   }
 
-  void playMerge() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('merge.wav', volume: _sfxVolume);
-  }
+  void playHit() => _playSfx('sfx/hit.ogg');
 
-  void playBuy() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('buy.wav', volume: _sfxVolume);
-  }
+  void playMerge() => _playSfx('sfx/merge.ogg');
 
-  void playWaveClear() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('wave_clear.wav', volume: _sfxVolume);
-  }
+  void playBuy() => _playSfx('sfx/buy.ogg');
 
-  void playBossKill() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('boss_kill.wav', volume: _sfxVolume);
-  }
+  void playWaveClear() => _playSfx('sfx/wave_clear.ogg');
 
-  void playRewardSelect() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('reward.wav', volume: _sfxVolume);
-  }
+  void playBossKill() => _playSfx('sfx/boss_kill.ogg');
 
-  void playGameOver() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('game_over.wav', volume: _sfxVolume);
-  }
+  void playRewardSelect() => _playSfx('sfx/reward.ogg');
 
-  void playButtonTap() {
-    if (!_sfxEnabled) return;
-    // TODO: FlameAudio.play('tap.wav', volume: _sfxVolume * 0.5);
-  }
+  void playGameOver() => _playSfx('sfx/game_over.ogg');
+
+  void playButtonTap() => _playSfx('sfx/tap.ogg', volumeScale: 0.5);
+
+  // === BGM playback ===
 
   void startBgm() {
     if (!_bgmEnabled) return;
-    // TODO: FlameAudio.bgm.play('bgm.mp3', volume: _bgmVolume);
+    try {
+      FlameAudio.bgm.play('bgm/bg1.ogg', volume: _bgmVolume);
+      _bgmPlaying = true;
+    } catch (_) {
+      // Silently ignore if file not found
+    }
   }
 
   void stopBgm() {
-    // TODO: FlameAudio.bgm.stop();
+    try {
+      FlameAudio.bgm.stop();
+    } catch (_) {}
+    _bgmPlaying = false;
   }
 
   void pauseBgm() {
-    // TODO: FlameAudio.bgm.pause();
+    if (_bgmPlaying) {
+      try {
+        FlameAudio.bgm.pause();
+      } catch (_) {}
+    }
   }
 
   void resumeBgm() {
-    if (!_bgmEnabled) return;
-    // TODO: FlameAudio.bgm.resume();
+    if (!_bgmEnabled || !_bgmPlaying) return;
+    try {
+      FlameAudio.bgm.resume();
+    } catch (_) {}
+  }
+
+  /// Called when app goes to background — pause all audio.
+  void onAppPaused() {
+    pauseBgm();
+  }
+
+  /// Called when app returns to foreground — resume if was playing.
+  void onAppResumed() {
+    resumeBgm();
+  }
+
+  /// Dispose audio resources.
+  void dispose() {
+    stopBgm();
+    FlameAudio.bgm.dispose();
   }
 
   // === Persistence ===

@@ -76,9 +76,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
+      // Pause audio when app goes to background
+      _game.soundManager.onAppPaused();
       if (_game.isPlaying) {
         _game.saveGame();
       }
+    } else if (state == AppLifecycleState.resumed) {
+      // Resume audio when app returns to foreground
+      _game.soundManager.onAppResumed();
     }
   }
 
