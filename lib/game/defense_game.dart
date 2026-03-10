@@ -533,13 +533,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Public entry point for auto-merge (called by DefenseGameFeel).
   void tryAutoMerge() => _tryAutoMerge();
 
-  /// Try to auto-merge if 3 same units exist.
+  /// Try to auto-merge if enough same units exist (3, or 2 with double merge relic).
   void _tryAutoMerge() {
-    final merges = merge.MergeManager.findPossibleMerges(_unitSlots);
+    final needed = relicManager.hasDoubleMerge ? 2 : BalanceConfig.mergeCount;
+    final merges = merge.MergeManager.findPossibleMerges(_unitSlots, mergeCount: needed);
     if (merges.isEmpty) return;
 
     final indices = merges.first;
-    if (indices.length < 3) return;
+    if (indices.length < needed) return;
 
     final unit = _unitSlots[indices[0]].unit;
     if (unit == null) return;

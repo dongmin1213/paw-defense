@@ -8,10 +8,13 @@ class DefenseEnemyRenderer {
   /// Render an enemy by id.
   /// [isHit] flashes the sprite white.
   /// [isBoss] renders the sprite larger.
-  static void render(Canvas canvas, Size size, String enemyId, {
+  static void render(Canvas canvas, Size size, {
+    required String enemyId,
     required double animTimer,
     bool isHit = false,
     bool isBoss = false,
+    bool isFlying = false,
+    double hpPercent = 1.0,
   }) {
     final frame = (animTimer * 4).toInt() % 2;
     final data = _getSpriteData(enemyId, frame);
@@ -45,6 +48,8 @@ class DefenseEnemyRenderer {
       case 'bomber':        return _bomber(frame);
       case 'healer':        return _healer(frame);
       case 'boss_golem':    return _bossGolem(frame);
+      case 'boss':          return _bossGolem(frame);
+      case 'shielded':      return _shieldBearer(frame);
       case 'skeleton':      return _skeleton(frame);
       case 'mushroom':      return _mushroom(frame);
       case 'golem':         return _golem(frame);

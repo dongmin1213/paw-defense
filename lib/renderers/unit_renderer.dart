@@ -7,10 +7,12 @@ import '../utils/pixel_art.dart';
 /// and an evolved form with glow effects.
 class UnitRenderer {
   /// Render a unit by type string and level.
-  static void render(Canvas canvas, Size size, String unitTypeId, {
+  static void render(Canvas canvas, Size size, {
+    required String unitTypeId,
     required int level,
     required double animTimer,
     bool isEvolved = false,
+    bool hasTarget = false,
   }) {
     final frame = (animTimer * 3).toInt() % 2;
     final data = _getSpriteData(unitTypeId, frame, isEvolved: isEvolved);

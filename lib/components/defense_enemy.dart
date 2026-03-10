@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 import '../renderers/defense_enemy_renderer.dart';
 import 'wall.dart';
@@ -37,6 +38,10 @@ class DefenseEnemy extends PositionComponent
 
   // Special behavior timers
   double _healTimer = 0;
+
+  // Slow debuff
+  double _slowIntensity = 0; // 0.0 = no slow, 0.3 = 30% slow
+  double _slowTimer = 0;
 
   static const double wallProximity = 35.0;
 
@@ -127,6 +132,31 @@ class DefenseEnemy extends PositionComponent
     removeFromParent();
   }
 
+  /// Apply a slow debuff to this enemy.
+  void applySlow(double intensity, double duration) {
+    if (intensity > _slowIntensity) {
+      _slowIntensity = intensity;
+    }
+    _slowTimer = duration;
+  }
+
+  /// Effective speed accounting for slow debuff and relic slow aura.
+  double get _effectiveSpeed {
+    double s = speed;
+    // Slow debuff (from bear tanker)
+    if (_slowTimer > 0) {
+      s *= (1.0 - _slowIntensity);
+    }
+    // Relic slow aura near wall
+    if (game.relicManager.hasSlowAura && !_reachedWall) {
+      final distToWall = position.distanceTo(game.wall.position);
+      if (distToWall <= BalanceConfig.relicSlowAuraRadius) {
+        s *= (1.0 - BalanceConfig.relicSlowAuraIntensity);
+      }
+    }
+    return s;
+  }
+
   /// Healer: heal all allies within 50px for 10% of their maxHp.
   void _healNearbyAllies() {
     final enemies = game.world.children.whereType<DefenseEnemy>();
@@ -146,7 +176,7 @@ class DefenseEnemy extends PositionComponent
     final wallDefense = game.rewardWallDefenseMultiplier *
         (1.0 - game.relicManager.wallDamageReduction) *
         game.upgradeManager.wallDefenseMultiplier;
-    game.wall.takeDamage(damage * 3.0 * wallDefense);
+    game.wall.takeDamage(damage * BalanceConfig.bomberExplosionMultiplier * wallDefense);
     game.waveManager.onWallDamaged();
     game.particleEffect.spawnEnemyDeath(position.x, position.y);
     _isDead = true;
@@ -170,6 +200,15 @@ class DefenseEnemy extends PositionComponent
       _hitFlashTimer -= dt;
       if (_hitFlashTimer <= 0) {
         _isHit = false;
+      }
+    }
+
+    // Slow debuff countdown
+    if (_slowTimer > 0) {
+      _slowTimer -= dt;
+      if (_slowTimer <= 0) {
+        _slowTimer = 0;
+        _slowIntensity = 0;
       }
     }
 
@@ -201,14 +240,15 @@ class DefenseEnemy extends PositionComponent
         direction = (wallPos - position).normalized();
 
         // Flying enemies hover with a sine wave offset
+        final spd = _effectiveSpeed;
         if (isFlying) {
           final hover = _sin(_animTimer * 4) * 3;
           position.add(Vector2(
-            direction.x * speed * dt,
-            direction.y * speed * dt + hover * dt,
+            direction.x * spd * dt,
+            direction.y * spd * dt + hover * dt,
           ));
         } else {
-          position.add(direction * speed * dt);
+          position.add(direction * spd * dt);
         }
       }
     } else {
@@ -277,6 +317,7 @@ class DefenseEnemy extends PositionComponent
       enemyId: enemyId,
       animTimer: _animTimer,
       isHit: _isHit,
+      isBoss: _isBoss,
       isFlying: isFlying,
       hpPercent: hpPercent,
     );

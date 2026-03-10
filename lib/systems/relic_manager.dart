@@ -13,12 +13,15 @@ class RelicManager {
 
   /// All available relic IDs in the game.
   static const List<String> allRelicIds = [
-    // Unit evolution relics
-    'evolve_knight',
-    'evolve_archer',
-    'evolve_mage',
-    'evolve_healer',
-    'evolve_assassin',
+    // Unit evolution relics (one per unit type, format: evolve_<unitTypeId>)
+    'evolve_cat_archer',
+    'evolve_dog_warrior',
+    'evolve_rabbit_mage',
+    'evolve_bear_tanker',
+    'evolve_fox_assassin',
+    'evolve_bird_scout',
+    'evolve_turtle_healer',
+    'evolve_owl_wizard',
     // Passive bonus relics
     'relic_atk_boost', // All units +15% ATK
     'relic_speed_boost', // All units +15% ATK speed

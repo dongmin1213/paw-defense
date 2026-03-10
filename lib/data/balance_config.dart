@@ -195,6 +195,40 @@ class BalanceConfig {
   static const double foxCritMultiplier = 2.0;
 
   // ══════════════════════════════════════
+  // Turtle Healer
+  // ══════════════════════════════════════
+
+  /// Fraction of attack damage healed to wall per turtle healer hit.
+  static const double turtleHealerHealFraction = 0.5;
+
+  // ══════════════════════════════════════
+  // Bear Tanker Slow
+  // ══════════════════════════════════════
+
+  /// Slow intensity applied by bear tanker on hit (0.3 = 30% slow).
+  static const double bearSlowIntensity = 0.3;
+
+  /// Duration of bear tanker slow in seconds.
+  static const double bearSlowDuration = 2.5;
+
+  // ══════════════════════════════════════
+  // Relic Slow Aura
+  // ══════════════════════════════════════
+
+  /// Slow intensity for relic_slow_aura near wall (0.2 = 20% slow).
+  static const double relicSlowAuraIntensity = 0.2;
+
+  /// Radius of relic slow aura around wall.
+  static const double relicSlowAuraRadius = 80.0;
+
+  // ══════════════════════════════════════
+  // Bomber
+  // ══════════════════════════════════════
+
+  /// Bomber explosion damage multiplier.
+  static const double bomberExplosionMultiplier = 2.0;
+
+  // ══════════════════════════════════════
   // Projectile
   // ══════════════════════════════════════
 

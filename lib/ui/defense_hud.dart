@@ -259,11 +259,14 @@ class _DefenseHudState extends State<DefenseHud>
       'relic_lifesteal': '🩸',
       'relic_double_merge': '📖',
       'relic_star_magnet': '⭐',
-      'evolve_knight': '🗡️',
-      'evolve_archer': '🏹',
-      'evolve_mage': '🔮',
-      'evolve_healer': '💚',
-      'evolve_assassin': '🗡️',
+      'evolve_cat_archer': '🏹',
+      'evolve_dog_warrior': '🗡️',
+      'evolve_rabbit_mage': '🔮',
+      'evolve_bear_tanker': '🛡️',
+      'evolve_fox_assassin': '🗡️',
+      'evolve_bird_scout': '🦅',
+      'evolve_turtle_healer': '💚',
+      'evolve_owl_wizard': '🌙',
     };
     return map[relicId] ?? '🔮';
   }

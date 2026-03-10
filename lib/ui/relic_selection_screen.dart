@@ -19,35 +19,53 @@ class _RelicInfo {
 
 /// Maps relicId → display data.
 const Map<String, _RelicInfo> _relicDatabase = {
-  // Evolution relics (epic rarity)
-  'evolve_knight': _RelicInfo(
-    name: '기사 진화석',
-    icon: '🗡️',
-    description: '전사 유닛을 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_archer': _RelicInfo(
+  // Evolution relics (epic rarity, one per unit type)
+  'evolve_cat_archer': _RelicInfo(
     name: '궁수 진화석',
     icon: '🏹',
-    description: '궁수 유닛을 진화시킵니다',
+    description: '고양이 궁수를 진화시킵니다',
     rarity: 'epic',
   ),
-  'evolve_mage': _RelicInfo(
+  'evolve_dog_warrior': _RelicInfo(
+    name: '기사 진화석',
+    icon: '🗡️',
+    description: '강아지 전사를 진화시킵니다',
+    rarity: 'epic',
+  ),
+  'evolve_rabbit_mage': _RelicInfo(
     name: '마법사 진화석',
     icon: '🔮',
-    description: '마법사 유닛을 진화시킵니다',
+    description: '토끼 마법사를 진화시킵니다',
     rarity: 'epic',
   ),
-  'evolve_healer': _RelicInfo(
-    name: '힐러 진화석',
-    icon: '💚',
-    description: '힐러 유닛을 진화시킵니다',
+  'evolve_bear_tanker': _RelicInfo(
+    name: '수호자 진화석',
+    icon: '🛡️',
+    description: '곰 탱커를 진화시킵니다',
     rarity: 'epic',
   ),
-  'evolve_assassin': _RelicInfo(
+  'evolve_fox_assassin': _RelicInfo(
     name: '암살자 진화석',
     icon: '🗡️',
-    description: '암살자 유닛을 진화시킵니다',
+    description: '여우 암살자를 진화시킵니다',
+    rarity: 'epic',
+  ),
+  'evolve_bird_scout': _RelicInfo(
+    name: '정찰대 진화석',
+    icon: '🦅',
+    description: '새 정찰대를 진화시킵니다',
+    rarity: 'epic',
+  ),
+  'evolve_turtle_healer': _RelicInfo(
+    name: '힐러 진화석',
+    icon: '💚',
+    description: '거북이 힐러를 진화시킵니다',
+    rarity: 'epic',
+  ),
+  'evolve_owl_wizard': _RelicInfo(
+    name: '마도사 진화석',
+    icon: '🌙',
+    description: '부엉이 마도사를 진화시킵니다',
     rarity: 'epic',
   ),
   // Passive bonus relics
@@ -119,11 +137,11 @@ class RelicSelectionScreen extends StatefulWidget {
   final DefenseGame game;
   final List<String> relicChoices;
 
-  const RelicSelectionScreen({
+  RelicSelectionScreen({
     super.key,
     required this.game,
-    required this.relicChoices,
-  });
+    List<String>? relicChoices,
+  }) : relicChoices = relicChoices ?? game.relicChoices;
 
   @override
   State<RelicSelectionScreen> createState() => _RelicSelectionScreenState();

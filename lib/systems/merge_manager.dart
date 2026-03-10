@@ -53,8 +53,9 @@ class MergeManager {
   }
 
   /// Find all possible merges in the given slot list.
-  /// Returns a list of index triplets (each list has 3 slot indices).
-  static List<List<int>> findPossibleMerges(List<UnitSlot> slots) {
+  /// Returns a list of index groups (each with [mergeCount] slot indices).
+  /// Use mergeCount=2 for double merge relic.
+  static List<List<int>> findPossibleMerges(List<UnitSlot> slots, {int mergeCount = 3}) {
     final result = <List<int>>[];
     final groups = <String, List<int>>{};
 
@@ -68,11 +69,11 @@ class MergeManager {
       groups[key]!.add(i);
     }
 
+    final needed = mergeCount.clamp(2, 3);
     for (final entry in groups.entries) {
       final indices = entry.value;
-      // Extract all possible triplets from the group
-      for (int start = 0; start + 2 < indices.length; start += 3) {
-        result.add([indices[start], indices[start + 1], indices[start + 2]]);
+      for (int start = 0; start + needed - 1 < indices.length; start += needed) {
+        result.add(indices.sublist(start, start + needed));
       }
     }
 

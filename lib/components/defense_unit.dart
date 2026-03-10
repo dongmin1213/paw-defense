@@ -153,7 +153,7 @@ class DefenseUnit extends PositionComponent
 
     // Turtle healer: heal wall on each attack
     if (unitTypeId == 'turtle_healer' && !game.wall.isDestroyed) {
-      game.wall.heal(dmg * 0.5);
+      game.wall.heal(dmg * BalanceConfig.turtleHealerHealFraction);
     }
 
     if (isMelee) {
@@ -164,6 +164,13 @@ class DefenseUnit extends PositionComponent
         final dist = position.distanceTo(enemy.position);
         if (dist <= range) {
           enemy.takeDamage(dmg, sourcePosition: position);
+          // Bear tanker: slow enemies on hit
+          if (unitTypeId == 'bear_tanker') {
+            enemy.applySlow(
+              BalanceConfig.bearSlowIntensity,
+              BalanceConfig.bearSlowDuration,
+            );
+          }
         }
       }
     } else {
