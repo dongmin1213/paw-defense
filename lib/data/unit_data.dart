@@ -1,7 +1,16 @@
 /// Unit types for the castle defense game.
-/// 6 base units + 6 evolved forms.
+/// 8 base units + 8 evolved forms.
 
-enum UnitType { catArcher, dogWarrior, rabbitMage, bearTanker, foxAssassin, birdScout }
+enum UnitType {
+  catArcher,
+  dogWarrior,
+  rabbitMage,
+  bearTanker,
+  foxAssassin,
+  birdScout,
+  turtleHealer,
+  owlWizard,
+}
 
 class UnitData {
   final UnitType type;
@@ -124,6 +133,30 @@ class UnitDatabase {
       isPiercing: true,
       description: 'Piercing shots that pass through enemies. Can hit air.',
     ),
+    UnitData(
+      type: UnitType.turtleHealer,
+      id: 'turtleHealer',
+      name: 'Turtle Healer',
+      emoji: '🐢',
+      baseAtk: 5,
+      baseAtkSpeed: 0.4,
+      range: 60,
+      isMelee: true,
+      description: 'Slowly attacks but heals the wall with each hit.',
+    ),
+    UnitData(
+      type: UnitType.owlWizard,
+      id: 'owlWizard',
+      name: 'Owl Wizard',
+      emoji: '🦉',
+      baseAtk: 18,
+      baseAtkSpeed: 0.6,
+      range: 130,
+      isMelee: false,
+      isSplash: true,
+      canHitAir: true,
+      description: 'Long-range AoE mage that can target air units.',
+    ),
   ];
 
   static UnitData get(UnitType type) =>
@@ -177,6 +210,22 @@ class UnitDatabase {
       requiredRelicId: 'windFeather',
       atkMultiplier: 2.5,
       specialEffect: 'Wind gusts push enemies back and pierce all',
+    ),
+    EvolvedUnitData(
+      baseType: UnitType.turtleHealer,
+      id: 'ancientTurtle',
+      name: 'Ancient Turtle',
+      requiredRelicId: 'lifeShell',
+      atkMultiplier: 2.5,
+      specialEffect: 'AoE heal pulse that repairs wall and buffs nearby units',
+    ),
+    EvolvedUnitData(
+      baseType: UnitType.owlWizard,
+      id: 'cosmicOwl',
+      name: 'Cosmic Owl',
+      requiredRelicId: 'moonstone',
+      atkMultiplier: 3.0,
+      specialEffect: 'Meteor shower attack covering massive area',
     ),
   ];
 

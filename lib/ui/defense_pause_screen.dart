@@ -104,10 +104,10 @@ class _DefensePauseScreenState extends State<DefensePauseScreen>
                     icon: Icons.play_arrow,
                   ),
                   const SizedBox(height: 12),
-                  // Settings placeholder
+                  // Settings
                   GameTheme.pixelButton(
                     label: '설정',
-                    onTap: () {},
+                    onTap: () => widget.game.overlays.add('Settings'),
                     color: GameTheme.bgCard,
                     fontSize: 8,
                     verticalPad: 10,

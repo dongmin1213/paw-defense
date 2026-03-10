@@ -55,6 +55,8 @@ class UnitRenderer {
       case 'bear_tanker':   return const Color(0xFF795548);
       case 'fox_assassin':  return const Color(0xFFFF3D00);
       case 'bird_scout':    return const Color(0xFF2979FF);
+      case 'turtle_healer': return const Color(0xFF00C853);
+      case 'owl_wizard':    return const Color(0xFF651FFF);
       default:              return const Color(0xFFFFFFFF);
     }
   }
@@ -89,6 +91,8 @@ class UnitRenderer {
         case 'bear_tanker':   return _bearTankerEvolved(frame);
         case 'fox_assassin':  return _foxAssassinEvolved(frame);
         case 'bird_scout':    return _birdScoutEvolved(frame);
+        case 'turtle_healer': return _turtleHealerEvolved(frame);
+        case 'owl_wizard':    return _owlWizardEvolved(frame);
         default:              return _catArcher(frame);
       }
     }
@@ -99,6 +103,8 @@ class UnitRenderer {
       case 'bear_tanker':   return _bearTanker(frame);
       case 'fox_assassin':  return _foxAssassin(frame);
       case 'bird_scout':    return _birdScout(frame);
+      case 'turtle_healer': return _turtleHealer(frame);
+      case 'owl_wizard':    return _owlWizard(frame);
       default:              return _catArcher(frame);
     }
   }
@@ -540,6 +546,141 @@ class UnitRenderer {
       'E': const Color(0xFF1A1A1A),
       'o': const Color(0xFFFFEB3B),
       'c': const Color(0xFF90CAF9),
+    });
+  }
+  // ========== TURTLE HEALER ==========
+
+  static _SpriteData _turtleHealer(int frame) {
+    final sprites = frame == 0 ? [
+      '...TTTTTT...',
+      '..TTTTTTTT..',
+      '.TTSSSSSSTT.',
+      '.TSSSSSSST..',
+      '.TSSSSSSST..',
+      '.TTSSSSSSTT.',
+      '..TTTTTTTT..',
+      '..TT.TT.TT..',
+      '..TT....TT..',
+      '..TT....TT..',
+    ] : [
+      '...TTTTTT...',
+      '..TTTTTTTT..',
+      '.TTSSSSSSTT.',
+      '.TSSSSSSST..',
+      '.TSSSSSSST..',
+      '.TTSSSSSSTT.',
+      '..TTTTTTTT..',
+      '.TT..TT..TT.',
+      '.TT......TT.',
+      '.TT......TT.',
+    ];
+    return _SpriteData(sprites, {
+      'T': const Color(0xFF2E7D32),
+      'S': const Color(0xFF4CAF50),
+    });
+  }
+
+  static _SpriteData _turtleHealerEvolved(int frame) {
+    final sprites = frame == 0 ? [
+      'g..TTTTTT..g',
+      '..TTTTTTTT..',
+      '.TTSSSSSSTT.',
+      '.TSgSSSSgST.',
+      '.TSSSSSSST..',
+      '.TTSSSSSSTT.',
+      '..TTTTTTTT..',
+      '..TT.TT.TT..',
+      '..TT....TT..',
+      '..TT....TT..',
+    ] : [
+      'g..TTTTTT..g',
+      '..TTTTTTTT..',
+      '.TTSSSSSSTT.',
+      '.TSgSSSSgST.',
+      '.TSSSSSSST..',
+      '.TTSSSSSSTT.',
+      '..TTTTTTTT..',
+      '.TT..TT..TT.',
+      '.TT......TT.',
+      '.TT......TT.',
+    ];
+    return _SpriteData(sprites, {
+      'T': const Color(0xFF388E3C),
+      'S': const Color(0xFF66BB6A),
+      'g': const Color(0xFF00E676),
+    });
+  }
+
+  // ========== OWL WIZARD ==========
+
+  static _SpriteData _owlWizard(int frame) {
+    final sprites = frame == 0 ? [
+      '..OO....OO..',
+      '..OOOOOOOO..',
+      '.OO.YY.YOO..',
+      '.OOOOOOOOOO.',
+      '.OOO.bb.OOO.',
+      '..OOOOOOOO..',
+      '..OOOOOOOO..',
+      '.OO.OOOO.OO.',
+      'OO..OOOO..OO',
+      '....OOOO....',
+      '....OO.O....',
+      '...YY..YY...',
+    ] : [
+      '..OO....OO..',
+      '..OOOOOOOO..',
+      '.OO.YY.YOO..',
+      '.OOOOOOOOOO.',
+      '.OOO.bb.OOO.',
+      '..OOOOOOOO..',
+      '..OOOOOOOO..',
+      '....OOOO....',
+      '..OO.OO.OO..',
+      '.OO..OO..OO.',
+      '....OO.O....',
+      '...YY..YY...',
+    ];
+    return _SpriteData(sprites, {
+      'O': const Color(0xFF795548),
+      'Y': const Color(0xFFFFEB3B),
+      'b': const Color(0xFFFF8F00),
+    });
+  }
+
+  static _SpriteData _owlWizardEvolved(int frame) {
+    final sprites = frame == 0 ? [
+      'p.OO....OO.p',
+      '..OOOOOOOO..',
+      '.OO.YY.YOO..',
+      '.OOOOOOOOOO.',
+      '.OOO.bb.OOO.',
+      '..OOOOOOOO..',
+      '..OOOOOOOOp.',
+      '.OO.OOOO.OO.',
+      'OO..OOOO..OO',
+      '....OOOO....',
+      '....OO.O....',
+      '...YY..YY...',
+    ] : [
+      'p.OO....OO.p',
+      '..OOOOOOOO..',
+      '.OO.YY.YOO..',
+      '.OOOOOOOOOO.',
+      '.OOO.bb.OOO.',
+      '..OOOOOOOO..',
+      '..OOOOOOOOp.',
+      '....OOOO....',
+      '..OO.OO.OO..',
+      '.OO..OO..OO.',
+      '....OO.O....',
+      '...YY..YY...',
+    ];
+    return _SpriteData(sprites, {
+      'O': const Color(0xFF6D4C41),
+      'Y': const Color(0xFFFFEB3B),
+      'b': const Color(0xFFFF8F00),
+      'p': const Color(0xFFCE93D8),
     });
   }
 }

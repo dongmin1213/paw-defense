@@ -42,6 +42,8 @@ class DefenseUnit extends PositionComponent
     'bear_tanker': UnitType.bearTanker,
     'fox_assassin': UnitType.foxAssassin,
     'bird_scout': UnitType.birdScout,
+    'turtle_healer': UnitType.turtleHealer,
+    'owl_wizard': UnitType.owlWizard,
   };
 
   DefenseUnit({
@@ -147,6 +149,11 @@ class DefenseUnit extends PositionComponent
         game.relicManager.critChanceBonus;
     if (critChance > 0 && _random.nextDouble() < critChance) {
       dmg *= BalanceConfig.foxCritMultiplier;
+    }
+
+    // Turtle healer: heal wall on each attack
+    if (unitTypeId == 'turtle_healer' && !game.wall.isDestroyed) {
+      game.wall.heal(dmg * 0.5);
     }
 
     if (isMelee) {

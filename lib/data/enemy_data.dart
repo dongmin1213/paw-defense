@@ -100,6 +100,36 @@ class DefenseEnemyDatabase {
       goldDrop: 6,
       unlockWave: 20,
     ),
+    DefenseEnemyData(
+      id: 'skeleton',
+      name: '스켈레톤',
+      baseHp: 30,
+      baseSpeed: 55,
+      baseDamage: 6,
+      baseAtkSpeed: 1.3,
+      goldDrop: 5,
+      unlockWave: 6,
+    ),
+    DefenseEnemyData(
+      id: 'mushroom',
+      name: '독버섯',
+      baseHp: 25,
+      baseSpeed: 35,
+      baseDamage: 8,
+      baseAtkSpeed: 0.7,
+      goldDrop: 7,
+      unlockWave: 12,
+    ),
+    DefenseEnemyData(
+      id: 'golem',
+      name: '골렘',
+      baseHp: 150,
+      baseSpeed: 18,
+      baseDamage: 12,
+      baseAtkSpeed: 0.4,
+      goldDrop: 15,
+      unlockWave: 22,
+    ),
   ];
 
   /// Lookup enemy data by ID. Returns null if not found.

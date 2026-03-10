@@ -260,7 +260,14 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           },
           child: GameTheme.pixelButton(
             label: '게임 시작',
-            onTap: () => widget.game.startGame(),
+            onTap: () {
+              if (widget.game.totalRuns <= 1) {
+                widget.game.overlays.remove('DefenseMainMenu');
+                widget.game.overlays.add('Tutorial');
+              } else {
+                widget.game.startGame();
+              }
+            },
             gradient: GameTheme.gradientPrimary,
             fontSize: 12,
             verticalPad: 16,
@@ -283,7 +290,7 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
         // Settings button
         GameTheme.pixelButton(
           label: '설정',
-          onTap: () {},
+          onTap: () => widget.game.overlays.add('Settings'),
           color: GameTheme.bgPanel,
           fontSize: 8,
           verticalPad: 8,

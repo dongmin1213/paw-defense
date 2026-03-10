@@ -90,6 +90,8 @@ class _DefenseHudState extends State<DefenseHud>
             if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
             // Wave progress indicator
             if (widget.game.waveManager.waveActive) _buildWaveProgress(),
+            // Wave clear banner
+            if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
             const Spacer(),
             _buildBottomPanel(),
           ],
@@ -297,6 +299,29 @@ class _DefenseHudState extends State<DefenseHud>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWaveClearBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: GameTheme.pixelPanelDecoration(
+          fillColor: GameTheme.accentGreen.withValues(alpha: 0.15),
+          glow: true,
+          glowColor: GameTheme.accentGreen,
+        ),
+        child: Text(
+          'WAVE ${widget.game.waveClearNumber} CLEAR!',
+          style: GameTheme.pixel(
+            fontSize: 12,
+            color: GameTheme.accentGreen,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2,
+          ),
+        ),
       ),
     );
   }

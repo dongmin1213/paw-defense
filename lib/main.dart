@@ -10,6 +10,8 @@ import 'ui/star_shop_screen.dart';
 import 'ui/run_result_screen.dart';
 import 'ui/defense_pause_screen.dart';
 import 'ui/relic_selection_screen.dart';
+import 'ui/tutorial_screen.dart';
+import 'ui/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,6 +110,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               DefensePauseScreen(game: game as DefenseGame),
           'RelicSelection': (context, game) =>
               RelicSelectionScreen(game: game as DefenseGame),
+          'Tutorial': (context, game) =>
+              TutorialScreen(game: game as DefenseGame),
+          'Settings': (context, game) =>
+              SettingsScreen(game: game as DefenseGame),
         },
       ),
     );

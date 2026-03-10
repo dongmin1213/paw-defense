@@ -45,6 +45,9 @@ class DefenseEnemyRenderer {
       case 'bomber':        return _bomber(frame);
       case 'healer':        return _healer(frame);
       case 'boss_golem':    return _bossGolem(frame);
+      case 'skeleton':      return _skeleton(frame);
+      case 'mushroom':      return _mushroom(frame);
+      case 'golem':         return _golem(frame);
       default:              return _slime(frame);
     }
   }
@@ -332,6 +335,110 @@ class DefenseEnemyRenderer {
       'G': const Color(0xFF9E9E9E),
       'E': const Color(0xFFFF5722),
       'g': const Color(0xFF5D4037),
+    });
+  }
+
+  // ========== SKELETON ==========
+
+  static _SpriteData _skeleton(int frame) {
+    final sprites = frame == 0 ? [
+      '...WWWWWW...',
+      '..WWWWWWWW..',
+      '..WW.BB.WW..',
+      '..WWWWWWWW..',
+      '..WW.WW.WW..',
+      '...WWWWWW...',
+      '..WWWWWWWW..',
+      '..WW.WW.WW..',
+      '..WWWWWWWW..',
+      '...WW..WW...',
+      '...WW..WW...',
+    ] : [
+      '...WWWWWW...',
+      '..WWWWWWWW..',
+      '..WW.BB.WW..',
+      '..WWWWWWWW..',
+      '..WW.WW.WW..',
+      '...WWWWWW...',
+      '..WWWWWWWW..',
+      '..WW.WW.WW..',
+      '..WWWWWWWW..',
+      '..WW....WW..',
+      '..WW....WW..',
+    ];
+    return _SpriteData(sprites, {
+      'W': const Color(0xFFEEEEEE),
+      'B': const Color(0xFF1A1A1A),
+    });
+  }
+
+  // ========== MUSHROOM ==========
+
+  static _SpriteData _mushroom(int frame) {
+    final sprites = frame == 0 ? [
+      '...RRRRRR...',
+      '..RRRRRRRR..',
+      '.RRRWRRWRRR.',
+      '.RRRRRRRRRR.',
+      '..RRRRRRRR..',
+      '....SSSS....',
+      '...SSSSSS...',
+      '...SSSSSS...',
+      '....SSSS....',
+      '...SSSSSS...',
+    ] : [
+      '..RRRRRRRR..',
+      '.RRRRRRRRRR.',
+      '.RRRWRRWRRR.',
+      '.RRRRRRRRRR.',
+      '..RRRRRRRR..',
+      '...RRRRRR...',
+      '....SSSS....',
+      '...SSSSSS...',
+      '...SSSSSS...',
+      '..SSSSSSSS..',
+    ];
+    return _SpriteData(sprites, {
+      'R': const Color(0xFFE91E63),
+      'W': const Color(0xFFFFFFFF),
+      'S': const Color(0xFFBCAAA4),
+    });
+  }
+
+  // ========== GOLEM ==========
+
+  static _SpriteData _golem(int frame) {
+    final sprites = frame == 0 ? [
+      '....GGGGGG....',
+      '...GGGGGGGG...',
+      '..GGGGGGGGGG..',
+      '..GG.EE.EGGG..',
+      '..GGGGGGGGGG..',
+      '..GGGGggGGGG..',
+      '...GGGGGGGG...',
+      '..GGGGGGGGGG..',
+      '.GGGGGGGGGGGG.',
+      '.GGGGGGGGGGGG.',
+      '..GGG....GGG..',
+      '..GGG....GGG..',
+    ] : [
+      '....GGGGGG....',
+      '...GGGGGGGG...',
+      '..GGGGGGGGGG..',
+      '..GG.EE.EGGG..',
+      '..GGGGGGGGGG..',
+      '..GGGGggGGGG..',
+      '...GGGGGGGG...',
+      '..GGGGGGGGGG..',
+      '.GGGGGGGGGGGG.',
+      '.GGGGGGGGGGGG.',
+      '.GGG......GGG.',
+      '.GGG......GGG.',
+    ];
+    return _SpriteData(sprites, {
+      'G': const Color(0xFF78909C),
+      'E': const Color(0xFFFF5722),
+      'g': const Color(0xFF546E7A),
     });
   }
 }

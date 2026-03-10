@@ -16,6 +16,7 @@ import '../systems/relic_manager.dart';
 import '../systems/defense_game_feel.dart';
 import '../systems/defense_upgrade_manager.dart';
 import '../systems/defense_save_manager.dart';
+import '../systems/sound_manager.dart';
 import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
@@ -37,6 +38,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DefenseGameFeel gameFeel;
   late DefenseUpgradeManager upgradeManager;
   late DefenseSaveManager saveManager;
+  late SoundManager soundManager;
 
   // ── Core Components ──
   late Wall wall;
@@ -73,24 +75,25 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ── Slot config ──
   int get maxSlots => 8 + upgradeManager.getLevel(DefenseUpgradeId.slotExpansion);
 
-  // ── Unit icon mapping ──
-  static const Map<String, String> _unitIcons = {
-    'cat_archer': '🐱',
-    'dog_warrior': '🐶',
-    'rabbit_mage': '🐰',
-    'bear_tanker': '🐻',
-    'fox_assassin': '🦊',
-    'bird_scout': '🐦',
+  // ── Unit type mapping (derived from UnitDatabase) ──
+  /// snake_case unit type IDs derived from UnitDatabase.
+  static final List<String> _unitTypeIds = UnitDatabase.all
+      .map((u) => _toSnakeCase(u.id))
+      .toList();
+
+  /// Unit emoji icons derived from UnitDatabase.
+  static final Map<String, String> _unitIcons = {
+    for (final u in UnitDatabase.all) _toSnakeCase(u.id): u.emoji,
   };
 
-  static const List<String> _unitTypeIds = [
-    'cat_archer',
-    'dog_warrior',
-    'rabbit_mage',
-    'bear_tanker',
-    'fox_assassin',
-    'bird_scout',
-  ];
+  /// Convert camelCase to snake_case.
+  static String _toSnakeCase(String s) =>
+      s.replaceAllMapped(RegExp(r'[A-Z]'), (m) => '_${m[0]!.toLowerCase()}');
+
+  // ── Wave clear announcement ──
+  bool showWaveClearBanner = false;
+  int waveClearNumber = 0;
+  double _waveClearTimer = 0;
 
   final Random _rng = Random();
 
@@ -133,7 +136,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Initialize managers
     upgradeManager = DefenseUpgradeManager();
     saveManager = DefenseSaveManager();
+    soundManager = SoundManager();
     await saveManager.init();
+    await soundManager.load();
 
     // Load persistent data
     saveManager.loadUpgrades(upgradeManager);
@@ -333,6 +338,22 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     if (regen > 0 && wall.currentHp < wall.maxHp && !wall.isDestroyed) {
       wall.heal(regen * effectiveDt);
     }
+
+    // Wave clear banner timer
+    if (showWaveClearBanner) {
+      _waveClearTimer -= effectiveDt;
+      if (_waveClearTimer <= 0) {
+        showWaveClearBanner = false;
+      }
+    }
+  }
+
+  /// Called by WaveManager when a wave is cleared.
+  void onWaveClear(int waveNumber) {
+    showWaveClearBanner = true;
+    waveClearNumber = waveNumber;
+    _waveClearTimer = 2.0;
+    soundManager.playWaveClear();
   }
 
   // ══════════════════════════════════════

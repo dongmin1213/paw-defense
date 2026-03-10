@@ -229,6 +229,9 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
       consecutivePerfects = 0;
     }
 
+    // Wave clear announcement
+    game.onWaveClear(currentWave);
+
     // Update highest wave record
     if (currentWave > game.highestWave) {
       game.highestWave = currentWave;
