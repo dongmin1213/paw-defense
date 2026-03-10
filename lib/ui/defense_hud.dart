@@ -10,8 +10,7 @@ import '../systems/merge_manager.dart' as merge;
 import '../systems/skill_manager.dart';
 import '../systems/synergy_manager.dart';
 
-/// In-game HUD for the castle defense game.
-/// Shows wave info, gold, wall HP, and unit shop area.
+/// In-game HUD — professional layout with clear visual hierarchy.
 class DefenseHud extends StatefulWidget {
   final DefenseGame game;
   const DefenseHud({super.key, required this.game});
@@ -29,13 +28,12 @@ class _DefenseHudState extends State<DefenseHud>
   bool _isGoldAnimating = false;
   int? _selectedSlotIndex;
   bool _sellMode = false;
-  int? _unitInfoSlot; // For unit info popup on tap
+  int? _unitInfoSlot;
   String? _achievementText;
   double _achievementTimer = 0;
   Color? _tierFlashColor;
   double _tierFlashTimer = 0;
 
-  // Wave modifier banner state
   String? _modifierText;
   String? _modifierIcon;
   double _modifierTimer = 0;
@@ -53,7 +51,6 @@ class _DefenseHudState extends State<DefenseHud>
     );
     _goldRollController.addListener(_onGoldRoll);
 
-    // Periodic refresh at 10 fps for HUD updates
     _refreshTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (mounted) {
         final currentGold = widget.game.gold;
@@ -62,12 +59,9 @@ class _DefenseHudState extends State<DefenseHud>
           _isGoldAnimating = true;
           _goldRollController.forward(from: 0.0);
         }
-        // Achievement notification polling
         if (_achievementText != null) {
           _achievementTimer -= 0.1;
-          if (_achievementTimer <= 0) {
-            _achievementText = null;
-          }
+          if (_achievementTimer <= 0) _achievementText = null;
         } else {
           final notif = widget.game.popAchievementNotification();
           if (notif != null) {
@@ -75,7 +69,6 @@ class _DefenseHudState extends State<DefenseHud>
             _achievementTimer = 2.5;
           }
         }
-        // Combo tier-up flash
         if (_tierFlashTimer > 0) {
           _tierFlashTimer -= 0.1;
           if (_tierFlashTimer <= 0) _tierFlashColor = null;
@@ -84,7 +77,6 @@ class _DefenseHudState extends State<DefenseHud>
           _tierFlashColor = Color(widget.game.comboManager.currentTier.color);
           _tierFlashTimer = 0.5;
         }
-        // Wave modifier banner polling
         final currentMod = widget.game.waveManager.waveModifier.currentModifier;
         if (currentMod != null && currentMod.id != _lastModifierId) {
           _lastModifierId = currentMod.id;
@@ -99,10 +91,7 @@ class _DefenseHudState extends State<DefenseHud>
             _modifierIcon = null;
           }
         }
-        // Reset modifier tracking when modifier clears
-        if (currentMod == null) {
-          _lastModifierId = null;
-        }
+        if (currentMod == null) _lastModifierId = null;
         setState(() {});
       }
     });
@@ -141,51 +130,41 @@ class _DefenseHudState extends State<DefenseHud>
       color: Colors.transparent,
       child: Stack(
         children: [
-          // Combo tier-up flash overlay
+          // Combo tier flash
           if (_tierFlashColor != null)
             Positioned.fill(
               child: IgnorePointer(
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 200),
-                  opacity: (_tierFlashTimer / 0.5).clamp(0.0, 0.15),
+                  opacity: (_tierFlashTimer / 0.5).clamp(0.0, 0.12),
                   child: Container(color: _tierFlashColor),
                 ),
               ),
             ),
           SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(),
-            const SizedBox(height: 4),
-            _buildWallHpBar(),
-            // Relic display
-            if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
-            // Wave progress indicator
-            if (widget.game.waveManager.waveActive) _buildWaveProgress(),
-            // Wave modifier banner
-            if (_modifierText != null) _buildModifierBanner(),
-            // Combo counter (only if combo system unlocked)
-            if (widget.game.comboManager.isActive &&
-                widget.game.isSystemUnlocked(DefenseGame.unlockCombo))
-              _buildComboCounter(),
-            // Wave clear banner
-            if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
-            // Achievement notification banner
-            if (_achievementText != null) _buildAchievementBanner(),
-            // Between-wave: wave preview + rush button
-            if (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
-              _buildWaveRushPanel(),
-            // Heal cooldown indicator
-            if (widget.game.healCooldown > 0) _buildHealCooldown(),
-            // Synergy display (compact, info-only)
-            if (widget.game.synergyManager.hasAnySynergy) _buildSynergyBar(),
-            const Spacer(),
-            // Skill gauge above bottom panel for thumb reach
-            _buildSkillGauge(),
-            _buildBottomPanel(),
-          ],
-        ),
-      ),
+            child: Column(
+              children: [
+                _buildTopBar(),
+                const SizedBox(height: 2),
+                _buildWallHpBar(),
+                if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
+                if (widget.game.waveManager.waveActive) _buildWaveProgress(),
+                if (_modifierText != null) _buildModifierBanner(),
+                if (widget.game.comboManager.isActive &&
+                    widget.game.isSystemUnlocked(DefenseGame.unlockCombo))
+                  _buildComboCounter(),
+                if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
+                if (_achievementText != null) _buildAchievementBanner(),
+                if (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
+                  _buildWaveRushPanel(),
+                if (widget.game.healCooldown > 0) _buildHealCooldown(),
+                if (widget.game.synergyManager.hasAnySynergy) _buildSynergyBar(),
+                const Spacer(),
+                _buildSkillGauge(),
+                _buildBottomPanel(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -194,23 +173,39 @@ class _DefenseHudState extends State<DefenseHud>
   Widget _buildTopBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: GameTheme.pixelPanelDecoration(
-        fillColor: GameTheme.bgDeep.withValues(alpha: 0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(GameTheme.radiusMd),
+        border: Border.all(
+          color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            offset: const Offset(0, 2),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Wave number
+          // Wave badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: GameTheme.pixelCardDecoration(
-              fillColor: GameTheme.bgCard,
-              borderColor: GameTheme.accent.withValues(alpha: 0.4),
+            decoration: BoxDecoration(
+              color: GameTheme.accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+              border: Border.all(
+                color: GameTheme.accent.withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.waves, color: GameTheme.accent, size: 14),
+                const Icon(Icons.waves, color: GameTheme.accent, size: 12),
                 const SizedBox(width: 4),
                 Text(
                   'W${widget.game.currentWave}',
@@ -227,14 +222,11 @@ class _DefenseHudState extends State<DefenseHud>
           // Kill count
           Text(
             '${widget.game.runKills}',
-            style: GameTheme.pixel(
-              fontSize: 7,
-              color: GameTheme.accentRed,
-            ),
+            style: GameTheme.pixel(fontSize: 7, color: GameTheme.accentRed),
           ),
           const Icon(Icons.dangerous, color: GameTheme.accentRed, size: 10),
           const Spacer(),
-          // Gold display with rolling animation
+          // Gold
           AnimatedBuilder(
             animation: _goldRollController,
             builder: (context, _) {
@@ -245,61 +237,71 @@ class _DefenseHudState extends State<DefenseHud>
             },
           ),
           const Spacer(),
-          // Speed toggle button
-          GestureDetector(
+          // Speed toggle
+          _buildHudIconButton(
+            icon: widget.game.gameSpeed >= 2.0 ? Icons.fast_forward : Icons.play_arrow,
+            label: widget.game.gameSpeed >= 2.0 ? '2x' : '1x',
+            isActive: widget.game.gameSpeed >= 2.0,
+            activeColor: GameTheme.accentGold,
             onTap: () {
               widget.game.toggleGameSpeed();
               setState(() {});
             },
-            child: Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.only(right: 6),
-              decoration: GameTheme.pixelCardDecoration(
-                fillColor: widget.game.gameSpeed >= 2.0
-                    ? GameTheme.accentGold.withValues(alpha: 0.2)
-                    : GameTheme.bgCard,
-                borderColor: widget.game.gameSpeed >= 2.0
-                    ? GameTheme.accentGold
-                    : GameTheme.textMuted.withValues(alpha: 0.5),
-                glow: widget.game.gameSpeed >= 2.0,
-                glowColor: GameTheme.accentGold,
-              ),
-              child: Center(
-                child: Text(
-                  widget.game.gameSpeed >= 2.0 ? '2x' : '1x',
-                  style: GameTheme.pixel(
-                    fontSize: 10,
-                    color: widget.game.gameSpeed >= 2.0
-                        ? GameTheme.accentGold
-                        : GameTheme.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
           ),
-          // Pause button
-          GestureDetector(
+          const SizedBox(width: 6),
+          // Pause
+          _buildHudIconButton(
+            icon: Icons.pause,
             onTap: () {
               widget.game.pauseGame();
               widget.game.overlays.add('Pause');
             },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: GameTheme.pixelCardDecoration(
-                fillColor: GameTheme.bgCard,
-                borderColor: GameTheme.textMuted.withValues(alpha: 0.5),
-              ),
-              child: const Icon(
-                Icons.pause,
-                color: GameTheme.textSecondary,
-                size: 20,
-              ),
-            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHudIconButton({
+    required IconData icon,
+    String? label,
+    bool isActive = false,
+    Color? activeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: isActive
+              ? (activeColor ?? GameTheme.accent).withValues(alpha: 0.12)
+              : GameTheme.bgCard.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+          border: Border.all(
+            color: isActive
+                ? (activeColor ?? GameTheme.accent).withValues(alpha: 0.4)
+                : GameTheme.pixelBorder.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: label != null
+              ? Text(
+                  label,
+                  style: GameTheme.pixel(
+                    fontSize: 8,
+                    color: isActive ? activeColor ?? GameTheme.accent : GameTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              : Icon(
+                  icon,
+                  color: GameTheme.textSecondary,
+                  size: 18,
+                ),
+        ),
       ),
     );
   }
@@ -317,12 +319,11 @@ class _DefenseHudState extends State<DefenseHud>
         children: [
           Row(
             children: [
-              Icon(Icons.shield, color: hpColor, size: 12),
+              Icon(Icons.shield, color: hpColor, size: 11),
               const SizedBox(width: 4),
               Text(
                 '성벽',
-                style: GameTheme.pixel(
-                    fontSize: 6, color: GameTheme.textSecondary),
+                style: GameTheme.pixel(fontSize: 6, color: GameTheme.textSecondary),
               ),
               const Spacer(),
               Text(
@@ -334,7 +335,7 @@ class _DefenseHudState extends State<DefenseHud>
           const SizedBox(height: 2),
           GameTheme.pixelProgressBar(
             value: hpPercent,
-            height: 12,
+            height: 10,
             fillColor: hpColor,
           ),
         ],
@@ -345,25 +346,26 @@ class _DefenseHudState extends State<DefenseHud>
   Widget _buildRelicBar() {
     final relics = widget.game.relicManager.ownedRelics;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Row(
         children: [
-          Text(
-            '유물',
-            style: GameTheme.pixel(
-                fontSize: 6, color: GameTheme.textMuted),
-          ),
+          Text('유물', style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted)),
           const SizedBox(width: 6),
           ...relics.map((id) {
             final emoji = _relicEmoji(id);
             return Padding(
-              padding: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.only(right: 3),
               child: Container(
                 padding: const EdgeInsets.all(3),
-                decoration: GameTheme.pixelCardDecoration(
-                  fillColor: GameTheme.bgCard,
+                decoration: BoxDecoration(
+                  color: GameTheme.bgCard.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
-                child: Text(emoji, style: const TextStyle(fontSize: 12)),
+                child: Text(emoji, style: const TextStyle(fontSize: 11)),
               ),
             );
           }),
@@ -383,29 +385,22 @@ class _DefenseHudState extends State<DefenseHud>
         ? 1.0 - (wm.enemiesRemaining / wm.totalEnemiesInWave)
         : 0.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Row(
         children: [
-          Text(
-            '적',
-            style: GameTheme.pixel(
-                fontSize: 6, color: GameTheme.textMuted),
-          ),
+          Text('적', style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted)),
           const SizedBox(width: 6),
           Expanded(
             child: GameTheme.pixelProgressBar(
               value: progress,
-              height: 6,
+              height: 5,
               fillColor: GameTheme.accentRed,
             ),
           ),
           const SizedBox(width: 6),
           Text(
             '${wm.enemiesRemaining}',
-            style: GameTheme.pixel(
-              fontSize: 6,
-              color: GameTheme.accentRed,
-            ),
+            style: GameTheme.pixel(fontSize: 6, color: GameTheme.accentRed),
           ),
         ],
       ),
@@ -414,13 +409,19 @@ class _DefenseHudState extends State<DefenseHud>
 
   Widget _buildWaveClearBanner() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: GameTheme.pixelPanelDecoration(
-          fillColor: GameTheme.accentGreen.withValues(alpha: 0.15),
-          glow: true,
-          glowColor: GameTheme.accentGreen,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        decoration: BoxDecoration(
+          color: GameTheme.accentGreen.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+          border: Border.all(color: GameTheme.accentGreen.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: GameTheme.accentGreen.withValues(alpha: 0.15),
+              blurRadius: 12,
+            ),
+          ],
         ),
         child: Text(
           'WAVE ${widget.game.waveClearNumber} CLEAR!',
@@ -440,18 +441,24 @@ class _DefenseHudState extends State<DefenseHud>
       duration: const Duration(milliseconds: 300),
       opacity: _achievementTimer > 0.3 ? 1.0 : _achievementTimer / 0.3,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 3),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: GameTheme.pixelPanelDecoration(
-            fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
-            glow: true,
-            glowColor: GameTheme.accentGold,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: GameTheme.accentGold.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+            border: Border.all(color: GameTheme.accentGold.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: GameTheme.accentGold.withValues(alpha: 0.15),
+                blurRadius: 10,
+              ),
+            ],
           ),
           child: Text(
             _achievementText ?? '',
             style: GameTheme.pixel(
-              fontSize: 9,
+              fontSize: 8,
               color: GameTheme.accentGold,
               fontWeight: FontWeight.w700,
             ),
@@ -467,28 +474,25 @@ class _DefenseHudState extends State<DefenseHud>
       duration: const Duration(milliseconds: 300),
       opacity: opacity,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: GameTheme.pixelPanelDecoration(
-            fillColor: GameTheme.accentPurple.withValues(alpha: 0.15),
-            glow: true,
-            glowColor: GameTheme.accentPurple,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: GameTheme.accentPurple.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+            border: Border.all(color: GameTheme.accentPurple.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                _modifierIcon ?? '',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(width: 8),
+              Text(_modifierIcon ?? '', style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   _modifierText ?? '',
                   style: GameTheme.pixel(
-                    fontSize: 8,
+                    fontSize: 7,
                     color: GameTheme.accentPurple,
                     fontWeight: FontWeight.w700,
                   ),
@@ -511,7 +515,7 @@ class _DefenseHudState extends State<DefenseHud>
     final isBigTier = tier.index >= ComboTier.amazing.index;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -558,11 +562,17 @@ class _DefenseHudState extends State<DefenseHud>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: GameTheme.pixelPanelDecoration(
-          fillColor: GameTheme.accent.withValues(alpha: 0.1),
-          glow: true,
-          glowColor: GameTheme.accent,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: GameTheme.accent.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(GameTheme.radiusMd),
+          border: Border.all(color: GameTheme.accent.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: GameTheme.accent.withValues(alpha: 0.08),
+              blurRadius: 10,
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -580,16 +590,15 @@ class _DefenseHudState extends State<DefenseHud>
               enemyNames,
               style: GameTheme.pixel(fontSize: 5, color: GameTheme.textSecondary),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             GestureDetector(
               onTap: () => widget.game.rushWave(),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: GameTheme.pixelCardDecoration(
-                  fillColor: GameTheme.accentGreen.withValues(alpha: 0.2),
-                  borderColor: GameTheme.accentGreen,
-                  glow: true,
-                  glowColor: GameTheme.accentGreen,
+                decoration: BoxDecoration(
+                  color: GameTheme.accentGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(color: GameTheme.accentGreen.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -645,12 +654,23 @@ class _DefenseHudState extends State<DefenseHud>
     final isHybridUnit = hybrid != null;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       padding: const EdgeInsets.all(10),
-      decoration: GameTheme.pixelPanelDecoration(
-        fillColor: GameTheme.bgDeep.withValues(alpha: 0.95),
-        glow: true,
-        glowColor: isHybridUnit ? GameTheme.accentPurple : GameTheme.accent,
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(GameTheme.radiusMd),
+        border: Border.all(
+          color: (isHybridUnit ? GameTheme.accentPurple : GameTheme.accent)
+              .withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isHybridUnit ? GameTheme.accentPurple : GameTheme.accent)
+                .withValues(alpha: 0.15),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -737,7 +757,7 @@ class _DefenseHudState extends State<DefenseHud>
             : GameTheme.accent;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: GestureDetector(
         onTap: isReady
             ? () {
@@ -746,14 +766,19 @@ class _DefenseHudState extends State<DefenseHud>
               }
             : null,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: GameTheme.pixelCardDecoration(
-            fillColor: isReady
-                ? GameTheme.accentGold.withValues(alpha: 0.15)
-                : GameTheme.bgCard,
-            borderColor: barColor.withValues(alpha: 0.6),
-            glow: isReady,
-            glowColor: GameTheme.accentGold,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: isReady
+                ? GameTheme.accentGold.withValues(alpha: 0.08)
+                : GameTheme.bgCard.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+            border: Border.all(
+              color: barColor.withValues(alpha: 0.3),
+              width: 1,
+            ),
+            boxShadow: isReady
+                ? [BoxShadow(color: GameTheme.accentGold.withValues(alpha: 0.15), blurRadius: 8)]
+                : null,
           ),
           child: Row(
             children: [
@@ -775,7 +800,7 @@ class _DefenseHudState extends State<DefenseHud>
                     const SizedBox(height: 2),
                     GameTheme.pixelProgressBar(
                       value: hasEffect ? (sm.effectTimer / 5.0).clamp(0.0, 1.0) : sm.chargePercent,
-                      height: 6,
+                      height: 5,
                       fillColor: barColor,
                     ),
                   ],
@@ -806,18 +831,16 @@ class _DefenseHudState extends State<DefenseHud>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: GameTheme.pixelCardDecoration(
-          fillColor: GameTheme.accentPurple.withValues(alpha: 0.1),
-          borderColor: GameTheme.accentPurple.withValues(alpha: 0.4),
+        decoration: BoxDecoration(
+          color: GameTheme.accentPurple.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+          border: Border.all(color: GameTheme.accentPurple.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Text(
               '시너지',
-              style: GameTheme.pixel(
-                fontSize: 5,
-                color: GameTheme.accentPurple,
-              ),
+              style: GameTheme.pixel(fontSize: 5, color: GameTheme.accentPurple),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -831,15 +854,13 @@ class _DefenseHudState extends State<DefenseHud>
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: tierColor.withValues(alpha: 0.15),
-                      border: Border.all(color: tierColor.withValues(alpha: 0.5)),
+                      color: tierColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: tierColor.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       '${s.bonus.icon} ${s.bonus.name}',
-                      style: GameTheme.pixel(
-                        fontSize: 5,
-                        color: tierColor,
-                      ),
+                      style: GameTheme.pixel(fontSize: 5, color: tierColor),
                     ),
                   );
                 }).toList(),
@@ -859,58 +880,71 @@ class _DefenseHudState extends State<DefenseHud>
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
       padding: const EdgeInsets.all(8),
-      decoration: GameTheme.pixelPanelDecoration(
-        fillColor: GameTheme.bgDeep.withValues(alpha: 0.9),
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(GameTheme.radiusMd),
+        border: Border.all(
+          color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            offset: const Offset(0, -2),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Sell mode indicator
           if (_sellMode)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '판매할 유닛을 선택하세요',
-                style: GameTheme.pixel(
-                  fontSize: 7,
-                  color: GameTheme.accentRed,
-                  fontWeight: FontWeight.w700,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: GameTheme.accentRed.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '판매할 유닛을 선택하세요',
+                  style: GameTheme.pixel(
+                    fontSize: 7,
+                    color: GameTheme.accentRed,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          // Owned units display row (units first, more prominent)
+          // Unit slots row
           SizedBox(
-            height: 50,
+            height: 52,
             child: widget.game.unitSlots.isEmpty
                 ? Center(
                     child: Text(
                       '유닛을 뽑아 배치하세요',
-                      style: GameTheme.pixel(
-                        fontSize: 7,
-                        color: GameTheme.textMuted,
-                      ),
+                      style: GameTheme.pixel(fontSize: 7, color: GameTheme.textMuted),
                     ),
                   )
                 : ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: widget.game.unitSlots.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    separatorBuilder: (_, __) => const SizedBox(width: 5),
                     itemBuilder: (context, index) {
                       final slot = widget.game.unitSlots[index];
                       return _buildUnitSlot(slot, index);
                     },
                   ),
           ),
-          // Unit info popup (shown above action buttons when a unit is tapped)
           if (_unitInfoSlot != null &&
               _unitInfoSlot! < widget.game.unitSlots.length &&
               widget.game.unitSlots[_unitInfoSlot!].isOccupied)
             _buildUnitInfoPopup(widget.game.unitSlots[_unitInfoSlot!], _unitInfoSlot!),
           const SizedBox(height: 6),
-          // Action buttons row - compact with costs integrated
+          // Action buttons — equal sizing
           Row(
             children: [
-              // Gacha / draw unit button with integrated cost
               Expanded(
                 flex: 3,
                 child: GameTheme.pixelButton(
@@ -924,29 +958,25 @@ class _DefenseHudState extends State<DefenseHud>
                   gradient: canBuy ? GameTheme.gradientPrimary : null,
                   fontSize: 8,
                   verticalPad: 10,
-                  horizontalPad: 6,
+                  horizontalPad: 4,
                   icon: Icons.add_circle_outline,
                   enabled: canBuy,
                 ),
               ),
-              const SizedBox(width: 6),
-              // Sell button (toggles sell mode)
+              const SizedBox(width: 5),
               Expanded(
                 flex: 2,
                 child: GameTheme.pixelButton(
                   label: _sellMode ? '취소' : '판매',
                   onTap: () => setState(() => _sellMode = !_sellMode),
-                  color: _sellMode
-                      ? GameTheme.accentOrange
-                      : GameTheme.accentRed,
+                  color: _sellMode ? GameTheme.accentOrange : GameTheme.accentRed.withValues(alpha: 0.7),
                   fontSize: 8,
                   verticalPad: 10,
-                  horizontalPad: 6,
+                  horizontalPad: 4,
                   icon: _sellMode ? Icons.close : Icons.sell,
                 ),
               ),
-              const SizedBox(width: 6),
-              // Reroll button with integrated cost
+              const SizedBox(width: 5),
               Expanded(
                 flex: 2,
                 child: GameTheme.pixelButton(
@@ -957,20 +987,30 @@ class _DefenseHudState extends State<DefenseHud>
                           setState(() => _sellMode = false);
                         }
                       : null,
-                  color: GameTheme.accentPurple,
+                  color: GameTheme.accentPurple.withValues(alpha: 0.7),
                   fontSize: 8,
                   verticalPad: 10,
-                  horizontalPad: 6,
+                  horizontalPad: 4,
                   icon: Icons.refresh,
                   enabled: canReroll,
                 ),
               ),
-              const SizedBox(width: 6),
-              // Slot count indicator
-              GameTheme.pixelChip(
-                value: '${widget.game.unitSlots.where((s) => s.isOccupied).length}/${widget.game.unitSlots.length}',
-                color: GameTheme.accentGold,
-                fontSize: 6,
+              const SizedBox(width: 5),
+              // Slot count
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: GameTheme.bgCard.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(
+                    color: GameTheme.accentGold.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  '${widget.game.unitSlots.where((s) => s.isOccupied).length}/${widget.game.unitSlots.length}',
+                  style: GameTheme.pixel(fontSize: 7, color: GameTheme.accentGold),
+                ),
               ),
             ],
           ),
@@ -1001,10 +1041,10 @@ class _DefenseHudState extends State<DefenseHud>
       borderColor = GameTheme.accentGreen;
       glowColor = GameTheme.accentGreen;
     } else if (isOccupied) {
-      borderColor = GameTheme.accent.withValues(alpha: 0.6);
-      glowColor = GameTheme.accentGold;
+      borderColor = GameTheme.accent.withValues(alpha: 0.3);
+      glowColor = GameTheme.accent;
     } else {
-      borderColor = GameTheme.pixelBorder;
+      borderColor = GameTheme.pixelBorder.withValues(alpha: 0.2);
       glowColor = null;
     }
 
@@ -1030,22 +1070,26 @@ class _DefenseHudState extends State<DefenseHud>
         }
       },
       child: Container(
-        width: 46,
-        height: 46,
-        decoration: GameTheme.pixelCardDecoration(
-          fillColor: showSellHighlight
-              ? GameTheme.accentRed.withValues(alpha: 0.15)
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: showSellHighlight
+              ? GameTheme.accentRed.withValues(alpha: 0.10)
               : showHybridHint
-                  ? GameTheme.accentPurple.withValues(alpha: 0.1)
+                  ? GameTheme.accentPurple.withValues(alpha: 0.08)
                   : showMergeHint
-                      ? GameTheme.accentGreen.withValues(alpha: 0.1)
+                      ? GameTheme.accentGreen.withValues(alpha: 0.08)
                       : isOccupied
-                          ? GameTheme.bgCard
-                          : GameTheme.bgDeep,
-          borderColor: borderColor,
-          selected: isSelected,
-          glow: glow,
-          glowColor: glowColor ?? GameTheme.accentGold,
+                          ? GameTheme.bgCard.withValues(alpha: 0.8)
+                          : GameTheme.bgDeep.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+          border: Border.all(
+            color: borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: glow
+              ? [BoxShadow(color: (glowColor ?? GameTheme.accent).withValues(alpha: 0.15), blurRadius: 6)]
+              : null,
         ),
         child: Center(
           child: isOccupied
@@ -1053,11 +1097,9 @@ class _DefenseHudState extends State<DefenseHud>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (showSellHighlight)
-                      const Icon(Icons.sell,
-                          color: GameTheme.accentRed, size: 10),
+                      const Icon(Icons.sell, color: GameTheme.accentRed, size: 10),
                     if (showHybridHint && !showSellHighlight)
-                      Text('🧬',
-                          style: const TextStyle(fontSize: 8)),
+                      Text('🧬', style: const TextStyle(fontSize: 8)),
                     Text(
                       slot.icon,
                       style: TextStyle(
@@ -1078,9 +1120,9 @@ class _DefenseHudState extends State<DefenseHud>
                     ),
                   ],
                 )
-              : const Icon(
+              : Icon(
                   Icons.add,
-                  color: GameTheme.textMuted,
+                  color: GameTheme.textMuted.withValues(alpha: 0.5),
                   size: 16,
                 ),
         ),

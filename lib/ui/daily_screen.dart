@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
-/// Daily reward + challenge screen overlay.
+/// Daily reward + challenge screen — clean centered popup design.
 class DailyScreen extends StatefulWidget {
   final DefenseGame game;
   const DailyScreen({super.key, required this.game});
@@ -18,12 +18,17 @@ class _DailyScreenState extends State<DailyScreen> {
     final streak = daily.streak;
 
     return Material(
-      color: Colors.black54,
+      color: Colors.black.withValues(alpha: 0.6),
       child: Center(
         child: Container(
-          width: 360,
-          padding: const EdgeInsets.all(16),
-          decoration: GameTheme.pixelPanelDecoration(),
+          width: 340,
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(20),
+          decoration: GameTheme.pixelPanelDecoration(
+            fillColor: GameTheme.bgPanel,
+            glow: true,
+            glowColor: GameTheme.accentGold.withValues(alpha: 0.2),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -31,33 +36,26 @@ class _DailyScreenState extends State<DailyScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '📅 일일 보상',
-                    style: GameTheme.pixel(
-                      fontSize: 12,
-                      color: GameTheme.accentGold,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => widget.game.closeDaily(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        '✕',
+                  Row(
+                    children: [
+                      const Text('📅', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '일일 보상',
                         style: GameTheme.pixel(
-                          fontSize: 12,
-                          color: GameTheme.textPrimary,
+                          fontSize: 11,
+                          color: GameTheme.accentGold,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
+                    ],
                   ),
+                  GameTheme.closeButton(onTap: () => widget.game.closeDaily()),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Streak circles (7 days)
+              // Streak
               Text(
                 '출석 ${streak}일차',
                 style: GameTheme.pixel(
@@ -66,7 +64,9 @@ class _DailyScreenState extends State<DailyScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+
+              // 7-day circles
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(7, (i) {
@@ -75,108 +75,141 @@ class _DailyScreenState extends State<DailyScreen> {
                       (streak % 7 == 0 && dayNum == 7);
                   final isPast = dayNum < (streak % 7 == 0 ? 8 : streak % 7);
                   return Container(
-                    width: 40,
-                    height: 40,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isCurrent
-                          ? const Color(0xFF4FC3F7)
+                          ? GameTheme.accent
                           : isPast
-                              ? const Color(0xFF2E7D32)
-                              : const Color(0xFF333355),
+                              ? GameTheme.accentGreenDark.withValues(alpha: 0.6)
+                              : GameTheme.bgDeep,
                       border: Border.all(
                         color: isCurrent
-                            ? Colors.white
-                            : Colors.white24,
+                            ? Colors.white.withValues(alpha: 0.6)
+                            : isPast
+                                ? GameTheme.accentGreen.withValues(alpha: 0.4)
+                                : GameTheme.pixelBorder.withValues(alpha: 0.3),
                         width: isCurrent ? 2 : 1,
                       ),
+                      boxShadow: isCurrent
+                          ? [BoxShadow(color: GameTheme.accent.withValues(alpha: 0.3), blurRadius: 8)]
+                          : null,
                     ),
                     child: Center(
-                      child: Text(
-                        '$dayNum',
-                        style: TextStyle(
-                          color: isCurrent || isPast
-                              ? Colors.white
-                              : Colors.white38,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: isPast && !isCurrent
+                          ? const Icon(Icons.check, color: GameTheme.accentGreen, size: 14)
+                          : Text(
+                              '$dayNum',
+                              style: TextStyle(
+                                color: isCurrent ? Colors.white : GameTheme.textMuted,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                     ),
                   );
                 }),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // Reward
-              Text(
-                '오늘의 보상: ⭐ ${daily.todayReward}',
-                style: const TextStyle(
-                  color: Color(0xFFFFD54F),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // Reward amount
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: GameTheme.accentGold.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(color: GameTheme.accentGold.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '오늘의 보상: ⭐ ${daily.todayReward}',
+                  style: GameTheme.pixel(
+                    fontSize: 10,
+                    color: GameTheme.accentGold,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
 
               // Claim button
               if (daily.hasUnclaimedReward)
-                GameTheme.pixelButton(
-                  label: '보상 받기!',
-                  gradient: GameTheme.gradientGreen,
-                  onTap: () {
-                    final reward = daily.claimDailyReward();
-                    widget.game.stars += reward;
-                    widget.game.totalStarsEarned += reward;
-                    widget.game.saveGame();
-                    setState(() {});
-                  },
+                SizedBox(
+                  width: double.infinity,
+                  child: GameTheme.pixelButton(
+                    label: '보상 받기!',
+                    gradient: GameTheme.gradientGreen,
+                    fontSize: 10,
+                    verticalPad: 12,
+                    onTap: () {
+                      final reward = daily.claimDailyReward();
+                      widget.game.stars += reward;
+                      widget.game.totalStarsEarned += reward;
+                      widget.game.saveGame();
+                      setState(() {});
+                    },
+                  ),
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 10, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(8),
+                    color: GameTheme.accentGreen.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                    border: Border.all(color: GameTheme.accentGreen.withValues(alpha: 0.2)),
                   ),
-                  child: const Text(
-                    '✅ 오늘 보상 수령 완료',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle, color: GameTheme.accentGreen, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        '오늘 보상 수령 완료',
+                        style: GameTheme.pixel(fontSize: 8, color: GameTheme.accentGreen),
+                      ),
+                    ],
                   ),
                 ),
 
-              const SizedBox(height: 20),
-              const Divider(color: Colors.white24),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              Container(height: 1, color: GameTheme.pixelBorder.withValues(alpha: 0.2)),
+              const SizedBox(height: 14),
 
               // Daily Challenge
-              Text(
-                '🎯 오늘의 도전',
-                style: GameTheme.pixel(
-                  fontSize: 9,
-                  color: GameTheme.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('🎯', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '오늘의 도전',
+                    style: GameTheme.pixel(fontSize: 9, color: GameTheme.textPrimary, fontWeight: FontWeight.w700),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
                 '웨이브 ${daily.challengeTargetWave} 도달',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: GameTheme.pixel(fontSize: 10, color: Colors.white),
               ),
               const SizedBox(height: 4),
-              Text(
-                daily.challengeComplete
-                    ? '✅ 완료! 보너스 ⭐ 획득됨'
-                    : '보너스: ⭐ ${daily.challengeBonus}',
-                style: TextStyle(
-                  color: daily.challengeComplete
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFF4FC3F7),
-                  fontSize: 14,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (daily.challengeComplete ? GameTheme.accentGreen : GameTheme.accent)
+                      .withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  daily.challengeComplete
+                      ? '✅ 완료! 보너스 ⭐ 획득됨'
+                      : '보너스: ⭐ ${daily.challengeBonus}',
+                  style: GameTheme.pixel(
+                    fontSize: 7,
+                    color: daily.challengeComplete ? GameTheme.accentGreen : GameTheme.accent,
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),
