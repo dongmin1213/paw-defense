@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'defense_upgrade_manager.dart';
-import 'relic_manager.dart';
 
 /// Save manager for castle defense mode.
 /// Uses SharedPreferences for persistent storage.

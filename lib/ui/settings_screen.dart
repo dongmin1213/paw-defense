@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
-import '../systems/sound_manager.dart';
 
 /// Settings overlay accessible from main menu and pause screen.
 class SettingsScreen extends StatefulWidget {

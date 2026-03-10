@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/material.dart' show Color, Colors;
+import 'package:flutter/material.dart' show Color, Paint;
 
 import '../components/wall.dart';
 import '../components/unit_slot.dart' as slot_component;

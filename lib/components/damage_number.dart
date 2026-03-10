@@ -2,7 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart' show Color, Colors;
+import 'package:flutter/material.dart' show Color;
 
 import '../game/defense_game.dart';
 

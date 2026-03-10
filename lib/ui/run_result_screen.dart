@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flame/game.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
