@@ -22,5 +22,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
-    - assets/audio/
+    - assets/images/sprites/
+    - assets/images/sprites/monsters/
+    - assets/images/sprites/characters/
+    - assets/images/sprites/items/
+    - assets/images/tiles/
+    - assets/images/ui/
+    - assets/audio/sfx/
+    - assets/audio/bgm/
+    - assets/audio/jingles/
