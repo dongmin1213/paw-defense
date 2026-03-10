@@ -1,5 +1,5 @@
-name: boss_rush
-description: "The Bichon's Run - An idle/active auto-runner game built with Flutter and Flame."
+name: paw_defense
+description: "동물 성벽 지키기 - 귀여운 동물 유닛을 배치·머지하여 성벽을 지키는 반방치 로그라이트 타워디펜스."
 publish_to: 'none'
 version: 1.0.0+1
 

@@ -1,4 +1,4 @@
-package com.example.boss_rush
+package com.example.paw_defense
 
 import io.flutter.embedding.android.FlutterActivity
 
