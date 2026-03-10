@@ -67,7 +67,6 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   // ── Merge/Achievement tracking ──
   int _totalMerges = 0;
-  int _maxComboThisRun = 0;
   final List<String> _achievementQueue = [];
 
   // ── Unit placement cost ──

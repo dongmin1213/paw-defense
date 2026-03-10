@@ -284,9 +284,9 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   }
 
   /// Resume from a specific wave (for mid-run resume).
-  /// Starts the between-wave pause leading into the given wave.
+  /// Sets currentWave to wave-1 so that startNextWave() increments it back.
   void resumeAtWave(int wave) {
-    currentWave = wave;
+    currentWave = wave - 1;
     bossesKilled = 0;
     consecutivePerfects = 0;
     wallTookDamage = false;
