@@ -115,6 +115,7 @@ class RelicManager {
   double get atkMultiplier {
     double m = 1.0;
     if (hasRelic('relic_atk_boost')) m += BalanceConfig.relicAtkBonus;
+    if (hasRelic('relic_ghost_unit')) m += 0.20; // Ghost unit: ATK +20%
     if (hasRelic('relic_rapid_fire')) m -= 0.15; // ATK -15%
     if (hasRelic('relic_war_god')) m *= 3.0;
     if (hasRelic('relic_midas')) m = 0.0; // Midas: no damage

@@ -188,6 +188,9 @@ class DefenseUnit {
   final int level;
   final bool isEvolved;
 
+  /// Whether this is a hybrid unit.
+  bool get isHybrid => HybridDatabase.isHybrid(unitTypeId);
+
   const DefenseUnit({
     required this.unitTypeId,
     required this.level,

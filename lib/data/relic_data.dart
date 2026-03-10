@@ -97,7 +97,7 @@ class RelicDatabase {
     RelicDef(id: 'relic_time_warp', name: '시간 왜곡', icon: '⏳', description: '매 5웨이브 시작 시 3초 슬로모션', rarity: RelicRarity.epic, category: RelicCategory.rule),
     RelicDef(id: 'relic_infinite_merge', name: '무한 머지', icon: '♾️', description: '최대 레벨 5 → 7', rarity: RelicRarity.epic, category: RelicCategory.merge),
     RelicDef(id: 'relic_merge_bomb', name: '폭발 머지', icon: '💣', description: '머지 시 주변 적에게 범위 데미지', rarity: RelicRarity.epic, category: RelicCategory.merge),
-    RelicDef(id: 'relic_ghost_unit', name: '유령 유닛', icon: '👻', description: '유닛이 적의 타겟이 되지 않음', rarity: RelicRarity.epic, category: RelicCategory.defense),
+    RelicDef(id: 'relic_ghost_unit', name: '유령 유닛', icon: '👻', description: '모든 유닛 공격력 +20%', rarity: RelicRarity.epic, category: RelicCategory.attack),
     RelicDef(id: 'relic_blessing_rain', name: '축복의 비', icon: '🌧️', description: '3웨이브마다 전체 HP 15% 회복', rarity: RelicRarity.epic, category: RelicCategory.defense),
     RelicDef(id: 'relic_doppelganger', name: '도플갱어', icon: '🪞', description: '유닛 구매 시 가장 많은 유닛과 같은 종류', rarity: RelicRarity.epic, category: RelicCategory.merge),
     RelicDef(id: 'relic_elemental', name: '원소 폭풍', icon: '🌀', description: '투사체에 랜덤 원소 효과 (불/얼음/독)', rarity: RelicRarity.epic, category: RelicCategory.attack),

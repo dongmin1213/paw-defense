@@ -283,6 +283,21 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     consecutivePerfects = 0;
   }
 
+  /// Resume from a specific wave (for mid-run resume).
+  /// Starts the between-wave pause leading into the given wave.
+  void resumeAtWave(int wave) {
+    currentWave = wave;
+    bossesKilled = 0;
+    consecutivePerfects = 0;
+    wallTookDamage = false;
+    waveActive = false;
+    betweenWaves = true;
+    betweenWaveTimer = betweenWavePause;
+    enemiesRemaining = 0;
+    enemiesSpawned = 0;
+    totalEnemiesInWave = 0;
+  }
+
   // === Save/Load (for mid-run resume) ===
 
   Map<String, dynamic> toMap() {

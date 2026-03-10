@@ -43,6 +43,30 @@ class _TutorialScreenState extends State<TutorialScreen>
       description: '5웨이브마다 보상 카드를 선택하고\n보스를 잡으면 유물을 획득합니다.',
       hint: '유물은 런 동안 영구 버프를 줍니다',
     ),
+    _TutorialStep(
+      icon: '🧬',
+      title: '하이브리드 유닛',
+      description: '서로 다른 종류의 Lv3+ 유닛 2개가\n있으면 이종 합체가 발동됩니다!\n특수 능력을 가진 강력한 유닛이 탄생합니다.',
+      hint: '12종의 하이브리드를 발견하세요',
+    ),
+    _TutorialStep(
+      icon: '🔥',
+      title: '콤보 시스템',
+      description: '적을 연속으로 처치하면 콤보가 쌓입니다.\n콤보가 높을수록 보너스 골드와\n화려한 이펙트가 발생합니다!',
+      hint: '2초 안에 다음 적을 처치하세요',
+    ),
+    _TutorialStep(
+      icon: '⭐',
+      title: '진화 & 업그레이드',
+      description: 'Lv5 유닛은 자동 진화하여\n공격력이 크게 증가합니다.\n별을 모아 영구 업그레이드를 구매하세요!',
+      hint: '메인 메뉴에서 업그레이드 상점을 열 수 있어요',
+    ),
+    _TutorialStep(
+      icon: '💰',
+      title: '판매 & 리롤',
+      description: '필요 없는 유닛은 판매하여 골드를 회수하고\n리롤로 모든 유닛을 새로 뽑을 수 있습니다.\n슬롯 관리가 승리의 핵심!',
+      hint: '같은 유닛을 모아야 합체가 가능합니다',
+    ),
   ];
 
   @override

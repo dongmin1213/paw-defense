@@ -18,6 +18,7 @@ class DefenseSaveManager {
   static const String _keyRunState = '${_prefix}runState';
   static const String _keyTotalStarsEarned = '${_prefix}totalStarsEarned';
   static const String _keyTotalBossKills = '${_prefix}totalBossKills';
+  static const String _keyTotalMerges = '${_prefix}totalMerges';
 
   late SharedPreferences _prefs;
 
@@ -51,6 +52,9 @@ class DefenseSaveManager {
 
   int get totalBossKills => _prefs.getInt(_keyTotalBossKills) ?? 0;
   set totalBossKills(int v) => _prefs.setInt(_keyTotalBossKills, v);
+
+  int get totalMerges => _prefs.getInt(_keyTotalMerges) ?? 0;
+  set totalMerges(int v) => _prefs.setInt(_keyTotalMerges, v);
 
   String get lastOnlineTime => _prefs.getString(_keyLastOnline) ?? '';
   set lastOnlineTime(String v) => _prefs.setString(_keyLastOnline, v);
@@ -115,6 +119,7 @@ class DefenseSaveManager {
     int? totalRuns,
     int? totalStarsEarned,
     int? totalBossKills,
+    int? totalMerges,
   }) {
     this.stars = stars;
     if (souls != null) this.souls = souls;
@@ -126,6 +131,7 @@ class DefenseSaveManager {
     if (totalRuns != null) this.totalRuns = totalRuns;
     if (totalStarsEarned != null) this.totalStarsEarned = totalStarsEarned;
     if (totalBossKills != null) this.totalBossKills = totalBossKills;
+    if (totalMerges != null) this.totalMerges = totalMerges;
     saveUpgrades(upgrades);
     lastOnlineTime = DateTime.now().toIso8601String();
   }

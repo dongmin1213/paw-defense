@@ -239,6 +239,36 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
   Widget _buildButtons() {
     return Column(
       children: [
+        // Resume button (if saved run exists)
+        if (widget.game.saveManager.hasRunState) ...[
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: GameTheme.accentGreen.withValues(alpha: 0.3 * _pulse.value),
+                      blurRadius: 16 * _pulse.value,
+                      spreadRadius: 2 * _pulse.value,
+                    ),
+                  ],
+                ),
+                child: child,
+              );
+            },
+            child: GameTheme.pixelButton(
+              label: '이어하기',
+              onTap: () => widget.game.resumeRun(),
+              gradient: GameTheme.gradientGreen,
+              fontSize: 12,
+              verticalPad: 16,
+              horizontalPad: 40,
+              icon: Icons.play_circle_outline,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         // Start game button with pulse glow
         AnimatedBuilder(
           animation: _pulseController,
@@ -257,7 +287,7 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
             );
           },
           child: GameTheme.pixelButton(
-            label: '게임 시작',
+            label: widget.game.saveManager.hasRunState ? '새 게임' : '게임 시작',
             onTap: () {
               if (widget.game.totalRuns <= 1) {
                 widget.game.overlays.remove('DefenseMainMenu');
@@ -267,9 +297,9 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
               }
             },
             gradient: GameTheme.gradientPrimary,
-            fontSize: 12,
-            verticalPad: 16,
-            horizontalPad: 40,
+            fontSize: widget.game.saveManager.hasRunState ? 9 : 12,
+            verticalPad: widget.game.saveManager.hasRunState ? 12 : 16,
+            horizontalPad: widget.game.saveManager.hasRunState ? 28 : 40,
             icon: Icons.play_arrow,
           ),
         ),

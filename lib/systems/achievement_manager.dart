@@ -67,6 +67,15 @@ class AchievementDatabase {
     AchievementDef(id: 'hybrid_5', name: '교배 전문가', description: '하이브리드 유닛 5마리 생성', icon: '🧬', starReward: 25, type: AchievementType.hybrids, target: 5),
     AchievementDef(id: 'hybrid_12', name: '하이브리드 마스터', description: '모든 하이브리드 발견', icon: '🌈', starReward: 100, type: AchievementType.hybrids, target: 12),
 
+    // ── Merge achievements ──
+    AchievementDef(id: 'merge_10', name: '초보 조련사', description: '유닛 10회 머지', icon: '🔄', starReward: 5, type: AchievementType.merges, target: 10),
+    AchievementDef(id: 'merge_50', name: '머지 장인', description: '유닛 50회 머지', icon: '🔄', starReward: 15, type: AchievementType.merges, target: 50),
+    AchievementDef(id: 'merge_100', name: '머지 마스터', description: '유닛 100회 머지', icon: '🔀', starReward: 30, type: AchievementType.merges, target: 100),
+
+    // ── Relic achievements ──
+    AchievementDef(id: 'relic_3', name: '유물 수집가', description: '한 런에서 유물 3개 획득', icon: '🔮', starReward: 5, type: AchievementType.relics, target: 3),
+    AchievementDef(id: 'relic_6', name: '유물 사냥꾼', description: '한 런에서 유물 6개 획득', icon: '🔮', starReward: 15, type: AchievementType.relics, target: 6),
+
     // ── Gold achievements ──
     AchievementDef(id: 'gold_1000', name: '부자', description: '한 런에서 골드 1,000 획득', icon: '💰', starReward: 10, type: AchievementType.gold, target: 1000),
     AchievementDef(id: 'gold_5000', name: '재벌', description: '한 런에서 골드 5,000 획득', icon: '💎', starReward: 30, type: AchievementType.gold, target: 5000),

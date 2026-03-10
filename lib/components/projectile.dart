@@ -17,6 +17,7 @@ class Projectile extends PositionComponent
   final bool isSplash;
   final double splashRadius;
   final String ownerTypeId;
+  final bool _isSplit; // true if this is a child split projectile (prevents recursion)
 
   double _lifeTime = 0;
   static const double maxLifeTime = 3.0;
@@ -32,7 +33,8 @@ class Projectile extends PositionComponent
     this.isSplash = false,
     this.splashRadius = 0,
     this.ownerTypeId = '',
-  }) : super(
+    bool isSplit = false,
+  }) : _isSplit = isSplit, super(
           position: spawnPosition,
           size: Vector2(6, 6),
           anchor: Anchor.center,
@@ -77,9 +79,56 @@ class Projectile extends PositionComponent
         _applySplashDamage(other.position);
       }
 
+      // Relic: split shot — spawn 2 child projectiles at ±45°
+      if (!_isSplit && game.relicManager.hasSplitShot) {
+        _spawnSplitProjectiles(other.position);
+      }
+
+      // Relic: elemental — apply random elemental effect
+      if (game.relicManager.hasElemental) {
+        _applyElementalEffect(other);
+      }
+
       if (!isPiercing) {
         removeFromParent();
       }
+    }
+  }
+
+  /// Split shot: spawn 2 child projectiles at ±45 degrees.
+  void _spawnSplitProjectiles(Vector2 impactPos) {
+    final speed = velocity.length * 0.7;
+    final baseAngle = velocity.screenAngle();
+    const splitAngle = 0.785; // 45 degrees in radians
+
+    for (final angleDelta in [-splitAngle, splitAngle]) {
+      final angle = baseAngle + angleDelta;
+      final dir = Vector2(0, -1)..rotate(angle);
+      game.world.add(Projectile(
+        spawnPosition: impactPos.clone(),
+        velocity: dir * speed,
+        damage: damage * 0.5,
+        isPiercing: false,
+        isSplash: false,
+        ownerTypeId: ownerTypeId,
+        isSplit: true,
+      ));
+    }
+  }
+
+  /// Elemental: apply random fire/ice/poison effect.
+  void _applyElementalEffect(DefenseEnemy enemy) {
+    final roll = DateTime.now().microsecond % 3;
+    switch (roll) {
+      case 0: // Fire: 30% DoT for 3 seconds
+        enemy.applyDot(damage * 0.30, 3.0, 'fire');
+        break;
+      case 1: // Ice: 40% slow for 2 seconds
+        enemy.applySlow(0.40, 2.0);
+        break;
+      case 2: // Poison: 15% DoT for 5 seconds
+        enemy.applyDot(damage * 0.15, 5.0, 'poison');
+        break;
     }
   }
 

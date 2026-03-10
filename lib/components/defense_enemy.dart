@@ -43,6 +43,12 @@ class DefenseEnemy extends PositionComponent
   double _slowIntensity = 0; // 0.0 = no slow, 0.3 = 30% slow
   double _slowTimer = 0;
 
+  // DoT (Damage over Time) — from elemental relic
+  double _dotDamage = 0; // damage per tick
+  double _dotDuration = 0; // remaining duration
+  double _dotTickTimer = 0; // time until next tick
+  String _dotType = ''; // 'fire', 'poison' for visual feedback
+
   static const double wallProximity = 35.0;
 
   // Special type detection helpers
@@ -140,6 +146,18 @@ class DefenseEnemy extends PositionComponent
     _slowTimer = duration;
   }
 
+  /// Apply a damage-over-time effect (fire/poison from elemental relic).
+  /// [dps] is damage per second, [duration] is total time, [type] is 'fire'/'poison'.
+  void applyDot(double dps, double duration, String type) {
+    // Keep the stronger DoT
+    if (dps > _dotDamage || _dotDuration <= 0) {
+      _dotDamage = dps;
+      _dotDuration = duration;
+      _dotType = type;
+      _dotTickTimer = 0;
+    }
+  }
+
   /// Effective speed accounting for slow debuff, relic slow aura, and time sand.
   double get _effectiveSpeed {
     double s = speed;
@@ -211,6 +229,29 @@ class DefenseEnemy extends PositionComponent
       if (_slowTimer <= 0) {
         _slowTimer = 0;
         _slowIntensity = 0;
+      }
+    }
+
+    // DoT (Damage over Time) processing
+    if (_dotDuration > 0) {
+      _dotDuration -= dt;
+      _dotTickTimer += dt;
+      if (_dotTickTimer >= 0.5) {
+        _dotTickTimer -= 0.5;
+        // Apply half-second tick of damage
+        final tickDmg = _dotDamage * 0.5;
+        hp -= tickDmg;
+        _isHit = true;
+        _hitFlashTimer = 0.05;
+        if (hp <= 0) {
+          hp = 0;
+          _die();
+          return;
+        }
+      }
+      if (_dotDuration <= 0) {
+        _dotDamage = 0;
+        _dotType = '';
       }
     }
 

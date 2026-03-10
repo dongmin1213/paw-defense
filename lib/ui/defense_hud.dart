@@ -24,6 +24,10 @@ class _DefenseHudState extends State<DefenseHud>
   bool _isGoldAnimating = false;
   int? _selectedSlotIndex;
   bool _sellMode = false;
+  String? _achievementText;
+  double _achievementTimer = 0;
+  Color? _tierFlashColor;
+  double _tierFlashTimer = 0;
 
   @override
   void initState() {
@@ -45,6 +49,28 @@ class _DefenseHudState extends State<DefenseHud>
           _previousGold = _displayedGold;
           _isGoldAnimating = true;
           _goldRollController.forward(from: 0.0);
+        }
+        // Achievement notification polling
+        if (_achievementText != null) {
+          _achievementTimer -= 0.1;
+          if (_achievementTimer <= 0) {
+            _achievementText = null;
+          }
+        } else {
+          final notif = widget.game.popAchievementNotification();
+          if (notif != null) {
+            _achievementText = notif;
+            _achievementTimer = 2.5;
+          }
+        }
+        // Combo tier-up flash
+        if (_tierFlashTimer > 0) {
+          _tierFlashTimer -= 0.1;
+          if (_tierFlashTimer <= 0) _tierFlashColor = null;
+        }
+        if (widget.game.comboManager.tierJustChanged) {
+          _tierFlashColor = Color(widget.game.comboManager.currentTier.color);
+          _tierFlashTimer = 0.5;
         }
         setState(() {});
       }
@@ -82,7 +108,20 @@ class _DefenseHudState extends State<DefenseHud>
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: SafeArea(
+      child: Stack(
+        children: [
+          // Combo tier-up flash overlay
+          if (_tierFlashColor != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: (_tierFlashTimer / 0.5).clamp(0.0, 0.15),
+                  child: Container(color: _tierFlashColor),
+                ),
+              ),
+            ),
+          SafeArea(
         child: Column(
           children: [
             _buildTopBar(),
@@ -96,10 +135,14 @@ class _DefenseHudState extends State<DefenseHud>
             if (widget.game.comboManager.isActive) _buildComboCounter(),
             // Wave clear banner
             if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
+            // Achievement notification banner
+            if (_achievementText != null) _buildAchievementBanner(),
             const Spacer(),
             _buildBottomPanel(),
           ],
         ),
+      ),
+        ],
       ),
     );
   }
@@ -314,6 +357,32 @@ class _DefenseHudState extends State<DefenseHud>
     );
   }
 
+  Widget _buildAchievementBanner() {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 300),
+      opacity: _achievementTimer > 0.3 ? 1.0 : _achievementTimer / 0.3,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: GameTheme.pixelPanelDecoration(
+            fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
+            glow: true,
+            glowColor: GameTheme.accentGold,
+          ),
+          child: Text(
+            _achievementText ?? '',
+            style: GameTheme.pixel(
+              fontSize: 9,
+              color: GameTheme.accentGold,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildComboCounter() {
     final combo = widget.game.comboManager;
     final tier = combo.currentTier;
@@ -511,6 +580,28 @@ class _DefenseHudState extends State<DefenseHud>
     final isOccupied = slot.isOccupied;
     final isSelected = _selectedSlotIndex == index;
     final showSellHighlight = _sellMode && isOccupied;
+    final showMergeHint = !_sellMode && slot.canMerge;
+    final showHybridHint = !_sellMode && slot.canHybrid;
+
+    Color borderColor;
+    Color? glowColor;
+    bool glow = isSelected || showSellHighlight || showMergeHint || showHybridHint;
+    if (showSellHighlight) {
+      borderColor = GameTheme.accentRed;
+      glowColor = GameTheme.accentRed;
+    } else if (showHybridHint) {
+      borderColor = GameTheme.accentPurple;
+      glowColor = GameTheme.accentPurple;
+    } else if (showMergeHint) {
+      borderColor = GameTheme.accentGreen;
+      glowColor = GameTheme.accentGreen;
+    } else if (isOccupied) {
+      borderColor = GameTheme.accent.withValues(alpha: 0.6);
+      glowColor = GameTheme.accentGold;
+    } else {
+      borderColor = GameTheme.pixelBorder;
+      glowColor = null;
+    }
 
     return GestureDetector(
       onTap: () {
@@ -532,18 +623,17 @@ class _DefenseHudState extends State<DefenseHud>
         decoration: GameTheme.pixelCardDecoration(
           fillColor: showSellHighlight
               ? GameTheme.accentRed.withValues(alpha: 0.15)
-              : isOccupied
-                  ? GameTheme.bgCard
-                  : GameTheme.bgDeep,
-          borderColor: showSellHighlight
-              ? GameTheme.accentRed
-              : isOccupied
-                  ? GameTheme.accent.withValues(alpha: 0.6)
-                  : GameTheme.pixelBorder,
+              : showHybridHint
+                  ? GameTheme.accentPurple.withValues(alpha: 0.1)
+                  : showMergeHint
+                      ? GameTheme.accentGreen.withValues(alpha: 0.1)
+                      : isOccupied
+                          ? GameTheme.bgCard
+                          : GameTheme.bgDeep,
+          borderColor: borderColor,
           selected: isSelected,
-          glow: isSelected || showSellHighlight,
-          glowColor:
-              showSellHighlight ? GameTheme.accentRed : GameTheme.accentGold,
+          glow: glow,
+          glowColor: glowColor ?? GameTheme.accentGold,
         ),
         child: Center(
           child: isOccupied
@@ -553,16 +643,23 @@ class _DefenseHudState extends State<DefenseHud>
                     if (showSellHighlight)
                       const Icon(Icons.sell,
                           color: GameTheme.accentRed, size: 10),
+                    if (showHybridHint && !showSellHighlight)
+                      Text('🧬',
+                          style: const TextStyle(fontSize: 8)),
                     Text(
                       slot.icon,
                       style: TextStyle(
-                          fontSize: showSellHighlight ? 14 : 18),
+                          fontSize: showSellHighlight ? 14 : (showHybridHint ? 14 : 18)),
                     ),
                     Text(
                       'Lv${slot.level}',
                       style: GameTheme.pixel(
                         fontSize: 5,
-                        color: GameTheme.textSecondary,
+                        color: showMergeHint
+                            ? GameTheme.accentGreen
+                            : showHybridHint
+                                ? GameTheme.accentPurple
+                                : GameTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -585,6 +682,8 @@ class UnitSlot {
   final bool isOccupied;
   final bool isSelected;
   final String unitType;
+  final bool canMerge;
+  final bool canHybrid;
 
   const UnitSlot({
     this.icon = '🐶',
@@ -592,6 +691,8 @@ class UnitSlot {
     this.isOccupied = false,
     this.isSelected = false,
     this.unitType = '',
+    this.canMerge = false,
+    this.canHybrid = false,
   });
 
   static const empty = UnitSlot();

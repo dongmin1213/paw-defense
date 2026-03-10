@@ -1,175 +1,10 @@
 import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
-
-/// Permanent upgrade IDs for the star shop.
-enum DefenseUpgradeId {
-  wallHp,
-  wallArmor,
-  wallRegen,
-  unitDamage,
-  unitSpeed,
-  unitRange,
-  goldBonus,
-  startGold,
-  unitSlot,
-  critChance,
-  critDamage,
-  waveBonus,
-}
-
-/// Data definition for a permanent upgrade.
-class DefenseUpgradeData {
-  final DefenseUpgradeId id;
-  final String name;
-  final String description;
-  final String icon;
-  final String category; // '성벽', '유닛', '경제', '특수'
-  final int maxLevel;
-  final int baseCost;
-  final double costMultiplier;
-
-  const DefenseUpgradeData({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.icon,
-    required this.category,
-    required this.maxLevel,
-    required this.baseCost,
-    this.costMultiplier = 1.5,
-  });
-
-  int costAt(int level) {
-    if (level >= maxLevel) return 0;
-    return (baseCost * (costMultiplier * level + 1)).round();
-  }
-}
-
-/// Database of all permanent upgrades.
-class DefenseUpgradeDatabase {
-  static const List<DefenseUpgradeData> all = [
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.wallHp,
-      name: '성벽 체력',
-      description: '성벽 최대 HP +10%',
-      icon: '🏰',
-      category: '성벽',
-      maxLevel: 20,
-      baseCost: 5,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.wallArmor,
-      name: '성벽 방어',
-      description: '받는 피해 -5%',
-      icon: '🛡️',
-      category: '성벽',
-      maxLevel: 15,
-      baseCost: 8,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.wallRegen,
-      name: '성벽 재생',
-      description: '성벽 자동 회복 +1/s',
-      icon: '💚',
-      category: '성벽',
-      maxLevel: 10,
-      baseCost: 12,
-      costMultiplier: 2.0,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.unitDamage,
-      name: '유닛 공격력',
-      description: '전체 유닛 공격력 +8%',
-      icon: '⚔️',
-      category: '유닛',
-      maxLevel: 25,
-      baseCost: 5,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.unitSpeed,
-      name: '공격 속도',
-      description: '전체 유닛 공격 속도 +5%',
-      icon: '⚡',
-      category: '유닛',
-      maxLevel: 20,
-      baseCost: 6,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.unitRange,
-      name: '사거리',
-      description: '전체 유닛 사거리 +10%',
-      icon: '🎯',
-      category: '유닛',
-      maxLevel: 15,
-      baseCost: 7,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.goldBonus,
-      name: '골드 보너스',
-      description: '골드 획득량 +10%',
-      icon: '💰',
-      category: '경제',
-      maxLevel: 20,
-      baseCost: 4,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.startGold,
-      name: '시작 골드',
-      description: '게임 시작 시 +50 골드',
-      icon: '🪙',
-      category: '경제',
-      maxLevel: 10,
-      baseCost: 10,
-      costMultiplier: 1.8,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.unitSlot,
-      name: '유닛 슬롯',
-      description: '배치 가능 유닛 +1',
-      icon: '📦',
-      category: '특수',
-      maxLevel: 5,
-      baseCost: 20,
-      costMultiplier: 3.0,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.critChance,
-      name: '치명타 확률',
-      description: '치명타 확률 +3%',
-      icon: '💥',
-      category: '특수',
-      maxLevel: 15,
-      baseCost: 8,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.critDamage,
-      name: '치명타 피해',
-      description: '치명타 피해 +15%',
-      icon: '🔥',
-      category: '특수',
-      maxLevel: 10,
-      baseCost: 10,
-      costMultiplier: 2.0,
-    ),
-    DefenseUpgradeData(
-      id: DefenseUpgradeId.waveBonus,
-      name: '웨이브 보너스',
-      description: '웨이브 클리어 시 추가 별 +1',
-      icon: '⭐',
-      category: '경제',
-      maxLevel: 5,
-      baseCost: 15,
-      costMultiplier: 2.5,
-    ),
-  ];
-
-  static List<DefenseUpgradeData> byCategory(String category) {
-    return all.where((u) => u.category == category).toList();
-  }
-}
+import '../systems/defense_upgrade_manager.dart';
 
 /// Star shop screen for between-run permanent upgrades.
+/// Uses the real DefenseUpgradeManager for purchase logic.
 class StarShopScreen extends StatefulWidget {
   final DefenseGame game;
   const StarShopScreen({super.key, required this.game});
@@ -186,10 +21,7 @@ class _StarShopScreenState extends State<StarShopScreen>
   late AnimationController _entryController;
   late Animation<double> _entryAnim;
 
-  // Simulated upgrade levels (in real game, read from DefenseUpgradeManager)
-  final Map<DefenseUpgradeId, int> _levels = {
-    for (final id in DefenseUpgradeId.values) id: 0,
-  };
+  DefenseUpgradeManager get _mgr => widget.game.upgradeManager;
 
   @override
   void initState() {
@@ -211,24 +43,18 @@ class _StarShopScreenState extends State<StarShopScreen>
     super.dispose();
   }
 
-  int _getLevel(DefenseUpgradeId id) => _levels[id] ?? 0;
-
   bool _canAfford(DefenseUpgradeData data) {
-    final level = _getLevel(data.id);
-    if (level >= data.maxLevel) return false;
-    return widget.game.stars >= data.costAt(level);
+    return _mgr.canAfford(data.id, widget.game.stars);
   }
 
   void _buyUpgrade(DefenseUpgradeData data) {
-    final level = _getLevel(data.id);
-    if (level >= data.maxLevel) return;
-    final cost = data.costAt(level);
-    if (widget.game.stars < cost) return;
-
-    setState(() {
-      _levels[data.id] = level + 1;
-      // In real implementation: widget.game.spendStars(cost);
-    });
+    final cost = _mgr.buy(data.id, widget.game.stars);
+    if (cost > 0) {
+      setState(() {
+        widget.game.stars -= cost;
+        widget.game.saveGame();
+      });
+    }
   }
 
   @override
@@ -351,9 +177,9 @@ class _StarShopScreenState extends State<StarShopScreen>
   }
 
   Widget _buildUpgradeCard(DefenseUpgradeData data) {
-    final level = _getLevel(data.id);
-    final isMaxed = level >= data.maxLevel;
-    final cost = isMaxed ? 0 : data.costAt(level);
+    final level = _mgr.getLevel(data.id);
+    final isMaxed = _mgr.isMaxed(data.id);
+    final cost = isMaxed ? 0 : _mgr.getCost(data.id);
     final canAfford = _canAfford(data);
     final progress = level / data.maxLevel;
 

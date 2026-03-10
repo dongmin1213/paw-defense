@@ -23,6 +23,7 @@ import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
 import '../data/hybrid_unit_data.dart';
+import '../data/relic_data.dart';
 import '../components/damage_number.dart';
 import '../ui/defense_hud.dart' as hud;
 
@@ -63,6 +64,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   bool isPlaying = false;
   bool _isPaused = false;
+
+  // ── Merge/Achievement tracking ──
+  int _totalMerges = 0;
+  int _maxComboThisRun = 0;
+  final List<String> _achievementQueue = [];
 
   // ── Unit placement cost ──
   int _unitsBought = 0;
@@ -105,20 +111,42 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ── Public accessors ──
   int get currentWave => waveManager.currentWave;
 
-  /// Unit slots exposed for UI (HUD).
+  /// Unit slots exposed for UI (HUD), with merge hints.
   List<hud.UnitSlot> get unitSlots {
-    return _unitSlots.map((s) {
+    // Compute merge-hint data: count occurrences of (type, level)
+    final counts = <String, int>{};
+    for (final s in _unitSlots) {
       final u = s.unit;
-      if (u == null) {
-        return const hud.UnitSlot();
+      if (u != null && !u.isEvolved) {
+        final key = '${u.unitTypeId}:${u.level}';
+        counts[key] = (counts[key] ?? 0) + 1;
       }
+    }
+    final mergeNeeded = relicManager.hasDoubleMerge ? 2 : BalanceConfig.mergeCount;
+
+    // Check if any cross-breed merge is possible
+    final crossBreeds = merge.MergeManager.findCrossBreedMerges(_unitSlots);
+    final crossBreedSlots = <int>{};
+    for (final cb in crossBreeds) {
+      crossBreedSlots.add(cb.slotIndexA);
+      crossBreedSlots.add(cb.slotIndexB);
+    }
+
+    return List.generate(_unitSlots.length, (i) {
+      final u = _unitSlots[i].unit;
+      if (u == null) return const hud.UnitSlot();
+      final key = '${u.unitTypeId}:${u.level}';
+      final canMerge = !u.isEvolved && (counts[key] ?? 0) >= mergeNeeded;
+      final canHybrid = crossBreedSlots.contains(i);
       return hud.UnitSlot(
         icon: _unitIcons[u.unitTypeId] ?? '❓',
         level: u.level,
         isOccupied: true,
         unitType: u.unitTypeId,
+        canMerge: canMerge,
+        canHybrid: canHybrid,
       );
-    }).toList();
+    });
   }
 
   DefenseGame()
@@ -154,6 +182,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     totalKills = saveManager.totalKills;
     totalStarsEarned = saveManager.totalStarsEarned;
     totalBossKills = saveManager.totalBossKills;
+    _totalMerges = saveManager.totalMerges;
 
     // Initialize components
     wall = Wall();
@@ -288,6 +317,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     waveManager.reset();
     waveManager.startFirstWave();
 
+    // Clear any saved run state
+    saveManager.clearRunState();
+
     // Update overlays
     overlays.remove('DefenseMainMenu');
     overlays.remove('RunResult');
@@ -295,6 +327,121 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.add('DefenseHud');
 
     totalRuns++;
+  }
+
+  // ── Mid-run save/load ──
+
+  /// Build a snapshot of the current run state for mid-run save.
+  Map<String, dynamic> buildRunState() {
+    final slotData = <Map<String, dynamic>>[];
+    for (final slot in _unitSlots) {
+      final u = slot.unit;
+      if (u != null) {
+        slotData.add({
+          'typeId': u.unitTypeId,
+          'level': u.level,
+          'isEvolved': u.isEvolved,
+        });
+      } else {
+        slotData.add({'empty': true});
+      }
+    }
+    return {
+      'gold': gold,
+      'runKills': _runKills,
+      'runGoldEarned': _runGoldEarned,
+      'unitsBought': _unitsBought,
+      'wave': waveManager.currentWave,
+      'wallHp': wall.currentHp,
+      'wallMaxHp': wall.maxHp,
+      'relics': relicManager.toList(),
+      'slots': slotData,
+      'rewardAtk': rewardAtkMultiplier,
+      'rewardAtkSpeed': rewardAtkSpeedMultiplier,
+      'rewardGold': rewardGoldMultiplier,
+      'rewardRange': rewardRangeMultiplier,
+      'rewardUnitCost': rewardUnitCostMultiplier,
+      'rewardWallDefense': rewardWallDefenseMultiplier,
+      'rewardWallRegen': rewardWallRegenBonus,
+    };
+  }
+
+  /// Save the current run state (called from app lifecycle).
+  void saveRunState() {
+    if (!isPlaying) return;
+    saveManager.saveRunState(buildRunState());
+  }
+
+  /// Resume from a saved run state. Returns true if successful.
+  bool resumeRun() {
+    final state = saveManager.loadRunState();
+    if (state == null) return false;
+
+    // Restore game state
+    gold = (state['gold'] as num?)?.toInt() ?? 50;
+    _runKills = (state['runKills'] as num?)?.toInt() ?? 0;
+    _runGoldEarned = (state['runGoldEarned'] as num?)?.toInt() ?? 0;
+    _unitsBought = (state['unitsBought'] as num?)?.toInt() ?? 0;
+    isPlaying = true;
+    _isPaused = false;
+
+    // Restore reward multipliers
+    rewardAtkMultiplier = (state['rewardAtk'] as num?)?.toDouble() ?? 1.0;
+    rewardAtkSpeedMultiplier = (state['rewardAtkSpeed'] as num?)?.toDouble() ?? 1.0;
+    rewardGoldMultiplier = (state['rewardGold'] as num?)?.toDouble() ?? 1.0;
+    rewardRangeMultiplier = (state['rewardRange'] as num?)?.toDouble() ?? 1.0;
+    rewardUnitCostMultiplier = (state['rewardUnitCost'] as num?)?.toDouble() ?? 1.0;
+    rewardWallDefenseMultiplier = (state['rewardWallDefense'] as num?)?.toDouble() ?? 1.0;
+    rewardWallRegenBonus = (state['rewardWallRegen'] as num?)?.toDouble() ?? 0.0;
+
+    // Restore wall
+    wall.maxHp = (state['wallMaxHp'] as num?)?.toDouble() ?? 100.0;
+    wall.currentHp = (state['wallHp'] as num?)?.toDouble() ?? wall.maxHp;
+
+    // Restore relics
+    relicManager.reset();
+    final relicList = state['relics'] as List<dynamic>?;
+    if (relicList != null) {
+      relicManager.loadFromList(relicList.cast<String>());
+    }
+
+    // Reset combo
+    comboManager.resetAll();
+
+    // Clear existing and restore slots/units
+    _clearAllUnits();
+    _clearAllEnemies();
+    _initSlots();
+
+    final slotsData = state['slots'] as List<dynamic>?;
+    if (slotsData != null) {
+      for (int i = 0; i < slotsData.length && i < _unitSlots.length; i++) {
+        final s = slotsData[i] as Map<String, dynamic>;
+        if (s['empty'] == true) continue;
+        _unitSlots[i].place(merge.DefenseUnit(
+          unitTypeId: s['typeId'] as String? ?? 'cat_archer',
+          level: (s['level'] as num?)?.toInt() ?? 1,
+          isEvolved: s['isEvolved'] as bool? ?? false,
+        ));
+      }
+    }
+    _refreshSlotComponents();
+
+    // Restore wave and restart
+    final savedWave = (state['wave'] as num?)?.toInt() ?? 1;
+    waveManager.reset();
+    waveManager.resumeAtWave(savedWave);
+
+    // Clear saved state
+    saveManager.clearRunState();
+
+    // Update overlays
+    overlays.remove('DefenseMainMenu');
+    overlays.remove('RunResult');
+    overlays.remove('StarShop');
+    overlays.add('DefenseHud');
+
+    return true;
   }
 
   /// Pause the game.
@@ -320,8 +467,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       totalRuns: totalRuns,
       totalStarsEarned: totalStarsEarned,
       totalBossKills: totalBossKills,
+      totalMerges: _totalMerges,
     );
     achievementManager.save();
+  }
+
+  /// Poll and consume achievement notifications (for HUD banner).
+  String? popAchievementNotification() {
+    if (_achievementQueue.isEmpty) return null;
+    return _achievementQueue.removeAt(0);
   }
 
   /// Update achievement progress and award stars for newly completed ones.
@@ -332,6 +486,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       if (def != null) {
         stars += def.starReward;
         totalStarsEarned += def.starReward;
+        _achievementQueue.add('${def.icon} ${def.name} (+${def.starReward}⭐)');
         showDamageNumber(
           wall.position,
           '🏆 +${def.starReward}⭐',
@@ -444,6 +599,25 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     if (relicManager.shouldTimeWarp(waveNumber)) {
       gameFeel.slowMotion(scale: 0.3, duration: 3.0);
     }
+
+    // Relic: chaos — re-randomize all relics except chaos itself each wave
+    if (relicManager.hasRelic('relic_chaos') && waveNumber > 1) {
+      final relicCount = relicManager.relicCount - 1; // exclude chaos
+      relicManager.reset();
+      relicManager.addRelic('relic_chaos');
+      // Re-roll random relics
+      for (int i = 0; i < relicCount; i++) {
+        final choices = relicManager.generateRelicChoices(
+          _rng,
+          choiceCount: 1,
+          qualityBonus: upgradeManager.relicQualityBonus,
+        );
+        if (choices.isNotEmpty) {
+          relicManager.addRelic(choices.first);
+        }
+      }
+      showDamageNumber(wall.position, '카오스!', const Color(0xFFE040FB));
+    }
   }
 
   /// Called by WaveManager when a wave is cleared.
@@ -550,6 +724,21 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       _applyChainLightning(enemy);
     }
 
+    // Relic: convert — 5% chance to spawn a free unit on kill
+    if (relicManager.convertChance > 0 && _rng.nextDouble() < relicManager.convertChance) {
+      final emptyIdx = _unitSlots.indexWhere((s) => s.isEmpty);
+      if (emptyIdx != -1) {
+        final typeId = getRandomUnitType(_rng);
+        _unitSlots[emptyIdx].place(merge.DefenseUnit(
+          unitTypeId: typeId,
+          level: 1,
+        ));
+        showDamageNumber(enemy.position, '전향!', const Color(0xFF64FFDA));
+        _tryAutoMerge();
+        _refreshSlotComponents();
+      }
+    }
+
     if (enemy.enemyId == 'boss') {
       waveManager.onBossKilled();
       totalBossKills++;
@@ -644,8 +833,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _updateAchievement(AchievementType.gold, _runGoldEarned);
     _updateAchievement(AchievementType.relics, relicManager.ownedRelics.length);
 
-    // Save
+    // Save & clear in-run state
     saveGame();
+    saveManager.clearRunState();
 
     // Show result overlay
     overlays.remove('DefenseHud');
@@ -660,6 +850,37 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   int get lastRunStars => _lastRunStars;
   int get runKills => _runKills;
   int get runGoldEarned => _runGoldEarned;
+
+  /// Build summary data for run result screen.
+  Map<String, dynamic> get runSummary {
+    // Count unit types and highest levels
+    final unitCounts = <String, int>{};
+    int highestLevel = 0;
+    int hybridCount = 0;
+    for (final slot in _unitSlots) {
+      final u = slot.unit;
+      if (u == null) continue;
+      final icon = _unitIcons[u.unitTypeId] ?? '❓';
+      unitCounts[icon] = (unitCounts[icon] ?? 0) + 1;
+      if (u.level > highestLevel) highestLevel = u.level;
+      if (u.isHybrid) hybridCount++;
+    }
+
+    // Relic list
+    final relicIcons = relicManager.ownedRelics.map((id) {
+      final def = RelicDatabase.get(id);
+      return def?.icon ?? '🔮';
+    }).toList();
+
+    return {
+      'unitCounts': unitCounts,
+      'highestLevel': highestLevel,
+      'hybridCount': hybridCount,
+      'relicIcons': relicIcons,
+      'maxCombo': comboManager.maxCombo,
+      'bossKills': waveManager.bossesKilled,
+    };
+  }
 
   /// Called when a perfect wave is achieved.
   void onPerfectWave(int consecutiveCount) {
@@ -770,6 +991,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     // Place merged unit
     _unitSlots[indices[0]].place(mergedUnit);
+
+    _totalMerges++;
+    _updateAchievement(AchievementType.merges, _totalMerges);
 
     gameFeel.onMerge(newLevel);
     particleEffect.spawnMerge(

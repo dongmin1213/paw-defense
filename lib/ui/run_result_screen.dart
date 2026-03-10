@@ -138,7 +138,9 @@ class _RunResultScreenState extends State<RunResultScreen>
                   _buildTitle(),
                   const SizedBox(height: 24),
                   _buildStatsPanel(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  _buildBuildSummary(),
+                  const SizedBox(height: 12),
                   _buildStarReward(),
                   const Spacer(flex: 1),
                   if (_showButtons) _buildButtons(),
@@ -298,6 +300,96 @@ class _RunResultScreenState extends State<RunResultScreen>
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBuildSummary() {
+    final summary = widget.game.runSummary;
+    final unitCounts = summary['unitCounts'] as Map<String, int>;
+    final relicIcons = summary['relicIcons'] as List<String>;
+    final maxCombo = summary['maxCombo'] as int;
+    final bossKills = summary['bossKills'] as int;
+    final hybridCount = summary['hybridCount'] as int;
+    final highestLevel = summary['highestLevel'] as int;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: GameTheme.pixelCardDecoration(
+        fillColor: GameTheme.bgDeep.withValues(alpha: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '빌드 요약',
+            style: GameTheme.pixel(
+              fontSize: 8,
+              color: GameTheme.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Unit composition
+          if (unitCounts.isNotEmpty)
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: unitCounts.entries.map((e) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: GameTheme.pixelCardDecoration(fillColor: GameTheme.bgCard),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(e.key, style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 2),
+                      Text('x${e.value}',
+                          style: GameTheme.pixel(fontSize: 6, color: GameTheme.textSecondary)),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 6),
+          // Extra stats row
+          Row(
+            children: [
+              if (highestLevel > 0)
+                _miniStat('최고 Lv', '$highestLevel', GameTheme.accentGold),
+              if (maxCombo > 0)
+                _miniStat('최대 콤보', '$maxCombo', GameTheme.accentOrange),
+              if (bossKills > 0)
+                _miniStat('보스 처치', '$bossKills', GameTheme.accentRed),
+              if (hybridCount > 0)
+                _miniStat('하이브리드', '$hybridCount', GameTheme.accentPurple),
+            ],
+          ),
+          // Relics
+          if (relicIcons.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text('유물 ', style: GameTheme.pixel(fontSize: 6, color: GameTheme.textMuted)),
+                ...relicIcons.map((icon) => Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Text(icon, style: const TextStyle(fontSize: 12)),
+                    )),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: GameTheme.pixel(fontSize: 8, color: color, fontWeight: FontWeight.w700)),
+          Text(label, style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted)),
         ],
       ),
     );

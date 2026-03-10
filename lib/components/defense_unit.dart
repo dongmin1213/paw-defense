@@ -120,9 +120,19 @@ class DefenseUnit extends PositionComponent
   }
 
   /// Attack power scales exponentially with level, plus reward/relic/upgrade bonuses.
-  /// Includes berserker (wall HP < 30% → x2) and reverse (low HP → high ATK).
+  /// Includes evolved multiplier, berserker (wall HP < 30% → x2) and reverse.
   double get atk {
-    final base = baseAtk * pow(BalanceConfig.unitAtkLevelBase, level - 1);
+    double base = baseAtk * pow(BalanceConfig.unitAtkLevelBase, level - 1);
+    // Evolved units get additional ATK multiplier (2.5x~3.0x defined in EvolvedUnitData)
+    if (isEvolved && !isHybrid) {
+      final unitType = _typeMap[unitTypeId];
+      if (unitType != null) {
+        final evo = UnitDatabase.getEvolution(unitType);
+        if (evo != null) {
+          base *= evo.atkMultiplier;
+        }
+      }
+    }
     final wallHpPct = game.wall.hpPercent;
     return base *
         game.rewardAtkMultiplier *
@@ -134,9 +144,11 @@ class DefenseUnit extends PositionComponent
   }
 
   /// Attack speed improves per level, plus reward/relic/upgrade bonuses.
+  /// Evolved units get +20% attack speed bonus.
   double get atkSpeed {
-    final base = baseAtkSpeed *
+    double base = baseAtkSpeed *
         (1.0 + (level - 1) * BalanceConfig.unitAtkSpeedPerLevel);
+    if (isEvolved && !isHybrid) base *= 1.2;
     return base *
         game.rewardAtkSpeedMultiplier *
         game.relicManager.atkSpeedMultiplier *
@@ -144,8 +156,10 @@ class DefenseUnit extends PositionComponent
   }
 
   /// Range grows per level, plus reward and relic bonuses.
+  /// Evolved units get +20% range bonus.
   double get range {
-    final base = baseRange + (level - 1) * BalanceConfig.unitRangePerLevel;
+    double base = baseRange + (level - 1) * BalanceConfig.unitRangePerLevel;
+    if (isEvolved && !isHybrid) base *= 1.2;
     return base * game.rewardRangeMultiplier * game.relicManager.rangeMultiplier;
   }
 

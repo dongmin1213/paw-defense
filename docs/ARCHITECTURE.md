@@ -91,28 +91,40 @@ game.gameFeel.onWallHit();       // 벽 피격 반응
 main.dart → DefenseGame.onLoad()
   → soundManager 초기화
   → comboManager 초기화 (add to world)
+  → achievementManager 초기화
   → overlays.add('DefenseMainMenu')
   → startGame()
     → wall/slots/waveManager 초기화
     → relicManager.reset(), comboManager.resetAll()
     → gold = 50 + startUnits * 10 + startGoldBonus
+    → saveManager.clearRunState()
     → overlays.add('DefenseHud')
+  → resumeRun() (이어하기)
+    → 저장된 상태 복원 (gold, relics, slots, wave, wall HP)
+    → waveManager.resumeAtWave(savedWave)
   → update(dt)
     → gameFeel 적용 (히트스탑/슬로모션)
     → camera shake/zoom
     → livingWall/wallTurret DPS (유물)
   → onEnemyKilled()
     → comboManager.onEnemyKilled()
-    → 유물 효과 (bonus gold, kill heal, chain lightning, boss gold)
+    → 유물 효과 (bonus gold, kill heal, chain lightning, boss gold, convert)
     → particle effects (scaled by combo tier)
+    → achievement 업데이트 (kills, combos)
   → onWaveStart()
-    → 유물 효과 (wave gold, blessing rain, rift, time warp)
+    → 유물 효과 (wave gold, blessing rain, rift, time warp, chaos)
   → onWallDestroyed()
+    → achievement 업데이트 (waves, gold, relics)
+    → saveManager.clearRunState()
     → overlays.add('RunResult')
   → goToMainMenu()
 
-9개 오버레이: DefenseMainMenu, DefenseHud, WaveReward,
-StarShop, RunResult, Pause, RelicSelection, Tutorial, Settings
+앱 라이프사이클:
+  → paused/inactive → saveRunState() + saveGame()
+  → resumed → soundManager.onAppResumed()
+
+10개 오버레이: DefenseMainMenu, DefenseHud, WaveReward,
+StarShop, RunResult, Pause, RelicSelection, Tutorial, Settings, Achievement
 ```
 
 ## 데이터 의존 관계
@@ -122,11 +134,13 @@ balance_config.dart     ← wave_manager, defense_game, defense_unit, relic_mana
 enemy_data.dart         ← wave_manager, defense_game
 unit_data.dart          ← defense_unit
 hybrid_unit_data.dart   ← defense_unit, merge_manager, defense_game, unit_renderer
-relic_data.dart         ← relic_manager, relic_selection_screen, defense_hud
+relic_data.dart         ← relic_manager, relic_selection_screen, defense_hud, defense_game
 relic_manager.dart      ← defense_game, defense_unit, defense_enemy, wave_manager, wall
 combo_manager.dart      ← defense_game, defense_hud
-upgrade_manager.dart    ← defense_game, defense_unit, combo_manager, relic_manager
+upgrade_manager.dart    ← defense_game, defense_unit, combo_manager, relic_manager, star_shop_screen
+save_manager.dart       ← defense_game, main.dart (앱 라이프사이클), defense_main_menu
 sound_manager.dart      ← defense_game, main.dart (앱 라이프사이클)
+achievement_manager.dart ← defense_game, achievement_screen, settings_screen
 ```
 
 ## 핵심 시스템 구조
@@ -172,6 +186,37 @@ combo_manager.dart (Component with HasGameReference)
   → update(dt) → 콤보 타이머 관리
   → comboWindow getter → 2.0 + upgradeManager.comboDurationBonus
   → effectSizeMultiplier → 파티클 크기에 전달
+```
+
+### 중간 저장/복원 시스템
+```
+defense_save_manager.dart
+  → saveRunState(Map) — JSON 직렬화 → SharedPreferences
+  → loadRunState() → Map? — 복원
+  → clearRunState() — 런 종료/시작 시 삭제
+  → hasRunState getter — 메인 메뉴 "이어하기" 표시 여부
+
+defense_game.dart
+  → buildRunState() — 현재 런 상태 스냅샷 (gold, wave, relics, slots, wall HP 등)
+  → saveRunState() — isPlaying일 때만 저장
+  → resumeRun() — 저장된 상태 복원 + waveManager.resumeAtWave()
+
+main.dart
+  → didChangeAppLifecycleState(paused) → saveRunState() + saveGame()
+```
+
+### 업적 시스템
+```
+achievement_manager.dart
+  → AchievementDef (id, name, icon, target, type, starReward)
+  → AchievementDatabase (25+개 업적, 8가지 타입)
+  → updateProgress(type, value) → 새로 달성된 업적 ID 리스트 반환
+  → SharedPreferences 기반 영구 저장
+
+defense_game.dart
+  → _updateAchievement(type, value) → 달성 시 별 보상 + 알림 큐
+  → popAchievementNotification() → HUD에서 폴링
+  → 머지/킬/웨이브/콤보/보스/하이브리드/골드/유물 추적
 ```
 
 ## 새 컨텐츠 추가 가이드

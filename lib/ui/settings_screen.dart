@@ -125,7 +125,35 @@ class _SettingsScreenState extends State<SettingsScreen>
                       setState(() => sound.setSfxVolume(v));
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  // Data reset button
+                  GameTheme.pixelButton(
+                    label: '데이터 초기화',
+                    onTap: () => _showResetDialog(context),
+                    color: GameTheme.accentRed.withValues(alpha: 0.6),
+                    fontSize: 7,
+                    verticalPad: 8,
+                    horizontalPad: 16,
+                    icon: Icons.delete_forever,
+                  ),
+                  const SizedBox(height: 20),
+                  // Version & credits
+                  Text(
+                    'Paw Defense v1.0.0',
+                    style: GameTheme.pixel(
+                      fontSize: 6,
+                      color: GameTheme.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Made with Flutter + Flame',
+                    style: GameTheme.pixel(
+                      fontSize: 5,
+                      color: GameTheme.textMuted.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Close button
                   GameTheme.pixelButton(
                     label: '닫기',
@@ -144,6 +172,69 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
       ),
+    );
+  }
+
+  void _showResetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: GameTheme.bgPanel,
+          title: Text(
+            '데이터 초기화',
+            style: GameTheme.pixel(
+              fontSize: 10,
+              color: GameTheme.accentRed,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            '모든 진행 데이터가 삭제됩니다.\n(별, 업그레이드, 업적 등)\n\n이 작업은 되돌릴 수 없습니다.',
+            style: TextStyle(
+              color: GameTheme.textPrimary,
+              fontSize: 13,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                '취소',
+                style: GameTheme.pixel(
+                  fontSize: 8,
+                  color: GameTheme.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await widget.game.saveManager.resetAll();
+                await widget.game.achievementManager.save();
+                // Reload state
+                widget.game.stars = 0;
+                widget.game.souls = 0;
+                widget.game.highestWave = 0;
+                widget.game.totalRuns = 0;
+                widget.game.totalKills = 0;
+                widget.game.totalStarsEarned = 0;
+                widget.game.totalBossKills = 0;
+                widget.game.upgradeManager.resetAll();
+                widget.game.overlays.remove('Settings');
+              },
+              child: Text(
+                '초기화',
+                style: GameTheme.pixel(
+                  fontSize: 8,
+                  color: GameTheme.accentRed,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
