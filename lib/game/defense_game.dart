@@ -22,6 +22,7 @@ import '../systems/skill_manager.dart';
 import '../systems/achievement_manager.dart';
 import '../systems/daily_manager.dart';
 import '../systems/codex_manager.dart';
+import '../systems/synergy_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
@@ -60,6 +61,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late AchievementManager achievementManager;
   late DailyManager dailyManager;
   late CodexManager codexManager;
+  late SynergyManager synergyManager;
 
   // ── Core Components ──
   late Wall wall;
@@ -243,6 +245,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final codexPrefs = await SharedPreferences.getInstance();
     await codexManager.init(codexPrefs);
 
+    synergyManager = SynergyManager();
+
     // Initialize unit slots
     _initSlots();
 
@@ -337,10 +341,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     wall.maxHp = 100.0 * wallHpMult;
     wall.currentHp = wall.maxHp;
 
-    // Reset relics, combo, and skill
+    // Reset relics, combo, skill, and synergies
     relicManager.reset();
     comboManager.resetAll();
     skillManager.reset();
+    synergyManager.reset();
 
     // Clear existing slots and enemies
     _clearAllUnits();
@@ -364,8 +369,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.remove('StarShop');
     overlays.add('DefenseHud');
 
-    // Update skill type after initial unit placement
+    // Update skill type and synergies after initial unit placement
     _updateSkillType();
+    _updateSynergies();
 
     totalRuns++;
   }
@@ -467,6 +473,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       }
     }
     _refreshSlotComponents();
+    _updateSkillType();
+    _updateSynergies();
 
     // Restore wave and restart
     final savedWave = (state['wave'] as num?)?.toInt() ?? 1;
@@ -921,7 +929,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final goldMult = upgradeManager.goldGainMultiplier *
         relicManager.goldMultiplier *
         rewardGoldMultiplier *
-        waveManager.waveModifier.goldMultiplier;
+        waveManager.waveModifier.goldMultiplier *
+        synergyManager.goldMultiplier;
     final finalAmount = (amount * goldMult).round();
     gold += finalAmount;
     _runGoldEarned += finalAmount;
@@ -943,6 +952,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     stars += earnedStars;
     totalStarsEarned += earnedStars;
+
+    // Soul reward — earn souls based on wave reached
+    final earnedSouls = _calculateSouls();
+    if (earnedSouls > 0) {
+      souls += earnedSouls;
+      _achievementQueue.add('👻 소울 +$earnedSouls 획득!');
+    }
+    _lastRunSouls = earnedSouls;
 
     // Update highest wave
     if (waveManager.currentWave > highestWave) {
@@ -978,9 +995,25 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   int _lastRunStars = 0;
+  int _lastRunSouls = 0;
   int get lastRunStars => _lastRunStars;
+  int get lastRunSouls => _lastRunSouls;
   int get runKills => _runKills;
   int get runGoldEarned => _runGoldEarned;
+
+  /// Calculate souls earned for this run.
+  /// Souls are the prestige currency: wave 15+ starts earning, scaling with wave.
+  int _calculateSouls() {
+    final wave = waveManager.currentWave;
+    if (wave < 15) return 0;
+    // Base: (wave - 14) * 2, bonus for boss kills
+    final base = (wave - 14) * 2;
+    final bossBonus = waveManager.bossesKilled * 5;
+    return base + bossBonus;
+  }
+
+  /// Soul-based permanent ATK multiplier. +2% per 50 souls spent equivalent.
+  double get soulAtkMultiplier => 1.0 + (souls ~/ 100) * 0.02;
 
   /// Build summary data for run result screen.
   Map<String, dynamic> get runSummary {
@@ -1127,6 +1160,17 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     return 10.0;
   }
 
+  /// Recalculate unit synergy bonuses. Called whenever unit composition changes.
+  void _updateSynergies() {
+    // Build hybrid parent map
+    final hybridParents = <String, (String, String)>{};
+    for (final h in HybridDatabase.all) {
+      hybridParents[h.id] = (h.parentA, h.parentB);
+    }
+    synergyManager.setHybridParents(hybridParents);
+    synergyManager.recalculate(_unitSlots);
+  }
+
   /// Update the dominant unit type for skill selection.
   /// Called whenever the unit composition changes.
   void _updateSkillType() {
@@ -1207,8 +1251,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _tryAutoMerge();
 
     // Refresh visual components
-    // Update skill type after buying unit
+    // Update skill type and synergies after buying unit
     _updateSkillType();
+    _updateSynergies();
     _refreshSlotComponents();
   }
 
@@ -1273,8 +1318,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         if (dist <= 120.0) {
           enemy.takeDamage(mergeBombDmg * newLevel);
         }
-    // Update skill type after unit composition change
+    // Update skill type and synergies after unit composition change
     _updateSkillType();
+    _updateSynergies();
 
       }
     }
@@ -1455,8 +1501,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       const Color(0xFFFFD54F),
     );
 
-    // Update skill type after selling unit
+    // Update skill type and synergies after selling unit
     _updateSkillType();
+    _updateSynergies();
     _refreshSlotComponents();
   }
 
@@ -1491,6 +1538,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Check for auto-merge after placing
     _tryAutoMerge();
 
+    _updateSkillType();
+    _updateSynergies();
     _refreshSlotComponents();
   }
 

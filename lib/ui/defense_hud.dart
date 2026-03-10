@@ -7,6 +7,8 @@ import '../data/hybrid_unit_data.dart';
 import '../data/enemy_data.dart';
 import '../systems/combo_manager.dart';
 import '../systems/merge_manager.dart' as merge;
+import '../systems/skill_manager.dart';
+import '../systems/synergy_manager.dart';
 
 /// In-game HUD for the castle defense game.
 /// Shows wave info, gold, wall HP, and unit shop area.
@@ -175,7 +177,11 @@ class _DefenseHudState extends State<DefenseHud>
               _buildWaveRushPanel(),
             // Heal cooldown indicator
             if (widget.game.healCooldown > 0) _buildHealCooldown(),
+            // Synergy display (compact, info-only)
+            if (widget.game.synergyManager.hasAnySynergy) _buildSynergyBar(),
             const Spacer(),
+            // Skill gauge above bottom panel for thumb reach
+            _buildSkillGauge(),
             _buildBottomPanel(),
           ],
         ),
@@ -246,8 +252,8 @@ class _DefenseHudState extends State<DefenseHud>
               setState(() {});
             },
             child: Container(
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               margin: const EdgeInsets.only(right: 6),
               decoration: GameTheme.pixelCardDecoration(
                 fillColor: widget.game.gameSpeed >= 2.0
@@ -263,7 +269,7 @@ class _DefenseHudState extends State<DefenseHud>
                 child: Text(
                   widget.game.gameSpeed >= 2.0 ? '2x' : '1x',
                   style: GameTheme.pixel(
-                    fontSize: 9,
+                    fontSize: 10,
                     color: widget.game.gameSpeed >= 2.0
                         ? GameTheme.accentGold
                         : GameTheme.textSecondary,
@@ -280,8 +286,8 @@ class _DefenseHudState extends State<DefenseHud>
               widget.game.overlays.add('Pause');
             },
             child: Container(
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               decoration: GameTheme.pixelCardDecoration(
                 fillColor: GameTheme.bgCard,
                 borderColor: GameTheme.textMuted.withValues(alpha: 0.5),
@@ -289,7 +295,7 @@ class _DefenseHudState extends State<DefenseHud>
               child: const Icon(
                 Icons.pause,
                 color: GameTheme.textSecondary,
-                size: 18,
+                size: 20,
               ),
             ),
           ),
@@ -689,6 +695,13 @@ class _DefenseHudState extends State<DefenseHud>
               style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted),
             ),
           ],
+          if (slot.level >= 5 && !isHybridUnit) ...[
+            const SizedBox(height: 4),
+            Text(
+              '★ 진화 가능! 유물에서 진화석을 획득하세요',
+              style: GameTheme.pixel(fontSize: 5, color: GameTheme.accentGold),
+            ),
+          ],
           if (slot.canMerge)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -710,130 +723,162 @@ class _DefenseHudState extends State<DefenseHud>
     );
   }
 
+  Widget _buildSkillGauge() {
+    final sm = widget.game.skillManager;
+    final skill = sm.currentSkill;
+    if (skill == null) return const SizedBox.shrink();
+
+    final isReady = sm.isReady;
+    final hasEffect = sm.hasActiveEffect;
+    final barColor = isReady
+        ? GameTheme.accentGold
+        : hasEffect
+            ? GameTheme.accentGreen
+            : GameTheme.accent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: GestureDetector(
+        onTap: isReady
+            ? () {
+                widget.game.activateSkill();
+                setState(() {});
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: GameTheme.pixelCardDecoration(
+            fillColor: isReady
+                ? GameTheme.accentGold.withValues(alpha: 0.15)
+                : GameTheme.bgCard,
+            borderColor: barColor.withValues(alpha: 0.6),
+            glow: isReady,
+            glowColor: GameTheme.accentGold,
+          ),
+          child: Row(
+            children: [
+              Text(skill.icon, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isReady ? '${skill.name} — 탭하여 발동!' : skill.name,
+                      style: GameTheme.pixel(
+                        fontSize: 6,
+                        color: isReady ? GameTheme.accentGold : GameTheme.textSecondary,
+                        fontWeight: isReady ? FontWeight.w700 : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    GameTheme.pixelProgressBar(
+                      value: hasEffect ? (sm.effectTimer / 5.0).clamp(0.0, 1.0) : sm.chargePercent,
+                      height: 6,
+                      fillColor: barColor,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                hasEffect
+                    ? '${sm.effectTimer.toStringAsFixed(1)}s'
+                    : '${sm.currentCharge}/${sm.maxCharge}',
+                style: GameTheme.pixel(
+                  fontSize: 6,
+                  color: isReady ? GameTheme.accentGold : GameTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSynergyBar() {
+    final synergies = widget.game.synergyManager.activeSynergies;
+    if (synergies.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: GameTheme.pixelCardDecoration(
+          fillColor: GameTheme.accentPurple.withValues(alpha: 0.1),
+          borderColor: GameTheme.accentPurple.withValues(alpha: 0.4),
+        ),
+        child: Row(
+          children: [
+            Text(
+              '시너지',
+              style: GameTheme.pixel(
+                fontSize: 5,
+                color: GameTheme.accentPurple,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 2,
+                children: synergies.map((s) {
+                  final tierColor = s.tier >= 2
+                      ? GameTheme.accentGold
+                      : GameTheme.accentPurple;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.15),
+                      border: Border.all(color: tierColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Text(
+                      '${s.bonus.icon} ${s.bonus.name}',
+                      style: GameTheme.pixel(
+                        fontSize: 5,
+                        color: tierColor,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomPanel() {
     final unitCost = widget.game.getUnitCost();
     final canBuy = widget.game.gold >= unitCost;
+    final canReroll = widget.game.gold >= 20;
 
     return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      padding: const EdgeInsets.all(8),
       decoration: GameTheme.pixelPanelDecoration(
         fillColor: GameTheme.bgDeep.withValues(alpha: 0.9),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Unit shop header
-          Row(
-            children: [
-              Text(
-                _sellMode ? '판매할 유닛 선택' : '유닛 배치',
+          // Sell mode indicator
+          if (_sellMode)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '판매할 유닛을 선택하세요',
                 style: GameTheme.pixel(
-                  fontSize: 8,
-                  color: _sellMode ? GameTheme.accentRed : GameTheme.textSecondary,
+                  fontSize: 7,
+                  color: GameTheme.accentRed,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const Spacer(),
-              // Occupied / total slots
-              GameTheme.pixelChip(
-                value: '${widget.game.unitSlots.where((s) => s.isOccupied).length}/${widget.game.unitSlots.length}',
-                color: GameTheme.accentGold,
-                fontSize: 6,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Action buttons row
-          Row(
-            children: [
-              // Gacha / draw unit button with cost
-              Expanded(
-                flex: 3,
-                child: Column(
-                  children: [
-                    GameTheme.pixelButton(
-                      label: '뽑기',
-                      onTap: canBuy
-                          ? () {
-                              widget.game.buyUnit();
-                              setState(() => _sellMode = false);
-                            }
-                          : null,
-                      gradient:
-                          canBuy ? GameTheme.gradientPrimary : null,
-                      fontSize: 9,
-                      verticalPad: 10,
-                      horizontalPad: 8,
-                      icon: Icons.add_circle_outline,
-                      enabled: canBuy,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${GameTheme.formatInt(unitCost)}G',
-                      style: GameTheme.pixel(
-                        fontSize: 5,
-                        color: canBuy
-                            ? GameTheme.accentGold
-                            : GameTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Sell button (toggles sell mode)
-              Expanded(
-                flex: 2,
-                child: GameTheme.pixelButton(
-                  label: _sellMode ? '취소' : '판매',
-                  onTap: () => setState(() => _sellMode = !_sellMode),
-                  color: _sellMode
-                      ? GameTheme.accentOrange
-                      : GameTheme.accentRed,
-                  fontSize: 8,
-                  verticalPad: 10,
-                  horizontalPad: 8,
-                  icon: _sellMode ? Icons.close : Icons.sell,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Reroll button
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    GameTheme.pixelButton(
-                      label: '리롤',
-                      onTap: widget.game.gold >= 20
-                          ? () {
-                              widget.game.rerollUnits();
-                              setState(() => _sellMode = false);
-                            }
-                          : null,
-                      color: GameTheme.accentPurple,
-                      fontSize: 8,
-                      verticalPad: 10,
-                      horizontalPad: 8,
-                      icon: Icons.refresh,
-                      enabled: widget.game.gold >= 20,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '20G',
-                      style: GameTheme.pixel(
-                        fontSize: 5,
-                        color: widget.game.gold >= 20
-                            ? GameTheme.accentPurple
-                            : GameTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Owned units display row
+            ),
+          // Owned units display row (units first, more prominent)
           SizedBox(
             height: 50,
             child: widget.game.unitSlots.isEmpty
@@ -855,6 +900,79 @@ class _DefenseHudState extends State<DefenseHud>
                       return _buildUnitSlot(slot, index);
                     },
                   ),
+          ),
+          // Unit info popup (shown above action buttons when a unit is tapped)
+          if (_unitInfoSlot != null &&
+              _unitInfoSlot! < widget.game.unitSlots.length &&
+              widget.game.unitSlots[_unitInfoSlot!].isOccupied)
+            _buildUnitInfoPopup(widget.game.unitSlots[_unitInfoSlot!], _unitInfoSlot!),
+          const SizedBox(height: 6),
+          // Action buttons row - compact with costs integrated
+          Row(
+            children: [
+              // Gacha / draw unit button with integrated cost
+              Expanded(
+                flex: 3,
+                child: GameTheme.pixelButton(
+                  label: '뽑기 ${GameTheme.formatInt(unitCost)}G',
+                  onTap: canBuy
+                      ? () {
+                          widget.game.buyUnit();
+                          setState(() => _sellMode = false);
+                        }
+                      : null,
+                  gradient: canBuy ? GameTheme.gradientPrimary : null,
+                  fontSize: 8,
+                  verticalPad: 10,
+                  horizontalPad: 6,
+                  icon: Icons.add_circle_outline,
+                  enabled: canBuy,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Sell button (toggles sell mode)
+              Expanded(
+                flex: 2,
+                child: GameTheme.pixelButton(
+                  label: _sellMode ? '취소' : '판매',
+                  onTap: () => setState(() => _sellMode = !_sellMode),
+                  color: _sellMode
+                      ? GameTheme.accentOrange
+                      : GameTheme.accentRed,
+                  fontSize: 8,
+                  verticalPad: 10,
+                  horizontalPad: 6,
+                  icon: _sellMode ? Icons.close : Icons.sell,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Reroll button with integrated cost
+              Expanded(
+                flex: 2,
+                child: GameTheme.pixelButton(
+                  label: '리롤 20G',
+                  onTap: canReroll
+                      ? () {
+                          widget.game.rerollUnits();
+                          setState(() => _sellMode = false);
+                        }
+                      : null,
+                  color: GameTheme.accentPurple,
+                  fontSize: 8,
+                  verticalPad: 10,
+                  horizontalPad: 6,
+                  icon: Icons.refresh,
+                  enabled: canReroll,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Slot count indicator
+              GameTheme.pixelChip(
+                value: '${widget.game.unitSlots.where((s) => s.isOccupied).length}/${widget.game.unitSlots.length}',
+                color: GameTheme.accentGold,
+                fontSize: 6,
+              ),
+            ],
           ),
         ],
       ),
@@ -896,11 +1014,18 @@ class _DefenseHudState extends State<DefenseHud>
           widget.game.sellUnit(index);
           setState(() {
             _selectedSlotIndex = null;
+            _unitInfoSlot = null;
             _sellMode = false;
           });
         } else if (isOccupied) {
           setState(() {
-            _selectedSlotIndex = isSelected ? null : index;
+            if (isSelected) {
+              _selectedSlotIndex = null;
+              _unitInfoSlot = null;
+            } else {
+              _selectedSlotIndex = index;
+              _unitInfoSlot = index;
+            }
           });
         }
       },
@@ -939,14 +1064,16 @@ class _DefenseHudState extends State<DefenseHud>
                           fontSize: showSellHighlight ? 14 : (showHybridHint ? 14 : 18)),
                     ),
                     Text(
-                      'Lv${slot.level}',
+                      slot.level >= 5 ? 'Lv${slot.level} ★' : 'Lv${slot.level}',
                       style: GameTheme.pixel(
                         fontSize: 5,
-                        color: showMergeHint
-                            ? GameTheme.accentGreen
-                            : showHybridHint
-                                ? GameTheme.accentPurple
-                                : GameTheme.textSecondary,
+                        color: slot.level >= 5
+                            ? GameTheme.accentGold
+                            : showMergeHint
+                                ? GameTheme.accentGreen
+                                : showHybridHint
+                                    ? GameTheme.accentPurple
+                                    : GameTheme.textSecondary,
                       ),
                     ),
                   ],

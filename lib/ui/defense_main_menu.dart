@@ -212,6 +212,80 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
     );
   }
 
+  Widget _buildSecondaryButtons() {
+    final showAchievement =
+        widget.game.isSystemUnlocked(DefenseGame.unlockAchievement) ||
+            widget.game.achievementManager.completedAchievements.length >= 3;
+
+    return Column(
+      children: [
+        // First row: upgrade + codex
+        Row(
+          children: [
+            Expanded(
+              child: GameTheme.pixelButton(
+                label: '업그레이드',
+                onTap: () => widget.game.openStarShop(),
+                gradient: GameTheme.gradientGold,
+                fontSize: 8,
+                verticalPad: 12,
+                horizontalPad: 8,
+                icon: Icons.auto_awesome,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GameTheme.pixelButton(
+                label: '도감',
+                onTap: () => widget.game.openCodex(),
+                gradient: GameTheme.gradientGreen,
+                fontSize: 8,
+                verticalPad: 12,
+                horizontalPad: 8,
+                icon: Icons.menu_book,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Second row: achievement + settings
+        Row(
+          children: [
+            if (showAchievement) ...[
+              Expanded(
+                child: GameTheme.pixelButton(
+                  label: '업적',
+                  onTap: () => widget.game.overlays.add('Achievement'),
+                  gradient: GameTheme.gradientPurple,
+                  fontSize: 8,
+                  verticalPad: 12,
+                  horizontalPad: 8,
+                  icon: Icons.emoji_events,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: GameTheme.pixelButton(
+                label: '설정',
+                onTap: () => widget.game.overlays.add('Settings'),
+                color: GameTheme.bgPanel,
+                fontSize: 8,
+                verticalPad: 12,
+                horizontalPad: 8,
+                icon: Icons.settings,
+              ),
+            ),
+            if (!showAchievement) ...[
+              const SizedBox(width: 10),
+              const Expanded(child: SizedBox()),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _statItem(String label, String value) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -340,52 +414,8 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           ),
         ),
         const SizedBox(height: 16),
-        // Upgrade button
-        GameTheme.pixelButton(
-          label: '업그레이드',
-          onTap: () => widget.game.openStarShop(),
-          gradient: GameTheme.gradientGold,
-          fontSize: 9,
-          verticalPad: 12,
-          horizontalPad: 28,
-          icon: Icons.auto_awesome,
-        ),
-        const SizedBox(height: 12),
-        // Codex button
-        GameTheme.pixelButton(
-          label: '\uB3C4\uAC10',
-          onTap: () => widget.game.openCodex(),
-          gradient: GameTheme.gradientGreen,
-          fontSize: 9,
-          verticalPad: 12,
-          horizontalPad: 28,
-          icon: Icons.menu_book,
-        ),
-        const SizedBox(height: 12),
-        // Achievement button (only if unlocked or enough achievements completed)
-        if (widget.game.isSystemUnlocked(DefenseGame.unlockAchievement) ||
-            widget.game.achievementManager.completedAchievements.length >= 3) ...[
-          GameTheme.pixelButton(
-            label: '\uC5C5\uC801',
-            onTap: () => widget.game.overlays.add('Achievement'),
-            gradient: GameTheme.gradientPurple,
-            fontSize: 9,
-            verticalPad: 12,
-            horizontalPad: 28,
-            icon: Icons.emoji_events,
-          ),
-          const SizedBox(height: 12),
-        ],
-        // Settings button
-        GameTheme.pixelButton(
-          label: '설정',
-          onTap: () => widget.game.overlays.add('Settings'),
-          color: GameTheme.bgPanel,
-          fontSize: 8,
-          verticalPad: 8,
-          horizontalPad: 20,
-          icon: Icons.settings,
-        ),
+        // Secondary buttons in 2-column grid for compact layout
+        _buildSecondaryButtons(),
       ],
     );
   }
