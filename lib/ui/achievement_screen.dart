@@ -66,7 +66,22 @@ class AchievementScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('🏆', style: TextStyle(fontSize: 24)),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: GameTheme.accentGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(
+                    color: GameTheme.accentGold.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: GameTheme.accentGold,
+                  size: 20,
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -92,26 +107,50 @@ class AchievementScreen extends StatelessWidget {
                 ),
               ),
               // Total star reward earned
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '획득 보상',
-                    style: GameTheme.pixel(
-                      fontSize: 6,
-                      color: GameTheme.textMuted,
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: GameTheme.bgDeep.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(
+                    color: GameTheme.accentGold.withValues(alpha: 0.2),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '⭐ ${mgr.totalStarReward}',
-                    style: GameTheme.pixel(
-                      fontSize: 9,
-                      color: GameTheme.accentGold,
-                      fontWeight: FontWeight.w700,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '획득 보상',
+                      style: GameTheme.pixel(
+                        fontSize: 6,
+                        color: GameTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: GameTheme.accentGold,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${mgr.totalStarReward}',
+                          style: GameTheme.pixel(
+                            fontSize: 9,
+                            color: GameTheme.accentGold,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -188,9 +227,17 @@ class AchievementScreen extends StatelessWidget {
                       ),
                     ),
                     if (isComplete)
-                      Text(
-                        '✅',
-                        style: const TextStyle(fontSize: 12),
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: GameTheme.accentGreen.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.check_circle,
+                          color: GameTheme.accentGreen,
+                          size: 14,
+                        ),
                       ),
                   ],
                 ),
@@ -236,12 +283,23 @@ class AchievementScreen extends StatelessWidget {
                   ? GameTheme.accentGold.withValues(alpha: 0.1)
                   : GameTheme.bgDeep,
             ),
-            child: Text(
-              '⭐${def.starReward}',
-              style: GameTheme.pixel(
-                fontSize: 6,
-                color: isComplete ? GameTheme.accentGold : GameTheme.textMuted,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  color: isComplete ? GameTheme.accentGold : GameTheme.textMuted,
+                  size: 10,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  '${def.starReward}',
+                  style: GameTheme.pixel(
+                    fontSize: 6,
+                    color: isComplete ? GameTheme.accentGold : GameTheme.textMuted,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

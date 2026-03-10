@@ -88,15 +88,15 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
   Color _rarityColor(RelicRarity rarity) {
     switch (rarity) {
       case RelicRarity.common:
-        return GameTheme.textSecondary;
+        return GameTheme.rarityCommon;
       case RelicRarity.rare:
-        return const Color(0xFF42A5F5);
+        return GameTheme.rarityRare;
       case RelicRarity.epic:
-        return const Color(0xFFAB47BC);
+        return GameTheme.rarityEpic;
       case RelicRarity.legendary:
-        return GameTheme.accentGold;
+        return GameTheme.rarityLegendary;
       case RelicRarity.mythic:
-        return const Color(0xFFFF1744);
+        return GameTheme.rarityMythic;
     }
   }
 
@@ -107,14 +107,21 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
       case RelicRarity.epic:
         return GameTheme.gradientPurple;
       case RelicRarity.mythic:
-        return const LinearGradient(
-          colors: [Color(0xFFFF1744), Color(0xFFFF6D00), Color(0xFFFF1744)],
+        return LinearGradient(
+          colors: [
+            GameTheme.rarityMythic,
+            GameTheme.accentOrange,
+            GameTheme.rarityMythic,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case RelicRarity.rare:
-        return const LinearGradient(
-          colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
+        return LinearGradient(
+          colors: [
+            GameTheme.rarityRare,
+            GameTheme.accentDark,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -157,11 +164,24 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                 ),
                 const SizedBox(height: 4),
                 // Owned relics indicator
-                Text(
-                  '보유: ${widget.game.relicManager.relicCount}/${widget.game.relicManager.maxRelics}',
-                  style: GameTheme.pixel(
-                    fontSize: 6,
-                    color: GameTheme.textMuted,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: GameTheme.bgCard.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                    border: Border.all(
+                      color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '보유: ${widget.game.relicManager.relicCount}/${widget.game.relicManager.maxRelics}',
+                    style: GameTheme.pixel(
+                      fontSize: 6,
+                      color: GameTheme.textMuted,
+                    ),
                   ),
                 ),
                 const Spacer(flex: 1),
@@ -249,6 +269,7 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                     color: _rarityGradient(def.rarity) == null
                         ? borderColor.withValues(alpha: 0.3)
                         : null,
+                    borderRadius: BorderRadius.circular(GameTheme.radiusSm),
                     border: Border.all(
                       color: borderColor.withValues(alpha: 0.6),
                     ),
@@ -303,6 +324,7 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                     ),
                     decoration: BoxDecoration(
                       gradient: GameTheme.gradientGreen,
+                      borderRadius: BorderRadius.circular(GameTheme.radiusSm),
                     ),
                     child: Text(
                       '선택!',

@@ -67,15 +67,32 @@ class _SettingsScreenState extends State<SettingsScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '설정',
-                    style: GameTheme.pixel(
-                      fontSize: 14,
-                      color: GameTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  // Header
+                  Row(
+                    children: [
+                      const Icon(Icons.settings, color: GameTheme.accent, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '설정',
+                        style: GameTheme.pixel(
+                          fontSize: 14,
+                          color: GameTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      GameTheme.closeButton(
+                        onTap: () => widget.game.overlays.remove('Settings'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  // Divider
+                  Container(
+                    height: 1,
+                    color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 16),
                   // BGM toggle
                   _buildToggleRow(
                     icon: Icons.music_note,
@@ -105,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       setState(() => sound.setVibrationEnabled(v));
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   // BGM Volume
                   _buildSliderRow(
                     label: 'BGM 볼륨',
@@ -125,7 +142,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                       setState(() => sound.setSfxVolume(v));
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  // Divider
+                  Container(
+                    height: 1,
+                    color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 16),
                   // Data reset button
                   GameTheme.pixelButton(
                     label: '데이터 초기화',
@@ -136,35 +159,36 @@ class _SettingsScreenState extends State<SettingsScreen>
                     horizontalPad: 16,
                     icon: Icons.delete_forever,
                   ),
-                  const SizedBox(height: 20),
-                  // Version & credits
-                  Text(
-                    'Paw Defense v1.0.0',
-                    style: GameTheme.pixel(
-                      fontSize: 6,
-                      color: GameTheme.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Made with Flutter + Flame',
-                    style: GameTheme.pixel(
-                      fontSize: 5,
-                      color: GameTheme.textMuted.withValues(alpha: 0.6),
-                    ),
-                  ),
                   const SizedBox(height: 16),
-                  // Close button
-                  GameTheme.pixelButton(
-                    label: '닫기',
-                    onTap: () {
-                      widget.game.overlays.remove('Settings');
-                    },
-                    gradient: GameTheme.gradientPrimary,
-                    fontSize: 10,
-                    verticalPad: 12,
-                    horizontalPad: 32,
-                    icon: Icons.close,
+                  // Version & credits
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: GameTheme.bgDeep.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Paw Defense v1.0.0',
+                          style: GameTheme.pixel(
+                            fontSize: 6,
+                            color: GameTheme.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Made with Flutter + Flame',
+                          style: GameTheme.pixel(
+                            fontSize: 5,
+                            color: GameTheme.textMuted.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -181,13 +205,25 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: GameTheme.bgPanel,
-          title: Text(
-            '데이터 초기화',
-            style: GameTheme.pixel(
-              fontSize: 10,
-              color: GameTheme.accentRed,
-              fontWeight: FontWeight.w700,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(GameTheme.radiusMd),
+            side: BorderSide(
+              color: GameTheme.accentRed.withValues(alpha: 0.3),
             ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber, color: GameTheme.accentRed, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '데이터 초기화',
+                style: GameTheme.pixel(
+                  fontSize: 10,
+                  color: GameTheme.accentRed,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           content: Text(
             '모든 진행 데이터가 삭제됩니다.\n(별, 업그레이드, 업적 등)\n\n이 작업은 되돌릴 수 없습니다.',
@@ -244,49 +280,65 @@ class _SettingsScreenState extends State<SettingsScreen>
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Row(
-      children: [
-        Icon(icon, color: GameTheme.textSecondary, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GameTheme.pixel(
-            fontSize: 8,
-            color: GameTheme.textPrimary,
-          ),
-        ),
-        const Spacer(),
-        GestureDetector(
-          onTap: () => onChanged(!value),
-          child: Container(
-            width: 44,
-            height: 24,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: value
-                  ? GameTheme.accentGreen.withValues(alpha: 0.6)
-                  : GameTheme.bgDeep,
-              border: Border.all(
-                color: value ? GameTheme.accentGreen : GameTheme.pixelBorder,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: GameTheme.textSecondary, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GameTheme.pixel(
+              fontSize: 8,
+              color: GameTheme.textPrimary,
             ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 150),
-              alignment:
-                  value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 18,
-                height: 18,
-                margin: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: value ? GameTheme.accentGreen : GameTheme.textMuted,
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => onChanged(!value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: value
+                    ? GameTheme.accentGreen.withValues(alpha: 0.6)
+                    : GameTheme.bgDeep,
+                border: Border.all(
+                  color: value ? GameTheme.accentGreen : GameTheme.pixelBorder,
+                ),
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 150),
+                alignment:
+                    value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: value ? GameTheme.accentGreen : GameTheme.textMuted,
+                    boxShadow: value
+                        ? [
+                            BoxShadow(
+                              color: GameTheme.accentGreen.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                            ),
+                          ]
+                        : null,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -311,13 +363,20 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             const Spacer(),
-            Text(
-              '${(value * 100).round()}%',
-              style: GameTheme.pixel(
-                fontSize: 6,
-                color: enabled
-                    ? GameTheme.accentGold
-                    : GameTheme.textMuted,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: GameTheme.bgDeep.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${(value * 100).round()}%',
+                style: GameTheme.pixel(
+                  fontSize: 6,
+                  color: enabled
+                      ? GameTheme.accentGold
+                      : GameTheme.textMuted,
+                ),
               ),
             ),
           ],

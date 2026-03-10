@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
-/// Castle defense main menu overlay.
+/// Castle defense main menu overlay — professional layout with unified button sizes.
 class DefenseMainMenu extends StatefulWidget {
   final DefenseGame game;
   const DefenseMainMenu({super.key, required this.game});
@@ -24,7 +24,6 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
   void initState() {
     super.initState();
 
-    // Entry animation: scale + fade
     _entryController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -35,7 +34,6 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
     );
     _entryController.forward();
 
-    // Pulse glow for start button
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -44,12 +42,11 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Castle bobbing animation
     _castleController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     )..repeat(reverse: true);
-    _castleBob = Tween<double>(begin: -4.0, end: 4.0).animate(
+    _castleBob = Tween<double>(begin: -3.0, end: 3.0).animate(
       CurvedAnimation(parent: _castleController, curve: Curves.easeInOut),
     );
   }
@@ -67,22 +64,12 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
     return Material(
       color: Colors.transparent,
       child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0A0A18),
-              Color(0xFF101030),
-              Color(0xFF0A0A18),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: GameTheme.bgVignette),
         child: AnimatedBuilder(
           animation: _entryController,
           builder: (context, _) {
             return Transform.scale(
-              scale: 0.8 + 0.2 * _scaleFade.value,
+              scale: 0.85 + 0.15 * _scaleFade.value,
               child: Opacity(
                 opacity: _scaleFade.value.clamp(0.0, 1.0),
                 child: _buildContent(),
@@ -97,11 +84,10 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
   Widget _buildContent() {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         child: Column(
           children: [
-            const SizedBox(height: 20),
-            // Star currency display (top right)
+            // Top bar — currency
             Align(
               alignment: Alignment.topRight,
               child: GameTheme.pixelCurrency(
@@ -109,17 +95,14 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
                 isSoul: true,
               ),
             ),
-            const Spacer(flex: 1),
-            // Game title with gradient
+            const Spacer(flex: 2),
+            // Title
             _buildTitle(),
-            const SizedBox(height: 24),
-            // Castle icon
-            _buildCastleIcon(),
-            const SizedBox(height: 32),
-            // Stats
-            _buildStats(),
-            const Spacer(flex: 1),
-            // Buttons
+            const SizedBox(height: 20),
+            // Castle icon with stats overlay
+            _buildCastleWithStats(),
+            const Spacer(flex: 2),
+            // Buttons — unified width
             _buildButtons(),
             const Spacer(flex: 1),
           ],
@@ -153,7 +136,7 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
     );
   }
 
-  Widget _buildCastleIcon() {
+  Widget _buildCastleWithStats() {
     return AnimatedBuilder(
       animation: _castleController,
       builder: (context, child) {
@@ -163,126 +146,40 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
         decoration: GameTheme.pixelPanelDecoration(
           fillColor: GameTheme.bgCard,
           glow: true,
-          glowColor: GameTheme.accentGold,
+          glowColor: GameTheme.accentGold.withValues(alpha: 0.3),
         ),
         child: Column(
           children: [
-            Text(
-              '🏰',
-              style: const TextStyle(fontSize: 48),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'CASTLE DEFENSE',
-              style: GameTheme.pixel(
-                fontSize: 7,
-                color: GameTheme.textSecondary,
-                letterSpacing: 2,
+            const Text('🏰', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            // Stats row integrated into castle panel
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: GameTheme.bgDeep.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _statItem('최고 웨이브', GameTheme.formatInt(widget.game.highestWave)),
+                  Container(
+                    width: 1,
+                    height: 28,
+                    color: GameTheme.pixelBorder.withValues(alpha: 0.4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  _statItem('총 런', GameTheme.formatInt(widget.game.totalRuns)),
+                ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStats() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: GameTheme.pixelCardDecoration(
-        fillColor: GameTheme.bgDeep.withValues(alpha: 0.8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _statItem('최고 웨이브', GameTheme.formatInt(widget.game.highestWave)),
-          Container(
-            width: 1,
-            height: 24,
-            color: GameTheme.pixelBorder,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-          ),
-          _statItem('총 런', GameTheme.formatInt(widget.game.totalRuns)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecondaryButtons() {
-    final showAchievement =
-        widget.game.isSystemUnlocked(DefenseGame.unlockAchievement) ||
-            widget.game.achievementManager.completedAchievements.length >= 3;
-
-    return Column(
-      children: [
-        // First row: upgrade + codex
-        Row(
-          children: [
-            Expanded(
-              child: GameTheme.pixelButton(
-                label: '업그레이드',
-                onTap: () => widget.game.openStarShop(),
-                gradient: GameTheme.gradientGold,
-                fontSize: 8,
-                verticalPad: 12,
-                horizontalPad: 8,
-                icon: Icons.auto_awesome,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GameTheme.pixelButton(
-                label: '도감',
-                onTap: () => widget.game.openCodex(),
-                gradient: GameTheme.gradientGreen,
-                fontSize: 8,
-                verticalPad: 12,
-                horizontalPad: 8,
-                icon: Icons.menu_book,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Second row: achievement + settings
-        Row(
-          children: [
-            if (showAchievement) ...[
-              Expanded(
-                child: GameTheme.pixelButton(
-                  label: '업적',
-                  onTap: () => widget.game.overlays.add('Achievement'),
-                  gradient: GameTheme.gradientPurple,
-                  fontSize: 8,
-                  verticalPad: 12,
-                  horizontalPad: 8,
-                  icon: Icons.emoji_events,
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: GameTheme.pixelButton(
-                label: '설정',
-                onTap: () => widget.game.overlays.add('Settings'),
-                color: GameTheme.bgPanel,
-                fontSize: 8,
-                verticalPad: 12,
-                horizontalPad: 8,
-                icon: Icons.settings,
-              ),
-            ),
-            if (!showAchievement) ...[
-              const SizedBox(width: 10),
-              const Expanded(child: SizedBox()),
-            ],
-          ],
-        ),
-      ],
     );
   }
 
@@ -293,12 +190,12 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
         Text(
           value,
           style: GameTheme.pixel(
-            fontSize: 12,
+            fontSize: 14,
             color: GameTheme.accentGold,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(
           label,
           style: GameTheme.pixel(
@@ -311,112 +208,224 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
   }
 
   Widget _buildButtons() {
+    final hasResume = widget.game.saveManager.hasRunState;
+    final showAchievement =
+        widget.game.isSystemUnlocked(DefenseGame.unlockAchievement) ||
+            widget.game.achievementManager.completedAchievements.length >= 3;
+
     return Column(
       children: [
-        // Resume button (if saved run exists)
-        if (widget.game.saveManager.hasRunState) ...[
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Container(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: GameTheme.accentGreen.withValues(alpha: 0.3 * _pulse.value),
-                      blurRadius: 16 * _pulse.value,
-                      spreadRadius: 2 * _pulse.value,
-                    ),
-                  ],
-                ),
-                child: child,
-              );
-            },
-            child: GameTheme.pixelButton(
-              label: '이어하기',
-              onTap: () => widget.game.resumeRun(),
-              gradient: GameTheme.gradientGreen,
-              fontSize: 12,
-              verticalPad: 16,
-              horizontalPad: 40,
-              icon: Icons.play_circle_outline,
-            ),
+        // Primary action — Resume or Start
+        if (hasResume) ...[
+          _fullWidthButton(
+            label: '이어하기',
+            icon: Icons.play_circle_outline,
+            gradient: GameTheme.gradientGreen,
+            onTap: () => widget.game.resumeRun(),
+            isPrimary: true,
+            pulse: true,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
         ],
-        // Daily reward button with notification badge
-        Stack(
-          clipBehavior: Clip.none,
+        // Daily reward
+        _fullWidthButton(
+          label: '일일 보상',
+          icon: Icons.calendar_today,
+          gradient: GameTheme.gradientGold,
+          onTap: () => widget.game.openDaily(),
+          badge: widget.game.dailyManager.hasUnclaimedReward,
+        ),
+        const SizedBox(height: 10),
+        // New game / start
+        _fullWidthButton(
+          label: hasResume ? '새 게임' : '게임 시작',
+          icon: Icons.play_arrow,
+          gradient: GameTheme.gradientPrimary,
+          onTap: () {
+            if (widget.game.totalRuns <= 1) {
+              widget.game.overlays.remove('DefenseMainMenu');
+              widget.game.overlays.add('Tutorial');
+            } else {
+              widget.game.startGame();
+            }
+          },
+          isPrimary: !hasResume,
+          pulse: !hasResume,
+        ),
+        const SizedBox(height: 16),
+        // Secondary row — 2 equal buttons
+        Row(
           children: [
-            GameTheme.pixelButton(
-              label: '일일 보상',
-              onTap: () => widget.game.openDaily(),
-              gradient: GameTheme.gradientGold,
-              fontSize: 9,
-              verticalPad: 12,
-              horizontalPad: 28,
-              icon: Icons.calendar_today,
-            ),
-            if (widget.game.dailyManager.hasUnclaimedReward)
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: GameTheme.accentRed,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: GameTheme.bgDeep, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: GameTheme.accentRed.withValues(alpha: 0.6),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
+            Expanded(
+              child: _secondaryButton(
+                label: '업그레이드',
+                icon: Icons.auto_awesome,
+                color: GameTheme.accentGold,
+                onTap: () => widget.game.openStarShop(),
               ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _secondaryButton(
+                label: '도감',
+                icon: Icons.menu_book,
+                color: GameTheme.accentGreen,
+                onTap: () => widget.game.openCodex(),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Start game button with pulse glow
-        AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            return Container(
+        const SizedBox(height: 8),
+        // Third row — 2 equal buttons
+        Row(
+          children: [
+            if (showAchievement) ...[
+              Expanded(
+                child: _secondaryButton(
+                  label: '업적',
+                  icon: Icons.emoji_events,
+                  color: GameTheme.accentPurple,
+                  onTap: () => widget.game.overlays.add('Achievement'),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: _secondaryButton(
+                label: '설정',
+                icon: Icons.settings,
+                color: GameTheme.textSecondary,
+                onTap: () => widget.game.overlays.add('Settings'),
+              ),
+            ),
+            if (!showAchievement) ...[
+              const SizedBox(width: 8),
+              const Expanded(child: SizedBox()),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Full-width primary/secondary action button
+  Widget _fullWidthButton({
+    required String label,
+    required IconData icon,
+    required LinearGradient gradient,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+    bool pulse = false,
+    bool badge = false,
+  }) {
+    Widget button = SizedBox(
+      width: double.infinity,
+      child: GameTheme.pixelButton(
+        label: label,
+        onTap: onTap,
+        gradient: gradient,
+        fontSize: isPrimary ? 11 : 9,
+        verticalPad: isPrimary ? 16 : 12,
+        horizontalPad: 20,
+        icon: icon,
+      ),
+    );
+
+    if (pulse) {
+      button = AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+              boxShadow: [
+                BoxShadow(
+                  color: gradient.colors.first.withValues(alpha: 0.25 * _pulse.value),
+                  blurRadius: 16 * _pulse.value,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: button,
+      );
+    }
+
+    if (badge) {
+      button = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          button,
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              width: 10,
+              height: 10,
               decoration: BoxDecoration(
+                color: GameTheme.accentRed,
+                shape: BoxShape.circle,
+                border: Border.all(color: GameTheme.bgDeep, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: GameTheme.accent.withValues(alpha: 0.3 * _pulse.value),
-                    blurRadius: 16 * _pulse.value,
-                    spreadRadius: 2 * _pulse.value,
+                    color: GameTheme.accentRed.withValues(alpha: 0.5),
+                    blurRadius: 4,
                   ),
                 ],
               ),
-              child: child,
-            );
-          },
-          child: GameTheme.pixelButton(
-            label: widget.game.saveManager.hasRunState ? '새 게임' : '게임 시작',
-            onTap: () {
-              if (widget.game.totalRuns <= 1) {
-                widget.game.overlays.remove('DefenseMainMenu');
-                widget.game.overlays.add('Tutorial');
-              } else {
-                widget.game.startGame();
-              }
-            },
-            gradient: GameTheme.gradientPrimary,
-            fontSize: widget.game.saveManager.hasRunState ? 9 : 12,
-            verticalPad: widget.game.saveManager.hasRunState ? 12 : 16,
-            horizontalPad: widget.game.saveManager.hasRunState ? 28 : 40,
-            icon: Icons.play_arrow,
+            ),
           ),
+        ],
+      );
+    }
+
+    return button;
+  }
+
+  /// Compact secondary button with icon-tinted background
+  Widget _secondaryButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+          border: Border.all(
+            color: color.withValues(alpha: 0.20),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              offset: const Offset(0, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        // Secondary buttons in 2-column grid for compact layout
-        _buildSecondaryButtons(),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GameTheme.pixel(
+                fontSize: 7,
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

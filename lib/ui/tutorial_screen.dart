@@ -131,7 +131,8 @@ class _TutorialScreenState extends State<TutorialScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(_steps.length, (i) {
                     final isActive = i == _currentStep;
-                    return Container(
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       width: isActive ? 24 : 8,
                       height: 8,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -196,11 +197,21 @@ class _TutorialScreenState extends State<TutorialScreen>
                     widget.game.overlays.remove('Tutorial');
                     widget.game.startGame();
                   },
-                  child: Text(
-                    '건너뛰기',
-                    style: GameTheme.pixel(
-                      fontSize: 7,
-                      color: GameTheme.textMuted,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                    ),
+                    child: Text(
+                      '건너뛰기',
+                      style: GameTheme.pixel(
+                        fontSize: 7,
+                        color: GameTheme.textMuted,
+                      ),
                     ),
                   ),
                 ),
@@ -254,6 +265,7 @@ class _TutorialScreenState extends State<TutorialScreen>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: GameTheme.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(GameTheme.radiusSm),
               border: Border.all(
                 color: GameTheme.accent.withValues(alpha: 0.3),
               ),

@@ -93,14 +93,20 @@ class _StarShopScreenState extends State<StarShopScreen>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: GameTheme.pixelPanelDecoration(
+        fillColor: GameTheme.bgCard,
+      ),
       child: Row(
         children: [
+          const Icon(Icons.upgrade, color: GameTheme.accentGold, size: 20),
+          const SizedBox(width: 8),
           Text(
             '영구 업그레이드',
             style: GameTheme.pixel(
-              fontSize: 12,
+              fontSize: 11,
               color: GameTheme.accentGold,
               fontWeight: FontWeight.w700,
             ),
@@ -224,13 +230,30 @@ class _StarShopScreenState extends State<StarShopScreen>
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'Lv.$level/${data.maxLevel}',
-                      style: GameTheme.pixel(
-                        fontSize: 6,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
                         color: isMaxed
-                            ? GameTheme.accentGold
-                            : GameTheme.textSecondary,
+                            ? GameTheme.accentGold.withValues(alpha: 0.15)
+                            : GameTheme.bgDeep,
+                        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                        border: Border.all(
+                          color: isMaxed
+                              ? GameTheme.accentGold.withValues(alpha: 0.4)
+                              : GameTheme.pixelBorder.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Lv.$level/${data.maxLevel}',
+                        style: GameTheme.pixel(
+                          fontSize: 6,
+                          color: isMaxed
+                              ? GameTheme.accentGold
+                              : GameTheme.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -264,6 +287,7 @@ class _StarShopScreenState extends State<StarShopScreen>
                   ),
                   decoration: BoxDecoration(
                     gradient: GameTheme.gradientGold,
+                    borderRadius: BorderRadius.circular(GameTheme.radiusSm),
                   ),
                   child: Text(
                     'MAX',
@@ -287,27 +311,37 @@ class _StarShopScreenState extends State<StarShopScreen>
                       enabled: canAfford,
                     ),
                     const SizedBox(height: 3),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: canAfford
-                              ? GameTheme.accentPurple
-                              : GameTheme.textMuted,
-                          size: 10,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          GameTheme.formatInt(cost),
-                          style: GameTheme.pixel(
-                            fontSize: 6,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: GameTheme.bgDeep.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
                             color: canAfford
                                 ? GameTheme.accentPurple
                                 : GameTheme.textMuted,
+                            size: 10,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 2),
+                          Text(
+                            GameTheme.formatInt(cost),
+                            style: GameTheme.pixel(
+                              fontSize: 6,
+                              color: canAfford
+                                  ? GameTheme.accentPurple
+                                  : GameTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

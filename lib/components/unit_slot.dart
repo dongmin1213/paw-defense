@@ -7,7 +7,7 @@ import '../game/defense_game.dart';
 import 'defense_unit.dart';
 
 /// A placement slot around the wall where a [DefenseUnit] can be placed.
-/// 8 slots are arranged in a circle around the wall center.
+/// 8 slots arranged in a circle — professional rounded visual with subtle glow.
 class UnitSlot extends PositionComponent with HasGameReference<DefenseGame> {
   final int slotIndex;
   DefenseUnit? placedUnit;
@@ -17,9 +17,14 @@ class UnitSlot extends PositionComponent with HasGameReference<DefenseGame> {
 
   static const double slotSize = 28.0;
   static const double slotRadius = 60.0;
-  static const Color emptyColor = Color(0x4400FF00);
-  static const Color highlightColor = Color(0x8800FFAA);
-  static const Color occupiedColor = Color(0x44FFFFFF);
+
+  // Refined colors for professional look
+  static const Color emptyColor = Color(0x2240A0FF);       // subtle blue
+  static const Color highlightColor = Color(0x6660FFAA);   // bright green
+  static const Color occupiedColor = Color(0x22FFFFFF);     // subtle white
+  static const Color _borderColor = Color(0x3360A0FF);     // blue border
+  static const Color _highlightBorder = Color(0x8860FFAA); // green border
+  static const Color _crossColor = Color(0x3360A0FF);      // blue cross
 
   UnitSlot({required this.slotIndex})
       : super(
@@ -76,44 +81,74 @@ class UnitSlot extends PositionComponent with HasGameReference<DefenseGame> {
   @override
   void render(Canvas canvas) {
     final paint = Paint()..isAntiAlias = false;
+    final cx = size.x / 2;
+    final cy = size.y / 2;
+    final r = size.x / 2 - 1;
 
     if (isEmpty) {
-      // Draw empty slot indicator
+      // Subtle breathing alpha
       final alpha = isHighlighted
-          ? 0.6
-          : (0.25 + 0.1 * _sin(_animTimer * 2));
+          ? 0.5
+          : (0.15 + 0.08 * _sin(_animTimer * 2));
+
+      // Background circle
       paint.color = isHighlighted
           ? highlightColor
           : emptyColor.withValues(alpha: alpha);
+      paint.style = PaintingStyle.fill;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.x, size.y),
+          const Radius.circular(6),
+        ),
+        paint,
+      );
 
-      // Dashed border effect via corner marks
-      final rect = Rect.fromLTWH(0, 0, size.x, size.y);
-      canvas.drawRect(rect, paint);
+      // Border
+      paint.color = isHighlighted ? _highlightBorder : _borderColor;
+      paint.style = PaintingStyle.stroke;
+      paint.strokeWidth = 1;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0.5, 0.5, size.x - 1, size.y - 1),
+          const Radius.circular(6),
+        ),
+        paint,
+      );
 
       // Inner cross to indicate "place here"
       paint.color = isHighlighted
-          ? const Color(0xCC00FFAA)
-          : const Color(0x4400FF00);
-      final cx = size.x / 2;
-      final cy = size.y / 2;
+          ? const Color(0x9960FFAA)
+          : _crossColor;
+      paint.style = PaintingStyle.fill;
       const armLen = 5.0;
-      const thickness = 2.0;
-      canvas.drawRect(
-        Rect.fromCenter(
-            center: Offset(cx, cy), width: armLen * 2, height: thickness),
+      const thickness = 1.5;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(cx, cy), width: armLen * 2, height: thickness),
+          const Radius.circular(1),
+        ),
         paint,
       );
-      canvas.drawRect(
-        Rect.fromCenter(
-            center: Offset(cx, cy), width: thickness, height: armLen * 2),
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(cx, cy), width: thickness, height: armLen * 2),
+          const Radius.circular(1),
+        ),
         paint,
       );
     } else {
-      // Subtle occupied indicator ring
+      // Occupied — subtle rounded indicator ring
       paint.color = occupiedColor;
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = 1;
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), paint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0.5, 0.5, size.x - 1, size.y - 1),
+          const Radius.circular(6),
+        ),
+        paint,
+      );
     }
   }
 

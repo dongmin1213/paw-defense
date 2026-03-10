@@ -54,11 +54,52 @@ static const _palette = { 'O': Color(0xFF4CAF50) };
 PixelArt.drawCentered(canvas, _sprite, _palette, size, pixelSize: px);
 ```
 
-### UI 테마 (GameTheme static)
+### UI 디자인 시스템 (GameTheme static)
+
+#### 색상 체계
 ```dart
-GameTheme.pixelButton(label: '시작', onTap: () {});
-GameTheme.pixelProgressBar(value: 0.7);
-GameTheme.formatInt(12345); // '12.3K'
+// 배경 레이어 (어두운 → 밝은)
+GameTheme.bgDeep / bgDark / bgPanel / bgCard / bgCardHover / bgSurface
+
+// 시맨틱 액센트
+GameTheme.accent (시안) / accentGold / accentPurple / accentGreen / accentRed
+
+// 텍스트 계층
+GameTheme.textPrimary / textSecondary / textMuted
+
+// 희귀도 티어
+GameTheme.rarityCommon / rarityRare / rarityEpic / rarityLegendary / rarityMythic
+```
+
+#### 타이포그래피
+```dart
+GameTheme.pixel(fontSize: 10)       // Press Start 2P (제목/숫자)
+GameTheme.gameFont(fontSize: 12)    // Silkscreen (게임 UI)
+GameTheme.pixelTitleLarge / pixelTitleMedium / pixelTitleSmall / pixelLabel / pixelNumber
+GameTheme.titleLarge / bodyLarge / bodyMedium / caption  // 한글 호환
+```
+
+#### 간격/라운딩 상수
+```dart
+GameTheme.spacingXs(4) / spacingSm(8) / spacingMd(12) / spacingLg(16) / spacingXl(24) / spacingXxl(32)
+GameTheme.radiusSm(6) / radiusMd(10) / radiusLg(14)
+```
+
+#### 공통 위젯
+```dart
+GameTheme.pixelButton(label: '시작', onTap: () {});   // AnimatedScale 눌림 효과
+GameTheme.pixelProgressBar(value: 0.7);                // ClipRRect 둥근 끝
+GameTheme.panelBox(child: widget);                     // bgCard 패널
+GameTheme.badgeChip(label: 'Lv.5');                    // 라운드 뱃지
+GameTheme.sectionTitle(title: '공격');                  // 액센트 좌측바 제목
+GameTheme.formatInt(12345);                            // '12.3K'
+GameTheme.rarityColor(RelicRarity.epic);               // 희귀도별 색상
+```
+
+#### 그라데이션
+```dart
+GameTheme.gradientPrimary / gradientGold / gradientPurple / gradientGreen / gradientRed / gradientDark
+GameTheme.bgVignette  // RadialGradient 배경 비네팅
 ```
 
 ### 사운드 (SoundManager)
@@ -123,8 +164,8 @@ main.dart → DefenseGame.onLoad()
   → paused/inactive → saveRunState() + saveGame()
   → resumed → soundManager.onAppResumed()
 
-10개 오버레이: DefenseMainMenu, DefenseHud, WaveReward,
-StarShop, RunResult, Pause, RelicSelection, Tutorial, Settings, Achievement
+12개 오버레이: DefenseMainMenu, DefenseHud, WaveReward,
+StarShop, RunResult, Pause, RelicSelection, Tutorial, Settings, Achievement, Daily, Codex
 ```
 
 ## 데이터 의존 관계
@@ -141,6 +182,11 @@ upgrade_manager.dart    ← defense_game, defense_unit, combo_manager, relic_man
 save_manager.dart       ← defense_game, main.dart (앱 라이프사이클), defense_main_menu
 sound_manager.dart      ← defense_game, main.dart (앱 라이프사이클)
 achievement_manager.dart ← defense_game, achievement_screen, settings_screen
+skill_manager.dart      ← defense_game, defense_hud (스킬 게이지/발동)
+wave_modifier.dart      ← wave_manager, defense_hud (변형 배너)
+synergy_manager.dart    ← defense_game, defense_unit
+codex_manager.dart      ← defense_game, codex_screen
+daily_manager.dart      ← defense_game, daily_screen, defense_main_menu
 ```
 
 ## 핵심 시스템 구조
@@ -217,6 +263,57 @@ defense_game.dart
   → _updateAchievement(type, value) → 달성 시 별 보상 + 알림 큐
   → popAchievementNotification() → HUD에서 폴링
   → 머지/킬/웨이브/콤보/보스/하이브리드/골드/유물 추적
+```
+
+### 액티브 스킬 시스템
+```
+skill_manager.dart (Component with HasGameReference)
+  → SkillDef (8종: 유닛별 1개씩)
+  → 킬 기반 게이지 충전 (killsRequired per skill)
+  → dominantUnitType — 보드 위 가장 많은 유닛 타입 자동 판별
+  → activateSkill() → 쿨다운 + 효과 지속시간
+  → update(dt) → 쿨다운/효과 타이머 관리
+```
+
+### 웨이브 변형 시스템
+```
+wave_modifier.dart
+  → WaveModifier enum (10종)
+  → 웨이브 10부터 5웨이브마다 랜덤 선택 (보스 웨이브 제외)
+  → 적 수/HP/속도/골드/사거리 배율 수정
+  → wave_manager.dart에서 연동
+```
+
+### 도감 시스템
+```
+codex_manager.dart
+  → discoverUnit/Enemy/Relic/Hybrid() — 발견 기록
+  → isDiscovered(category, id) — 발견 여부
+  → completionRate(category) — 완성도 %
+  → SharedPreferences 기반 영구 저장
+
+codex_screen.dart
+  → 4탭: 유닛(기본/진화/하이브리드) / 적 / 유물(희귀도별) / 통계
+  → 미발견 → "???" 실루엣
+```
+
+### 일일 시스템
+```
+daily_manager.dart
+  → 로그인 스트릭 (7일 사이클, SharedPreferences)
+  → 일일 챌린지: 날짜 해시 기반 목표 웨이브
+  → hasUnclaimedReward — 메인 메뉴 알림 뱃지
+
+daily_screen.dart
+  → 7일 스트릭 표시 + 보상 수령 + 챌린지 상태
+```
+
+### 시너지 시스템
+```
+synergy_manager.dart
+  → 종족 시너지 (같은 종 3/5/7 마리 → ATK/DEF 보너스)
+  → 다양성 시너지 (다른 종 N개 → 전체 ATK 보너스)
+  → 하이브리드 유닛의 양쪽 부모 종 카운팅
 ```
 
 ## 새 컨텐츠 추가 가이드

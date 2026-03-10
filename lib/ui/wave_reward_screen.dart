@@ -407,6 +407,7 @@ class _WaveRewardScreenState extends State<WaveRewardScreen>
                     color: _rarityGradient(card.rarity) == null
                         ? borderColor.withValues(alpha: 0.3)
                         : null,
+                    borderRadius: BorderRadius.circular(GameTheme.radiusSm),
                     border: Border.all(
                       color: borderColor.withValues(alpha: 0.6),
                     ),
@@ -461,6 +462,7 @@ class _WaveRewardScreenState extends State<WaveRewardScreen>
                     ),
                     decoration: BoxDecoration(
                       gradient: GameTheme.gradientGreen,
+                      borderRadius: BorderRadius.circular(GameTheme.radiusSm),
                     ),
                     child: Text(
                       '선택!',
