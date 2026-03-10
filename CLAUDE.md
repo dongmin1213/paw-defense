@@ -8,6 +8,7 @@
 - **Game Engine**: Flame 1.14.0 (flame_audio 2.1.0)
 - **저장**: shared_preferences 2.2.0
 - **Target**: Android (portrait 400x700, immersive mode)
+- **테스트**: `flutter test` (10개 파일, 100+ 케이스)
 - **빌드**: `flutter pub get && flutter build apk --release` (CI로만 검증)
 
 ## 문서 구조
@@ -57,6 +58,20 @@ lib/
 │   ├── settings_screen.dart           # 설정 (사운드, 데이터 초기화)
 │   └── tutorial_screen.dart           # 게임 튜토리얼 (8단계)
 └── utils/pixel_art.dart               # 문자맵 스프라이트 유틸
+
+test/
+├── data/                              # 데이터 레이어 검증
+│   ├── balance_config_test.dart       # 밸런스 상수 범위/정합성
+│   ├── unit_data_test.dart            # 8종 유닛 + 8종 진화 데이터
+│   ├── enemy_data_test.dart           # 10종 적, availableAt() 필터
+│   ├── hybrid_unit_data_test.dart     # 28종 레시피, 양방향 매칭
+│   └── relic_data_test.dart           # 58개 유물 ID/희귀도 분포
+├── systems/                           # 시스템 로직 검증
+│   ├── merge_manager_test.dart        # 동종 머지/진화/이종 크로스브리드
+│   ├── relic_manager_test.dart        # 인벤토리, 멀티플라이어, 이벤트
+│   ├── synergy_manager_test.dart      # 종족/다양성 시너지, 하이브리드 카운팅
+│   ├── upgrade_manager_test.dart      # 비용 스케일링, 멀티플라이어, 저장/로드
+│   └── achievement_manager_test.dart  # 진행도 추적, 보상 누적
 ```
 
 ## 핵심 시스템
@@ -120,3 +135,5 @@ lib/
 5. **텍스트 렌더링** → Flame render()에서는 dart:ui TextStyle만 사용
 6. **유물 추가** → `data/relic_data.dart` 데이터 + `systems/relic_manager.dart` 효과 로직
 7. **하이브리드 추가** → `data/hybrid_unit_data.dart` 레시피+데이터 + `renderers/unit_renderer.dart` 렌더
+8. **테스트** → `flutter test` 실행, 데이터 변경 시 `test/data/` 테스트도 업데이트
+9. **유닛 ID** → 게임 내부에서 snake_case 사용 (`cat_archer`, `dog_warrior` 등)
