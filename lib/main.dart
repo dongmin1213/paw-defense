@@ -47,6 +47,15 @@ class CastleDefenseApp extends StatelessWidget {
           surface: Color(0xFF141428),
         ),
       ),
+      builder: (context, child) {
+        // 시스템 폰트/디스플레이 크기 설정 무시 — 게임 UI 고정
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling,
+          ),
+          child: child!,
+        );
+      },
       home: const GameScreen(),
     );
   }
