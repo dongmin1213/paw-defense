@@ -405,8 +405,11 @@ unitDPS(level) = baseATK * pow(2.0, level - 1) * upgradeMultiplier
 | 성벽 피격 | 벽 피격 반응 |
 | 유닛 진화 | 히트스탑 + 줌인 + 진화 연출 + 슬로모션 복귀 |
 | 웨이브 클리어 | 보상 카드 등장 연출 |
-| 콤보 티어 변경 | 화면 플래시 (티어별 색상) |
+| 콤보 티어 변경 | 화면 전체 플래시 (티어별 색상, 0.5초 페이드) |
 | 크리티컬 히트 | 별 모양 파티클 (흰색/금색) |
+| 업적 달성 | HUD 상단 배너 (2.5초 표시 후 페이드) |
+| 분열탄 피격 | ±45° 자식 투사체 2개 (데미지 50%) |
+| 원소 피격 | 불(DoT)/얼음(슬로우)/독(DoT) 랜덤 적용 |
 | 연쇄 번개 | 적→적 번개 이펙트 |
 | 하이브리드 머지 | 두 색상 소용돌이 파티클 |
 | 체인 킬 | 연속 처치 파티클 |
@@ -428,33 +431,32 @@ unitDPS(level) = baseATK * pow(2.0, level - 1) * upgradeMultiplier
 
 ## 6. UI 구조
 
-### 6.1 오버레이 구성
+### 6.1 오버레이 구성 (10개)
 
 ```
-[게임 화면]
-├── HUD (상단)
+[게임 화면] — 10개 Flutter 오버레이
+├── DefenseHud (전투 중 상시)
 │   ├── 웨이브 번호 + 적 남은 수
 │   ├── 골드 표시 (롤링 애니메이션)
-│   ├── 성벽 HP 바
-│   └── 연속 퍼펙트 배율 표시
-├── 유닛 상점 (하단)
-│   ├── 유닛 뽑기 버튼 (비용 표시)
-│   ├── 보유 유닛 목록 (드래그 가능)
-│   └── 리롤 버튼
-├── 일시정지 메뉴
-│   ├── 계속하기
-│   ├── 설정
-│   └── 포기 (별 수령)
-└── 웨이브 보상 (5웨이브마다 팝업)
-    └── 3장 카드 선택
+│   ├── 성벽 HP 바 + 연속 퍼펙트 배율
+│   ├── 콤보 카운터 (티어별 색상)
+│   ├── 업적 달성 배너 (2.5초 표시)
+│   ├── 머지/하이브리드 힌트 (초록/보라 글로우)
+│   └── 콤보 티어 변경 플래시 오버레이
+├── WaveReward (5웨이브마다 카드 3택)
+├── RelicSelection (보스 처치 시 유물 3택)
+├── Pause (일시정지)
+├── RunResult (런 종료 — 빌드 요약 포함)
+├── StarShop (영구 업그레이드 상점)
+├── Tutorial (8단계 튜토리얼)
+├── Settings (설정 + 데이터 초기화)
+└── Achievement (업적 화면)
 
-[메인 메뉴]
-├── 시작 (런 시작)
-├── 영구 업그레이드 상점 (별)
-├── 초월 (소울 상점)
-├── 도감 (유닛/적/렐릭 컬렉션)
+[메인 메뉴] — DefenseMainMenu
+├── 이어하기 (저장된 런이 있을 때)
+├── 게임 시작 / 새 게임
+├── 업그레이드 (별 상점)
 ├── 업적
-├── 일일 보너스
 └── 설정
 ```
 
@@ -490,29 +492,35 @@ unitDPS(level) = baseATK * pow(2.0, level - 1) * upgradeMultiplier
 ### 저장 데이터
 
 ```dart
-// 메타 (영구)
+// 메타 (영구) — defense_save_manager.dart
 - stars: int              // 별 (메타 화폐)
 - souls: int              // 소울 (초월 화폐)
-- upgrades: Map<String, int>  // 영구 업그레이드 레벨
-- soulUpgrades: Map<String, int>  // 소울 업그레이드 레벨
-- unlockedUnits: List<String>     // 해금된 유닛 종류
-- achievements: Map<String, bool> // 업적 달성 여부
-- dailyBonus: {...}        // 일일 보너스 상태
-- stats: {...}             // 누적 통계 (총 처치수, 최고 웨이브 등)
+- highestWave: int        // 최고 웨이브 기록
+- totalKills: int         // 누적 킬 수
+- totalRuns: int          // 총 런 횟수
+- totalMerges: int        // 총 머지 횟수
+- totalStarsEarned: int   // 총 별 획득량
+- totalBossKills: int     // 총 보스 킬 수
+- upgrades: Map<String, int>  // 영구 업그레이드 16종 레벨
+- lastOnline: String      // 마지막 접속 시간 (ISO 8601)
 
-// 인런 (중간 저장)
+// 인런 (중간 저장) — JSON 직렬화
 - currentWave: int
 - wallHP: double
 - gold: int
-- units: List<UnitSaveData>   // 배치된 유닛 (종류, 레벨, 슬롯)
-- relics: List<String>        // 보유 렐릭
-- waveRewards: List<String>   // 선택한 웨이브 보상
+- kills: int
+- relics: List<String>        // 보유 렐릭 ID 목록
+- unitSlots: List<{typeId, level, isEvolved}>  // 배치된 유닛
+- rewardMultiplier: double     // 보상 배율
+- waveManager: Map             // 웨이브 매니저 전체 상태
 ```
 
-### 저장 방식
-- `SharedPreferences` (기존 시스템 재활용)
-- 인런 저장: 웨이브 클리어마다 자동 저장 (기차방어의 저장 없음 문제 해결)
-- 메타 저장: 런 종료/업그레이드 구매 시 저장
+### 저장 방식 (구현 완료)
+- `SharedPreferences` — 메타 데이터 개별 키, 인런 데이터 JSON 문자열
+- **중간 저장 트리거**: 앱 백그라운드 진입 시 (`didChangeAppLifecycleState`)
+- **복원**: 메인 메뉴 "이어하기" → `resumeRun()` → 상태 복원 + 현재 웨이브 재시작
+- **삭제 트리거**: 런 종료(`onWallDestroyed`) 또는 새 게임 시작(`startGame`)
+- 메타 저장: 런 종료/업그레이드 구매 시 `saveAll()` 호출
 
 ---
 

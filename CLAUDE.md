@@ -23,7 +23,7 @@
 
 ```
 lib/
-├── main.dart                          # 앱 진입점, 9개 오버레이
+├── main.dart                          # 앱 진입점, 10개 오버레이
 ├── game/defense_game.dart             # FlameGame 메인
 ├── components/                        # Flame 컴포넌트
 │   ├── wall.dart, unit_slot.dart, defense_unit.dart
@@ -45,8 +45,8 @@ lib/
 │   ├── combo_manager.dart             # 콤보 5단계 티어, 골드 보너스
 │   ├── defense_game_feel.dart         # 히트스탑, 슬로모션, 줌펀치
 │   ├── defense_upgrade_manager.dart   # 영구 업그레이드 16종
-│   ├── defense_save_manager.dart      # 세이브/로드
-│   ├── achievement_manager.dart       # 업적 시스템
+│   ├── defense_save_manager.dart      # 세이브/로드 (영구 + 중간저장)
+│   ├── achievement_manager.dart       # 업적 시스템 (처치/웨이브/머지/유물)
 │   └── sound_manager.dart             # BGM/SFX 재생, 앱 pause/resume
 ├── ui/                                # Flutter 오버레이
 │   ├── game_theme.dart, defense_main_menu.dart, defense_hud.dart
@@ -54,8 +54,8 @@ lib/
 │   ├── star_shop_screen.dart, run_result_screen.dart
 │   ├── relic_selection_screen.dart
 │   ├── achievement_screen.dart        # 업적 화면
-│   ├── settings_screen.dart           # 설정 (사운드, 진동 등)
-│   └── tutorial_screen.dart           # 게임 튜토리얼
+│   ├── settings_screen.dart           # 설정 (사운드, 데이터 초기화)
+│   └── tutorial_screen.dart           # 게임 튜토리얼 (8단계)
 └── utils/pixel_art.dart               # 문자맵 스프라이트 유틸
 ```
 
@@ -84,6 +84,33 @@ lib/
 - 기본 11종: 성벽(HP/재생/방어), 유닛(ATK/공속/초기유닛), 경제(골드/할인/스타), 특수(슬롯/유물확률)
 - 신규 5종: 초기자금, 유물품질, 콤보지속, 하이브리드강화, 기본크리티컬
 - `systems/defense_upgrade_manager.dart`
+
+### 중간 저장 시스템 (Mid-run Save/Load)
+- 앱이 백그라운드로 가면 자동 저장 (`didChangeAppLifecycleState`)
+- `buildRunState()`: 골드, 킬수, 웨이브, 유물, 슬롯, 벽 HP, 보상 배율 직렬화
+- `resumeRun()`: 저장 상태 복원 + 현재 웨이브 재시작
+- 메인 메뉴에 "이어하기" 버튼 표시 (저장된 런이 있을 때)
+- 런 종료 시 자동 삭제 (`clearRunState`)
+
+### 업적 시스템
+- 카테고리: 처치(kills), 웨이브(waves), 머지(merges), 유물(relics)
+- HUD 상단에 업적 달성 알림 배너 (2.5초 표시)
+- `achievement_manager.dart` + `defense_game.dart` 큐 기반 알림
+
+### 원소 & DoT 시스템
+- 분열탄 유물: 피격 시 ±45° 자식 투사체 2개 (데미지 50%)
+- 원소 폭풍 유물: 피격 시 랜덤 원소 적용 (불/얼음/독)
+  - 불: 30% DoT 3초 / 얼음: 40% 슬로우 2초 / 독: 15% DoT 5초
+- DoT 틱 간격: 0.5초 (`defense_enemy.dart`)
+
+### HUD 피드백
+- 머지 힌트: 동종 3개(합성의서 2개) 시 초록 글로우
+- 하이브리드 힌트: 이종 머지 가능 시 보라 글로우 + 🧬 표시
+- 콤보 티어 변경 시 화면 전체 플래시 (티어별 색상, 0.5초 페이드)
+
+### 튜토리얼 (8단계)
+1. 성벽을 지켜라! → 2. 유닛 배치 → 3. 합체! → 4. 보상과 유물
+5. 하이브리드 유닛 → 6. 콤보 시스템 → 7. 진화 & 업그레이드 → 8. 판매 & 리롤
 
 ## 핵심 규칙
 1. **밸런스 수치** → `data/balance_config.dart` 한 곳에서 관리
