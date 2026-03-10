@@ -18,7 +18,7 @@
 - `docs/BALANCE.md` — 밸런스 수치 총정리 (balance_config.dart 기반)
 - `docs/ARCHITECTURE.md` — 코드 구조, 패턴, 확장 가이드
 
-## 프로젝트 구조 (30개 파일)
+## 프로젝트 구조 (33개 파일)
 
 ```
 lib/
@@ -29,8 +29,8 @@ lib/
 │   ├── defense_enemy.dart, projectile.dart
 │   ├── defense_particle.dart, damage_number.dart
 ├── data/                              # 데이터 정의 (수치 변경은 여기만)
-│   ├── unit_data.dart                 # 유닛 6종
-│   ├── enemy_data.dart                # 적 7종
+│   ├── unit_data.dart                 # 유닛 8종 + 진화 8종
+│   ├── enemy_data.dart                # 적 10종
 │   └── balance_config.dart            # 모든 밸런스 수치
 ├── renderers/                         # 픽셀아트 렌더러 (static only)
 │   ├── wall_renderer.dart, unit_renderer.dart
@@ -39,11 +39,14 @@ lib/
 │   ├── wave_manager.dart, merge_manager.dart
 │   ├── relic_manager.dart, defense_game_feel.dart
 │   ├── defense_upgrade_manager.dart, defense_save_manager.dart
+│   └── sound_manager.dart             # BGM/SFX 재생, 앱 pause/resume
 ├── ui/                                # Flutter 오버레이
 │   ├── game_theme.dart, defense_main_menu.dart, defense_hud.dart
 │   ├── defense_pause_screen.dart, wave_reward_screen.dart
 │   ├── star_shop_screen.dart, run_result_screen.dart
-│   └── relic_selection_screen.dart
+│   ├── relic_selection_screen.dart
+│   ├── settings_screen.dart           # 설정 (사운드, 진동 등)
+│   └── tutorial_screen.dart           # 게임 튜토리얼
 └── utils/pixel_art.dart               # 문자맵 스프라이트 유틸
 ```
 

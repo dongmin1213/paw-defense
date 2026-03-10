@@ -1,15 +1,30 @@
 # 유닛 가이드
 
-## 유닛 6종 (data/unit_data.dart)
+## 유닛 8종 (data/unit_data.dart)
 
 | ID | 이름 | 아이콘 | 타입 | ATK | 공속 | 사거리 | 특수 |
 |-----|------|--------|------|-----|------|--------|------|
-| cat_archer | 고양이 궁수 | 🐱 | 원거리 | 10 | 1.2 | 100 | 기본 딜러 |
-| dog_warrior | 강아지 전사 | 🐶 | 근거리 | 15 | 0.8 | 40 | 고공격력 |
-| rabbit_mage | 토끼 마법사 | 🐰 | 원거리+스플래시 | 12 | 0.9 | 90 | 광역 데미지 |
-| bear_tanker | 곰 탱커 | 🐻 | 근거리 | 8 | 0.5 | 35 | 느리지만 튼튼 |
-| fox_assassin | 여우 암살자 | 🦊 | 근거리+관통 | 18 | 1.5 | 45 | 20% 크리 (2x) |
-| bird_scout | 새 정찰병 | 🐦 | 원거리+대공 | 8 | 1.3 | 110 | 비행적 공격 가능 |
+| catArcher | 고양이 궁수 | 🐱 | 원거리 | 10 | 1.5 | 120 | 대공 가능, 단일 타겟 |
+| dogWarrior | 강아지 전사 | 🐶 | 근거리+스플래시 | 15 | 0.8 | 40 | 광역 근접 공격 |
+| rabbitMage | 토끼 마법사 | 🐰 | 원거리+스플래시 | 20 | 0.5 | 100 | 느리지만 강력한 광역 |
+| bearTanker | 곰 탱커 | 🐻 | 근거리 | 8 | 0.6 | 35 | 적 슬로우 (30%, 2.5초) |
+| foxAssassin | 여우 암살자 | 🦊 | 원거리 | 25 | 0.7 | 90 | 20% 크리 (2x) |
+| birdScout | 새 정찰병 | 🐦 | 원거리+관통+대공 | 12 | 1.0 | 110 | 관통탄, 비행적 공격 |
+| turtleHealer | 거북 힐러 | 🐢 | 근거리 | 5 | 0.4 | 60 | 공격 데미지의 50% 성벽 회복 |
+| owlWizard | 부엉이 마법사 | 🦉 | 원거리+스플래시+대공 | 18 | 0.6 | 130 | 장거리 광역, 대공 가능 |
+
+## 진화 유닛 8종 (unit_data.dart → EvolvedUnitData)
+
+| 기본 유닛 | 진화 이름 | ATK 배율 | 특수 효과 | 필요 유물 |
+|-----------|----------|----------|----------|----------|
+| 🐱 Cat Archer | Storm Archer | 3.0x | 넓은 범위에 화살 비 | evolve_cat_archer |
+| 🐶 Dog Warrior | Flame Knight | 2.5x | 근접 적 화상 도트 데미지 | evolve_dog_warrior |
+| 🐰 Rabbit Mage | Archmage | 3.0x | 거대 범위 마법 폭발 | evolve_rabbit_mage |
+| 🐻 Bear Tanker | Iron Guardian | 2.5x | 강력한 슬로우 + 약화 | evolve_bear_tanker |
+| 🦊 Fox Assassin | Shadow Fox | 3.0x | 독 도트 데미지 | evolve_fox_assassin |
+| 🐦 Bird Scout | Storm Hawk | 2.5x | 바람 넉백 + 전체 관통 | evolve_bird_scout |
+| 🐢 Turtle Healer | Ancient Turtle | 2.5x | 범위 힐 + 성벽 수리 + 버프 | evolve_turtle_healer |
+| 🦉 Owl Wizard | Cosmic Owl | 3.0x | 대규모 메테오 공격 | evolve_owl_wizard |
 
 ## 레벨 스케일링
 

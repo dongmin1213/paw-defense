@@ -12,6 +12,7 @@
 | 판매 환불 | 50% | `sellRefundRate` |
 | 리롤 비용 | 20골드 | `rerollCost` |
 | 퍼펙트 웨이브 보너스 | 5 * 연속횟수 | `perfectWaveGoldPerStreak` |
+| 스타 보상 배율 | wave * 1.0 | `baseStarMultiplier` |
 
 ## 유닛 스케일링
 
@@ -31,6 +32,7 @@
 | HP 유닛 수 배율 | +12%/유닛 | `enemyHpUnitScale` |
 | 속도 유닛 수 배율 | +2%/유닛 | `enemySpeedUnitScale` |
 | 속도 후반 배율 | +0.5%/wave(30+) | `enemySpeedLateWaveScale` |
+| 후반 배율 시작 웨이브 | 30 | `enemySpeedLateWaveStart` |
 
 ## 웨이브 시스템
 
@@ -41,6 +43,17 @@
 | 보스 등장 주기 | 10웨이브 | `bossInterval` |
 | 보상 선택 주기 | 5웨이브 | `rewardInterval` |
 | 최소 스폰 간격 | 0.15초 | `minSpawnInterval` |
+| 최대 스폰 간격 | 3.0초 | `maxSpawnInterval` |
+
+## 웨이브 적 수
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 기본 적 수 티어 | [5,5] [10,7] [20,10] [30,13] | `baseEnemyCountTiers` |
+| 기본값 (30+) | 16 | `baseEnemyCountDefault` |
+| 웨이브 스케일 | +0.8/wave | `enemyCountWaveScale` |
+| 유닛 수 스케일 | +4%/유닛 | `enemyCountUnitScale` |
+| 최대 적 수/웨이브 | 200 | `maxEnemiesPerWave` |
 
 ## 보스
 
@@ -59,6 +72,28 @@
 | 기본 HP | 100 | `wallBaseHp` |
 | 레벨당 HP | +30 | `wallHpPerLevel` |
 
+## 유닛별 특수 수치
+
+### 여우 암살자
+
+| 항목 | 값 |
+|------|-----|
+| 크리 확률 | 20% (`foxCritChance`) |
+| 크리 배율 | 2x (`foxCritMultiplier`) |
+
+### 거북 힐러
+
+| 항목 | 값 |
+|------|-----|
+| 성벽 회복 비율 | 공격 데미지의 50% (`turtleHealerHealFraction`) |
+
+### 곰 탱커
+
+| 항목 | 값 |
+|------|-----|
+| 슬로우 강도 | 30% (`bearSlowIntensity`) |
+| 슬로우 지속 | 2.5초 (`bearSlowDuration`) |
+
 ## 유물 보너스 (relic_manager.dart)
 
 | 유물 | 효과 |
@@ -70,19 +105,29 @@
 | 크리 확률 | +10% |
 | 흡혈 | 2% 데미지 → 성벽 회복 |
 | 스타 보너스 | +20% |
+| 슬로우 오라 | 성벽 주변 80px, 20% 감속 |
+| 최대 유물 수 | 3개/런 (`maxRelics`) |
 
 ## 웨이브 보상 카드 (wave_reward_screen.dart)
 
 | 등급 | 확률 | 예시 효과 |
 |------|------|----------|
-| 일반 | 60% | ATK +10%, 성벽 회복 10%, 골드 +15% |
+| 일반 | 60% | ATK +10%, 성벽 회복 10%, 골드 +15%, 공속 +10%, 사거리 +15% |
 | 레어 | 25% | 유닛 비용 -20%, 성벽 방어 +20% |
-| 에픽 | 12% | ATK +25%, 성벽 자동회복, 비용 -30% |
+| 에픽 | 12% | ATK +25%, 성벽 자동회복 1/s, 비용 -30% |
 | 전설 | 3% | 성벽 완전회복, 전체 강화 +15% |
 
-## 여우 암살자
+## 투사체 / 뷰포트
 
-| 항목 | 값 |
-|------|-----|
-| 크리 확률 | 20% |
-| 크리 배율 | 2x |
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 투사체 속도 | 200 | `projectileSpeed` |
+| 스플래시 반경 | 40px | `splashRadius` |
+| 게임 너비 | 400px | `gameWidth` |
+| 게임 높이 | 700px | `gameHeight` |
+
+## 폭탄병
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 폭발 배율 | 2.0x | `bomberExplosionMultiplier` |

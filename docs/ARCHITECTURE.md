@@ -61,6 +61,16 @@ GameTheme.pixelProgressBar(value: 0.7);
 GameTheme.formatInt(12345); // '12.3K'
 ```
 
+### 사운드 (SoundManager)
+```dart
+game.soundManager.playSfx('hit');        // 효과음 재생
+game.soundManager.playBgm('battle');     // BGM 재생
+game.soundManager.onAppPaused();         // 앱 백그라운드 시 일시정지
+game.soundManager.onAppResumed();        // 앱 복귀 시 재개
+```
+- `main.dart`의 `WidgetsBindingObserver`에서 앱 라이프사이클 연동
+- Settings 오버레이에서 사운드 on/off 제어
+
 ### 게임필 (DefenseGameFeel)
 ```dart
 game.gameFeel.onEnemyKill();     // 쉐이크
@@ -78,6 +88,7 @@ game.gameFeel.shake(intensity: 5, duration: 0.2);
 
 ```
 main.dart → DefenseGame.onLoad()
+  → soundManager 초기화
   → overlays.add('DefenseMainMenu')
   → startGame()
     → wall/slots/waveManager 초기화
@@ -88,6 +99,9 @@ main.dart → DefenseGame.onLoad()
   → onWallDestroyed()
     → overlays.add('RunResult')
   → goToMainMenu()
+
+9개 오버레이: DefenseMainMenu, DefenseHud, WaveReward,
+StarShop, RunResult, Pause, RelicSelection, Tutorial, Settings
 ```
 
 ## 데이터 의존 관계
@@ -97,6 +111,7 @@ balance_config.dart ← wave_manager.dart, defense_game.dart, defense_unit.dart
 enemy_data.dart     ← wave_manager.dart, defense_game.dart
 unit_data.dart      ← defense_unit.dart
 relic_manager.dart  ← defense_game.dart, relic_selection_screen.dart
+sound_manager.dart  ← defense_game.dart, main.dart (앱 라이프사이클)
 ```
 
 ## 새 컨텐츠 추가 가이드
