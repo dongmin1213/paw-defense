@@ -474,6 +474,32 @@ class _RunResultScreenState extends State<RunResultScreen>
               color: GameTheme.textMuted,
             ),
           ),
+          // Soul reward display
+          if (widget.game.lastRunSouls > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('👻', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 6),
+                Text(
+                  '+${widget.game.lastRunSouls} 소울',
+                  style: GameTheme.pixel(
+                    fontSize: 12,
+                    color: const Color(0xFF80CBC4),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              '보유: ${GameTheme.formatInt(widget.game.souls)} 소울',
+              style: GameTheme.pixel(
+                fontSize: 6,
+                color: GameTheme.textMuted,
+              ),
+            ),
+          ],
         ],
       ),
     );

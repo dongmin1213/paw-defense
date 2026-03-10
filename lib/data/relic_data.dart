@@ -40,16 +40,16 @@ class RelicDatabase {
 
   static const List<RelicDef> all = [
     // ══════════════════════════════════════
-    // Evolution relics (8) — epic
+    // Evolution relics (8) — rare (접근성 향상)
     // ══════════════════════════════════════
-    RelicDef(id: 'evolve_cat_archer', name: '궁수 진화석', icon: '🏹', description: '고양이 궁수를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
-    RelicDef(id: 'evolve_dog_warrior', name: '기사 진화석', icon: '🗡️', description: '강아지 전사를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
-    RelicDef(id: 'evolve_rabbit_mage', name: '마법사 진화석', icon: '🔮', description: '토끼 마법사를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
-    RelicDef(id: 'evolve_bear_tanker', name: '수호자 진화석', icon: '🛡️', description: '곰 탱커를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.defense),
-    RelicDef(id: 'evolve_fox_assassin', name: '암살자 진화석', icon: '🗡️', description: '여우 암살자를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
-    RelicDef(id: 'evolve_bird_scout', name: '정찰대 진화석', icon: '🦅', description: '새 정찰대를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
-    RelicDef(id: 'evolve_turtle_healer', name: '힐러 진화석', icon: '💚', description: '거북이 힐러를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.defense),
-    RelicDef(id: 'evolve_owl_wizard', name: '마도사 진화석', icon: '🌙', description: '부엉이 마도사를 진화시킵니다', rarity: RelicRarity.epic, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_cat_archer', name: '궁수 진화석', icon: '🏹', description: '고양이 궁수를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_dog_warrior', name: '기사 진화석', icon: '🗡️', description: '강아지 전사를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_rabbit_mage', name: '마법사 진화석', icon: '🔮', description: '토끼 마법사를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_bear_tanker', name: '수호자 진화석', icon: '🛡️', description: '곰 탱커를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.defense),
+    RelicDef(id: 'evolve_fox_assassin', name: '암살자 진화석', icon: '🗡️', description: '여우 암살자를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_bird_scout', name: '정찰대 진화석', icon: '🦅', description: '새 정찰대를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
+    RelicDef(id: 'evolve_turtle_healer', name: '힐러 진화석', icon: '💚', description: '거북이 힐러를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.defense),
+    RelicDef(id: 'evolve_owl_wizard', name: '마도사 진화석', icon: '🌙', description: '부엉이 마도사를 진화시킵니다', rarity: RelicRarity.rare, category: RelicCategory.attack),
 
     // ══════════════════════════════════════
     // Common (15) — 숫자 버프

@@ -7,6 +7,8 @@ import '../data/hybrid_unit_data.dart';
 import '../data/enemy_data.dart';
 import '../systems/combo_manager.dart';
 import '../systems/merge_manager.dart' as merge;
+import '../systems/skill_manager.dart';
+import '../systems/synergy_manager.dart';
 
 /// In-game HUD for the castle defense game.
 /// Shows wave info, gold, wall HP, and unit shop area.
@@ -175,6 +177,10 @@ class _DefenseHudState extends State<DefenseHud>
               _buildWaveRushPanel(),
             // Heal cooldown indicator
             if (widget.game.healCooldown > 0) _buildHealCooldown(),
+            // Skill gauge
+            _buildSkillGauge(),
+            // Synergy display
+            if (widget.game.synergyManager.hasAnySynergy) _buildSynergyBar(),
             const Spacer(),
             _buildBottomPanel(),
           ],
@@ -689,6 +695,13 @@ class _DefenseHudState extends State<DefenseHud>
               style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted),
             ),
           ],
+          if (slot.level >= 5 && !isHybridUnit) ...[
+            const SizedBox(height: 4),
+            Text(
+              '★ 진화 가능! 유물에서 진화석을 획득하세요',
+              style: GameTheme.pixel(fontSize: 5, color: GameTheme.accentGold),
+            ),
+          ],
           if (slot.canMerge)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -706,6 +719,134 @@ class _DefenseHudState extends State<DefenseHud>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkillGauge() {
+    final sm = widget.game.skillManager;
+    final skill = sm.currentSkill;
+    if (skill == null) return const SizedBox.shrink();
+
+    final isReady = sm.isReady;
+    final hasEffect = sm.hasActiveEffect;
+    final barColor = isReady
+        ? GameTheme.accentGold
+        : hasEffect
+            ? GameTheme.accentGreen
+            : GameTheme.accent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: GestureDetector(
+        onTap: isReady
+            ? () {
+                widget.game.activateSkill();
+                setState(() {});
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: GameTheme.pixelCardDecoration(
+            fillColor: isReady
+                ? GameTheme.accentGold.withValues(alpha: 0.15)
+                : GameTheme.bgCard,
+            borderColor: barColor.withValues(alpha: 0.6),
+            glow: isReady,
+            glowColor: GameTheme.accentGold,
+          ),
+          child: Row(
+            children: [
+              Text(skill.icon, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isReady ? '${skill.name} — 탭하여 발동!' : skill.name,
+                      style: GameTheme.pixel(
+                        fontSize: 6,
+                        color: isReady ? GameTheme.accentGold : GameTheme.textSecondary,
+                        fontWeight: isReady ? FontWeight.w700 : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    GameTheme.pixelProgressBar(
+                      value: hasEffect ? (sm.effectTimer / 5.0).clamp(0.0, 1.0) : sm.chargePercent,
+                      height: 6,
+                      fillColor: barColor,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                hasEffect
+                    ? '${sm.effectTimer.toStringAsFixed(1)}s'
+                    : '${sm.currentCharge}/${sm.maxCharge}',
+                style: GameTheme.pixel(
+                  fontSize: 6,
+                  color: isReady ? GameTheme.accentGold : GameTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSynergyBar() {
+    final synergies = widget.game.synergyManager.activeSynergies;
+    if (synergies.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: GameTheme.pixelCardDecoration(
+          fillColor: GameTheme.accentPurple.withValues(alpha: 0.1),
+          borderColor: GameTheme.accentPurple.withValues(alpha: 0.4),
+        ),
+        child: Row(
+          children: [
+            Text(
+              '시너지',
+              style: GameTheme.pixel(
+                fontSize: 5,
+                color: GameTheme.accentPurple,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 2,
+                children: synergies.map((s) {
+                  final tierColor = s.tier >= 2
+                      ? GameTheme.accentGold
+                      : GameTheme.accentPurple;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.15),
+                      border: Border.all(color: tierColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Text(
+                      '${s.bonus.icon} ${s.bonus.name}',
+                      style: GameTheme.pixel(
+                        fontSize: 5,
+                        color: tierColor,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -939,14 +1080,16 @@ class _DefenseHudState extends State<DefenseHud>
                           fontSize: showSellHighlight ? 14 : (showHybridHint ? 14 : 18)),
                     ),
                     Text(
-                      'Lv${slot.level}',
+                      slot.level >= 5 ? 'Lv${slot.level} ★' : 'Lv${slot.level}',
                       style: GameTheme.pixel(
                         fontSize: 5,
-                        color: showMergeHint
-                            ? GameTheme.accentGreen
-                            : showHybridHint
-                                ? GameTheme.accentPurple
-                                : GameTheme.textSecondary,
+                        color: slot.level >= 5
+                            ? GameTheme.accentGold
+                            : showMergeHint
+                                ? GameTheme.accentGreen
+                                : showHybridHint
+                                    ? GameTheme.accentPurple
+                                    : GameTheme.textSecondary,
                       ),
                     ),
                   ],
