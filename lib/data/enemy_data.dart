@@ -1,92 +1,147 @@
-import 'dart:ui';
-
-enum EnemyType { ground, air }
-
-class EnemyData {
+/// Centralized enemy type definitions for castle defense.
+/// All enemy stats are defined here — no hardcoded values in other files.
+class DefenseEnemyData {
   final String id;
   final String name;
-  final EnemyType type;
-  final int hp;
-  final double coinDrop;
-  final double soulDrop;
-  final double width;
-  final double height;
-  final Color color;
-  final Color accentColor;
-  final int spawnWeight;
+  final double baseHp;
+  final double baseSpeed;
+  final double baseDamage;
+  final double baseAtkSpeed;
+  final int goldDrop;
+  final bool isFlying;
 
-  const EnemyData({
+  /// Wave at which this enemy type first appears.
+  final int unlockWave;
+
+  const DefenseEnemyData({
     required this.id,
     required this.name,
-    required this.type,
-    required this.hp,
-    required this.coinDrop,
-    this.soulDrop = 0,
-    required this.width,
-    required this.height,
-    required this.color,
-    required this.accentColor,
-    required this.spawnWeight,
+    required this.baseHp,
+    required this.baseSpeed,
+    required this.baseDamage,
+    required this.baseAtkSpeed,
+    required this.goldDrop,
+    this.isFlying = false,
+    this.unlockWave = 1,
   });
 }
 
-class EnemyDatabase {
-  // === 초원 (Meadow) ===
-  static const List<EnemyData> meadowEnemies = [
-    EnemyData(id: 'slime', name: '슬라임', type: EnemyType.ground, hp: 1, coinDrop: 1, width: 28, height: 22, color: Color(0xFF4CAF50), accentColor: Color(0xFF81C784), spawnWeight: 40),
-    EnemyData(id: 'mushroom', name: '버섯', type: EnemyType.ground, hp: 2, coinDrop: 2, width: 24, height: 28, color: Color(0xFFE57373), accentColor: Color(0xFFFFCDD2), spawnWeight: 25),
-    EnemyData(id: 'bird', name: '새', type: EnemyType.air, hp: 1, coinDrop: 3, width: 26, height: 18, color: Color(0xFF42A5F5), accentColor: Color(0xFF90CAF9), spawnWeight: 25),
-    EnemyData(id: 'butterfly', name: '나비', type: EnemyType.air, hp: 1, coinDrop: 2, width: 22, height: 16, color: Color(0xFFCE93D8), accentColor: Color(0xFFF3E5F5), spawnWeight: 10),
+/// Database of all enemy types. Add new enemies here only.
+class DefenseEnemyDatabase {
+  static const List<DefenseEnemyData> all = [
+    DefenseEnemyData(
+      id: 'slime',
+      name: '슬라임',
+      baseHp: 20,
+      baseSpeed: 40,
+      baseDamage: 3,
+      baseAtkSpeed: 1.0,
+      goldDrop: 2,
+      unlockWave: 1,
+    ),
+    DefenseEnemyData(
+      id: 'goblin',
+      name: '고블린',
+      baseHp: 35,
+      baseSpeed: 60,
+      baseDamage: 5,
+      baseAtkSpeed: 1.2,
+      goldDrop: 4,
+      unlockWave: 4,
+    ),
+    DefenseEnemyData(
+      id: 'bat',
+      name: '박쥐',
+      baseHp: 15,
+      baseSpeed: 70,
+      baseDamage: 3,
+      baseAtkSpeed: 1.5,
+      goldDrop: 3,
+      isFlying: true,
+      unlockWave: 7,
+    ),
+    DefenseEnemyData(
+      id: 'orc',
+      name: '오크',
+      baseHp: 80,
+      baseSpeed: 30,
+      baseDamage: 10,
+      baseAtkSpeed: 0.6,
+      goldDrop: 8,
+      unlockWave: 10,
+    ),
+    DefenseEnemyData(
+      id: 'shielded',
+      name: '방패병',
+      baseHp: 120,
+      baseSpeed: 25,
+      baseDamage: 7,
+      baseAtkSpeed: 0.8,
+      goldDrop: 10,
+      unlockWave: 15,
+    ),
+    DefenseEnemyData(
+      id: 'bomber',
+      name: '폭탄병',
+      baseHp: 40,
+      baseSpeed: 50,
+      baseDamage: 15,
+      baseAtkSpeed: 0.5,
+      goldDrop: 12,
+      unlockWave: 18,
+    ),
+    DefenseEnemyData(
+      id: 'healer',
+      name: '힐러',
+      baseHp: 50,
+      baseSpeed: 35,
+      baseDamage: 4,
+      baseAtkSpeed: 1.0,
+      goldDrop: 6,
+      unlockWave: 20,
+    ),
+    DefenseEnemyData(
+      id: 'skeleton',
+      name: '스켈레톤',
+      baseHp: 30,
+      baseSpeed: 55,
+      baseDamage: 6,
+      baseAtkSpeed: 1.3,
+      goldDrop: 5,
+      unlockWave: 6,
+    ),
+    DefenseEnemyData(
+      id: 'mushroom',
+      name: '독버섯',
+      baseHp: 25,
+      baseSpeed: 35,
+      baseDamage: 8,
+      baseAtkSpeed: 0.7,
+      goldDrop: 7,
+      unlockWave: 12,
+    ),
+    DefenseEnemyData(
+      id: 'golem',
+      name: '골렘',
+      baseHp: 150,
+      baseSpeed: 18,
+      baseDamage: 12,
+      baseAtkSpeed: 0.4,
+      goldDrop: 15,
+      unlockWave: 22,
+    ),
   ];
 
-  // === 숲 (Forest) ===
-  static const List<EnemyData> forestEnemies = [
-    EnemyData(id: 'goblin', name: '고블린', type: EnemyType.ground, hp: 3, coinDrop: 5, width: 26, height: 28, color: Color(0xFF558B2F), accentColor: Color(0xFF8BC34A), spawnWeight: 35),
-    EnemyData(id: 'spider', name: '거미', type: EnemyType.ground, hp: 4, coinDrop: 7, width: 30, height: 22, color: Color(0xFF4E342E), accentColor: Color(0xFF795548), spawnWeight: 25),
-    EnemyData(id: 'bat', name: '박쥐', type: EnemyType.air, hp: 2, coinDrop: 8, width: 28, height: 16, color: Color(0xFF37474F), accentColor: Color(0xFF78909C), spawnWeight: 25),
-    EnemyData(id: 'fairy', name: '요정', type: EnemyType.air, hp: 1, coinDrop: 10, width: 18, height: 18, color: Color(0xFFFFEB3B), accentColor: Color(0xFFFFF9C4), spawnWeight: 15),
-  ];
-
-  // === 사막 (Desert) ===
-  static const List<EnemyData> desertEnemies = [
-    EnemyData(id: 'scorpion', name: '전갈', type: EnemyType.ground, hp: 6, coinDrop: 15, width: 32, height: 20, color: Color(0xFFBF360C), accentColor: Color(0xFFFF8A65), spawnWeight: 35),
-    EnemyData(id: 'mummy', name: '미라', type: EnemyType.ground, hp: 8, coinDrop: 20, width: 26, height: 34, color: Color(0xFFD7CCC8), accentColor: Color(0xFF8D6E63), spawnWeight: 25),
-    EnemyData(id: 'eagle', name: '독수리', type: EnemyType.air, hp: 4, coinDrop: 25, width: 34, height: 20, color: Color(0xFF5D4037), accentColor: Color(0xFFA1887F), spawnWeight: 25),
-    EnemyData(id: 'sand_spirit', name: '모래령', type: EnemyType.air, hp: 3, coinDrop: 30, width: 24, height: 24, color: Color(0xFFFFC107), accentColor: Color(0xFFFFE082), spawnWeight: 15),
-  ];
-
-  // === 설산 (Snowfield) ===
-  static const List<EnemyData> snowfieldEnemies = [
-    EnemyData(id: 'snow_golem', name: '눈골렘', type: EnemyType.ground, hp: 12, coinDrop: 40, width: 34, height: 36, color: Color(0xFFE0E0E0), accentColor: Color(0xFF90CAF9), spawnWeight: 30),
-    EnemyData(id: 'wolf', name: '늑대', type: EnemyType.ground, hp: 8, coinDrop: 50, width: 32, height: 24, color: Color(0xFF78909C), accentColor: Color(0xFFB0BEC5), spawnWeight: 30),
-    EnemyData(id: 'snow_owl', name: '눈올빼미', type: EnemyType.air, hp: 6, coinDrop: 60, width: 26, height: 22, color: Color(0xFFF5F5F5), accentColor: Color(0xFFBBDEFB), spawnWeight: 25),
-    EnemyData(id: 'ice_spirit', name: '얼음정령', type: EnemyType.air, hp: 5, coinDrop: 80, width: 22, height: 22, color: Color(0xFF81D4FA), accentColor: Color(0xFFE1F5FE), spawnWeight: 15),
-  ];
-
-  // === 화산 (Volcano) ===
-  static const List<EnemyData> volcanoEnemies = [
-    EnemyData(id: 'fire_imp', name: '화염임프', type: EnemyType.ground, hp: 15, coinDrop: 120, width: 26, height: 28, color: Color(0xFFFF5722), accentColor: Color(0xFFFFAB91), spawnWeight: 35),
-    EnemyData(id: 'dragonkin', name: '용인', type: EnemyType.ground, hp: 20, coinDrop: 180, width: 34, height: 32, color: Color(0xFFB71C1C), accentColor: Color(0xFFEF5350), spawnWeight: 25),
-    EnemyData(id: 'fire_bat', name: '불박쥐', type: EnemyType.air, hp: 10, coinDrop: 200, width: 30, height: 18, color: Color(0xFFFF6F00), accentColor: Color(0xFFFFD54F), spawnWeight: 25),
-    EnemyData(id: 'phoenix', name: '피닉스', type: EnemyType.air, hp: 8, coinDrop: 300, width: 32, height: 26, color: Color(0xFFFF8F00), accentColor: Color(0xFFFFECB3), spawnWeight: 15),
-  ];
-
-  static List<EnemyData> getEnemiesForRegion(String regionId) {
-    switch (regionId) {
-      case 'meadow': return meadowEnemies;
-      case 'forest': return forestEnemies;
-      case 'desert': return desertEnemies;
-      case 'snowfield': return snowfieldEnemies;
-      case 'volcano': return volcanoEnemies;
-      default: return meadowEnemies;
+  /// Lookup enemy data by ID. Returns null if not found.
+  static DefenseEnemyData? get(String id) {
+    for (final e in all) {
+      if (e.id == id) return e;
     }
+    return null;
   }
 
-  static List<EnemyData> getGroundEnemies(String regionId) {
-    return getEnemiesForRegion(regionId).where((e) => e.type == EnemyType.ground).toList();
-  }
-
-  static List<EnemyData> getAirEnemies(String regionId) {
-    return getEnemiesForRegion(regionId).where((e) => e.type == EnemyType.air).toList();
+  /// Get all enemy types available at the given wave.
+  static List<DefenseEnemyData> availableAt(int wave) {
+    return all.where((e) => e.unlockWave <= wave).toList();
   }
 }
