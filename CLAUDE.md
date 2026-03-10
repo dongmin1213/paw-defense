@@ -7,6 +7,7 @@
 - **Framework**: Flutter 3.27.4 / Dart 3.6.2
 - **Game Engine**: Flame 1.14.0 (flame_audio 2.1.0)
 - **저장**: shared_preferences 2.2.0
+- **폰트**: google_fonts (Press Start 2P, Silkscreen)
 - **Target**: Android (portrait 400x700, immersive mode)
 - **테스트**: `flutter test` (10개 파일, 100+ 케이스)
 - **빌드**: `flutter pub get && flutter build apk --release` (CI로만 검증)
@@ -24,7 +25,7 @@
 
 ```
 lib/
-├── main.dart                          # 앱 진입점, 10개 오버레이
+├── main.dart                          # 앱 진입점, 12개 오버레이
 ├── game/defense_game.dart             # FlameGame 메인
 ├── components/                        # Flame 컴포넌트
 │   ├── wall.dart, unit_slot.dart, defense_unit.dart
@@ -32,7 +33,7 @@ lib/
 │   ├── defense_particle.dart, damage_number.dart
 ├── data/                              # 데이터 정의 (수치 변경은 여기만)
 │   ├── unit_data.dart                 # 유닛 8종 + 진화 8종
-│   ├── hybrid_unit_data.dart          # 하이브리드 유닛 12종 (이종 머지)
+│   ├── hybrid_unit_data.dart          # 하이브리드 유닛 28종 (이종 머지)
 │   ├── relic_data.dart                # 유물 50개 (5단계 희귀도)
 │   ├── enemy_data.dart                # 적 10종
 │   └── balance_config.dart            # 모든 밸런스 수치
@@ -41,20 +42,28 @@ lib/
 │   └── defense_enemy_renderer.dart
 ├── systems/                           # 게임 시스템
 │   ├── wave_manager.dart              # 웨이브 생성, 후반 스케일링
+│   ├── wave_modifier.dart             # 웨이브 변형 10종 (속도/비행/엘리트 등)
 │   ├── merge_manager.dart             # 동종 머지 + 이종 크로스브리드
 │   ├── relic_manager.dart             # 50개 유물 효과, 가중 드롭
 │   ├── combo_manager.dart             # 콤보 5단계 티어, 골드 보너스
+│   ├── skill_manager.dart             # 액티브 스킬 8종 (킬 기반 게이지)
+│   ├── synergy_manager.dart           # 종족/다양성 시너지
 │   ├── defense_game_feel.dart         # 히트스탑, 슬로모션, 줌펀치
 │   ├── defense_upgrade_manager.dart   # 영구 업그레이드 16종
-│   ├── defense_save_manager.dart      # 세이브/로드 (영구 + 중간저장)
+│   ├── defense_save_manager.dart      # 세이브/로드 (영구 + 중간저장 + 해금)
+│   ├── codex_manager.dart             # 도감 발견 상태 관리
+│   ├── daily_manager.dart             # 일일 챌린지/출석 보상
 │   ├── achievement_manager.dart       # 업적 시스템 (처치/웨이브/머지/유물)
 │   └── sound_manager.dart             # BGM/SFX 재생, 앱 pause/resume
 ├── ui/                                # Flutter 오버레이
-│   ├── game_theme.dart, defense_main_menu.dart, defense_hud.dart
+│   ├── game_theme.dart                # 통합 디자인 시스템 (색상/간격/타이포/위젯)
+│   ├── defense_main_menu.dart, defense_hud.dart
 │   ├── defense_pause_screen.dart, wave_reward_screen.dart
 │   ├── star_shop_screen.dart, run_result_screen.dart
 │   ├── relic_selection_screen.dart
 │   ├── achievement_screen.dart        # 업적 화면
+│   ├── codex_screen.dart              # 도감 4탭 (유닛/적/유물/통계)
+│   ├── daily_screen.dart              # 일일 보상/챌린지
 │   ├── settings_screen.dart           # 설정 (사운드, 데이터 초기화)
 │   └── tutorial_screen.dart           # 게임 튜토리얼 (8단계)
 └── utils/pixel_art.dart               # 문자맵 스프라이트 유틸
@@ -74,6 +83,42 @@ test/
 │   └── achievement_manager_test.dart  # 진행도 추적, 보상 누적
 ```
 
+## UI 디자인 시스템 (GameTheme)
+
+### 색상 팔레트
+- **배경 6단계**: bgDeep → bgDark → bgPanel → bgCard → bgCardHover → bgSurface
+- **주 액센트**: accent(시안), accentDark
+- **시맨틱 6색**: Gold, Purple, Green, Red, Orange + Dark 변형
+- **텍스트 3단계**: textPrimary(밝음), textSecondary(중간), textMuted(어두움)
+- **희귀도 5티어**: rarityCommon → rarityRare → rarityEpic → rarityLegendary → rarityMythic
+- **픽셀 크롬**: pixelHighlight, pixelShadow, pixelBorder
+
+### 그라데이션
+- 6종 LinearGradient (Primary/Gold/Purple/Green/Red/Dark)
+- bgVignette RadialGradient (배경 비네팅)
+
+### 타이포그래피
+- **pixel()**: Press Start 2P (제목/숫자) — `GameTheme.pixelTitleLarge/Medium/Small/Label/Number`
+- **gameFont()**: Silkscreen (가독성 높은 게임 UI 텍스트)
+- **Korean TextStyle**: titleLarge/bodyLarge/bodyMedium/caption (한글 호환)
+
+### 표준 간격/라운딩
+- **간격**: spacingXs(4) / Sm(8) / Md(12) / Lg(16) / Xl(24) / Xxl(32)
+- **라운딩**: radiusSm(6) / radiusMd(10) / radiusLg(14)
+
+### 공통 위젯 (static 메서드)
+- `pixelButton()` — AnimatedScale(0.95) 눌림 효과, 그라데이션 배경
+- `pixelProgressBar()` — ClipRRect 둥근 끝 처리
+- `panelBox()` — bgCard + pixelBorder 테두리 패널
+- `badgeChip()` — 작은 라운드 뱃지
+- `sectionTitle()` — 액센트 좌측바 + 제목
+- `formatInt()` — 숫자 포맷 (12345 → '12.3K')
+- `rarityColor()` — 희귀도별 색상 반환
+
+### 12개 오버레이
+DefenseMainMenu, DefenseHud, WaveReward, StarShop, RunResult,
+Pause, RelicSelection, Tutorial, Settings, Achievement, Daily, Codex
+
 ## 핵심 시스템
 
 ### 유물 시스템 (50개, 5단계 희귀도)
@@ -83,9 +128,9 @@ test/
 - **구성**: 진화석 8 + 일반 15 + 레어 15 + 에픽 12 + 전설 6 + 신화 2 = 58개
 - 데이터: `data/relic_data.dart` / 로직: `systems/relic_manager.dart`
 
-### 이종 머지 (하이브리드 유닛 12종)
+### 이종 머지 (하이브리드 유닛 28종)
 - **다른 종 2마리** (둘 다 Lv3+) = 하이브리드 유닛 탄생
-- 8종 기본 유닛에서 12종 핵심 조합 구현
+- 8종 기본 유닛에서 C(8,2) = 28종 전체 조합 구현
 - 하이브리드 유닛은 양쪽 부모의 능력을 결합한 고유 특수 능력 보유
 - 데이터: `data/hybrid_unit_data.dart` / 머지: `systems/merge_manager.dart`
 
@@ -123,6 +168,42 @@ test/
 - 하이브리드 힌트: 이종 머지 가능 시 보라 글로우 + 🧬 표시
 - 콤보 티어 변경 시 화면 전체 플래시 (티어별 색상, 0.5초 페이드)
 
+### 액티브 스킬 시스템 (8종)
+- 킬 기반 게이지 충전 → 지배적 유닛 타입의 스킬 자동 판별
+- 화살비/전투의함성/메테오/얼음벽/암살표식/폭풍소환/성벽회복/마력폭발
+- `systems/skill_manager.dart`
+
+### 웨이브 변형 시스템 (10종)
+- 웨이브 10부터 5웨이브마다 랜덤 적용 (보스 웨이브 제외)
+- 하늘의위협/스피드런/철벽행군/엘리트/물량공세/불타는땅/황금웨이브/번개웨이브/안개/카오스
+- `systems/wave_modifier.dart`
+
+### 일일 챌린지 & 출석 보상
+- 7일 사이클 출석 보상 (50~500 별)
+- 날짜 해시 기반 일일 챌린지 (목표 웨이브 15~30)
+- `systems/daily_manager.dart` + `ui/daily_screen.dart`
+
+### 도감 시스템 (4탭)
+- 유닛/적/유물/통계 탭, 미발견 아이템 "???" 실루엣 표시
+- `systems/codex_manager.dart` + `ui/codex_screen.dart`
+
+### 시너지 시스템
+- 종족 시너지 + 다양성 시너지, 하이브리드 카운팅
+- `systems/synergy_manager.dart`
+
+### 점진적 시스템 해금
+- 플레이 진행에 따라 시스템 순차 해금 (머지힌트 → 보상카드 → 유물 → 하이브리드 → 콤보 → 진화 → 업적)
+- `defense_save_manager.dart` (`unlockedSystems`)
+
+### 배속 조절
+- 1x ↔ 2x 토글, HUD 상단바에서 조작
+- `defense_game.dart` (`gameSpeed`, `toggleGameSpeed()`)
+
+### 런 결과 랭크 시스템
+- F → D → C → B → A → S → SS (웨이브 기반)
+- 신기록 표시, DPS 통계, 광고 x2 보상 슬롯
+- `ui/run_result_screen.dart`
+
 ### 튜토리얼 (8단계)
 1. 성벽을 지켜라! → 2. 유닛 배치 → 3. 합체! → 4. 보상과 유물
 5. 하이브리드 유닛 → 6. 콤보 시스템 → 7. 진화 & 업그레이드 → 8. 판매 & 리롤
@@ -131,7 +212,7 @@ test/
 1. **밸런스 수치** → `data/balance_config.dart` 한 곳에서 관리
 2. **새 적/유닛 추가** → `data/` 파일만 수정 (상세: `docs/ARCHITECTURE.md`)
 3. **렌더러** → static 메서드만, PixelArt.drawCentered() 패턴
-4. **UI** → GameTheme 정적 멤버 사용 (pixelButton, pixelProgressBar 등)
+4. **UI** → GameTheme 정적 멤버 사용 (색상: bgCard/accent/textPrimary, 간격: spacingMd, 위젯: pixelButton/panelBox/badgeChip 등)
 5. **텍스트 렌더링** → Flame render()에서는 dart:ui TextStyle만 사용
 6. **유물 추가** → `data/relic_data.dart` 데이터 + `systems/relic_manager.dart` 효과 로직
 7. **하이브리드 추가** → `data/hybrid_unit_data.dart` 레시피+데이터 + `renderers/unit_renderer.dart` 렌더
