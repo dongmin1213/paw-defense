@@ -18,7 +18,11 @@ import '../systems/defense_upgrade_manager.dart';
 import '../systems/defense_save_manager.dart';
 import '../systems/sound_manager.dart';
 import '../systems/combo_manager.dart';
+import '../systems/skill_manager.dart';
 import '../systems/achievement_manager.dart';
+import '../systems/daily_manager.dart';
+import '../systems/codex_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
@@ -31,6 +35,15 @@ import '../ui/defense_hud.dart' as hud;
 /// Portrait mode (400x700), fixed resolution viewport.
 /// Manages all game state, spawning, overlays, and lifecycle.
 class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
+  // ── System Unlock IDs ──
+  static const String unlockMergeHint = 'merge_hint';
+  static const String unlockWaveReward = 'wave_reward';
+  static const String unlockRelic = 'relic';
+  static const String unlockHybrid = 'hybrid';
+  static const String unlockCombo = 'combo';
+  static const String unlockEvolution = 'evolution';
+  static const String unlockAchievement = 'achievement';
+
   // ── Viewport ──
   static const double gameWidth = 400;
   static const double gameHeight = 700;
@@ -43,7 +56,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DefenseSaveManager saveManager;
   late SoundManager soundManager;
   late ComboManager comboManager;
+  late SkillManager skillManager;
   late AchievementManager achievementManager;
+  late DailyManager dailyManager;
+  late CodexManager codexManager;
 
   // ── Core Components ──
   late Wall wall;
@@ -64,10 +80,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   bool isPlaying = false;
   bool _isPaused = false;
+  double gameSpeed = 1.0; // 1x or 2x speed toggle
 
   // ── Merge/Achievement tracking ──
   int _totalMerges = 0;
+  int get totalMerges => _totalMerges;
   final List<String> _achievementQueue = [];
+
+  // ── System Unlock tracking ──
+  Set<String> _unlockedSystems = {};
 
   // ── Unit placement cost ──
   int _unitsBought = 0;
@@ -99,6 +120,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Convert camelCase to snake_case.
   static String _toSnakeCase(String s) =>
       s.replaceAllMapped(RegExp(r'[A-Z]'), (m) => '_${m[0]!.toLowerCase()}');
+
+  // ── Wall tap heal ──
+  double _healCooldown = 0;
+  static const double healCooldownDuration = 10.0;
+  double get healCooldown => _healCooldown;
 
   // ── Wave clear announcement ──
   bool showWaveClearBanner = false;
@@ -182,6 +208,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     totalStarsEarned = saveManager.totalStarsEarned;
     totalBossKills = saveManager.totalBossKills;
     _totalMerges = saveManager.totalMerges;
+    _unlockedSystems = saveManager.unlockedSystems;
 
     // Initialize components
     wall = Wall();
@@ -202,8 +229,19 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     comboManager = ComboManager();
     world.add(comboManager);
 
+    skillManager = SkillManager();
+    world.add(skillManager);
+
     achievementManager = AchievementManager();
     await achievementManager.load();
+
+    dailyManager = DailyManager();
+    final dailyPrefs = await SharedPreferences.getInstance();
+    await dailyManager.init(dailyPrefs);
+
+    codexManager = CodexManager();
+    final codexPrefs = await SharedPreferences.getInstance();
+    await codexManager.init(codexPrefs);
 
     // Initialize unit slots
     _initSlots();
@@ -299,9 +337,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     wall.maxHp = 100.0 * wallHpMult;
     wall.currentHp = wall.maxHp;
 
-    // Reset relics and combo
+    // Reset relics, combo, and skill
     relicManager.reset();
     comboManager.resetAll();
+    skillManager.reset();
 
     // Clear existing slots and enemies
     _clearAllUnits();
@@ -324,6 +363,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.remove('RunResult');
     overlays.remove('StarShop');
     overlays.add('DefenseHud');
+
+    // Update skill type after initial unit placement
+    _updateSkillType();
 
     totalRuns++;
   }
@@ -469,6 +511,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       totalMerges: _totalMerges,
     );
     achievementManager.save();
+    _checkUnlocks();
   }
 
   /// Poll and consume achievement notifications (for HUD banner).
@@ -496,6 +539,53 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   // ══════════════════════════════════════
+  // System Unlock
+  // ══════════════════════════════════════
+
+  /// Whether a system has been unlocked.
+  bool isSystemUnlocked(String id) => _unlockedSystems.contains(id);
+
+  /// Check unlock conditions and unlock newly eligible systems.
+  void _checkUnlocks() {
+    // After ANY merge success → unlock merge_hint
+    if (_totalMerges > 0) _unlockSystem(unlockMergeHint);
+
+    // Wave >= 5 → unlock wave_reward
+    if (currentWave >= 5) _unlockSystem(unlockWaveReward);
+
+    // Wave >= 10 → unlock relic
+    if (currentWave >= 10) _unlockSystem(unlockRelic);
+
+    // Wave >= 15 OR totalRuns >= 3 → unlock hybrid
+    if (currentWave >= 15 || totalRuns >= 3) _unlockSystem(unlockHybrid);
+
+    // Wave >= 20 OR totalRuns >= 5 → unlock combo
+    if (currentWave >= 20 || totalRuns >= 5) _unlockSystem(unlockCombo);
+
+    // Any unit reaches level 5 → unlock evolution
+    for (final slot in _unitSlots) {
+      final u = slot.unit;
+      if (u != null && u.level >= 5) {
+        _unlockSystem(unlockEvolution);
+        break;
+      }
+    }
+
+    // achievementManager.completedCount >= 3 → unlock achievement
+    if (achievementManager.completedAchievements.length >= 3) {
+      _unlockSystem(unlockAchievement);
+    }
+  }
+
+  /// Unlock a system by ID. No-op if already unlocked.
+  void _unlockSystem(String id) {
+    if (_unlockedSystems.contains(id)) return;
+    _unlockedSystems.add(id);
+    saveManager.unlockSystem(id);
+    _achievementQueue.add('🔓 새 시스템 해금!');
+  }
+
+  // ══════════════════════════════════════
   // Game Update
   // ══════════════════════════════════════
 
@@ -513,7 +603,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       return;
     }
 
-    final effectiveDt = dt * gameFeel.timeScale;
+    final effectiveDt = dt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
 
     // Apply zoom punch
@@ -563,6 +653,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       if (_waveClearTimer <= 0) {
         showWaveClearBanner = false;
       }
+    }
+
+    // Wall heal cooldown
+    if (_healCooldown > 0) {
+      _healCooldown -= effectiveDt;
+      if (_healCooldown < 0) _healCooldown = 0;
     }
   }
 
@@ -625,6 +721,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     waveClearNumber = waveNumber;
     _waveClearTimer = 2.0;
     soundManager.playWaveClear();
+    _checkUnlocks();
   }
 
   // ══════════════════════════════════════
@@ -633,6 +730,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Spawn an enemy. Called by WaveManager.
   /// Stats are looked up from DefenseEnemyDatabase.
+  /// Wave modifier effects are applied here (HP/speed multipliers, auto-burn, flying override).
   void spawnEnemy({
     required String typeId,
     required Vector2 position,
@@ -640,6 +738,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     required double speed,
   }) {
     final data = DefenseEnemyDatabase.get(typeId);
+    final modifier = waveManager.waveModifier;
+
+    // Wave modifier: sky_threat forces all enemies to be flying
+    final isFlying = modifier.allFlying || (data?.isFlying ?? false);
+
     final enemy = DefenseEnemy(
       enemyId: typeId,
       maxHp: hp,
@@ -650,9 +753,17 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wave: waveManager.currentWave,
       spawnPosition: position,
       wallPosition: wall.position,
-      isFlying: data?.isFlying ?? false,
+      isFlying: isFlying,
     );
     world.add(enemy);
+
+    // Codex: discover this enemy type
+    codexManager.discoverEnemy(typeId);
+
+    // Wave modifier: burning — apply automatic fire DoT to all enemies
+    if (modifier.autoBurn) {
+      enemy.applyDot(5.0, 99.0, 'fire');
+    }
   }
 
   /// Spawn a boss enemy.
@@ -674,6 +785,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wallPosition: wall.position,
     );
     world.add(enemy);
+
+    // Codex: discover boss
+    codexManager.discoverEnemy('boss');
   }
 
   // ══════════════════════════════════════
@@ -686,6 +800,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     totalKills++;
     waveManager.onEnemyKilled();
     gameFeel.onEnemyKill();
+
+    // Skill gauge: charge on kill
+    skillManager.onEnemyKilled();
 
     // Combo: track and scale effects
     final prevTier = comboManager.currentTier;
@@ -719,7 +836,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
 
     // Relic: chain lightning — deal 50% damage to nearby enemy
-    if (relicManager.hasChainLightning) {
+    // Wave modifier: chain — always trigger chain lightning on kill
+    if (relicManager.hasChainLightning || waveManager.waveModifier.alwaysChain) {
       _applyChainLightning(enemy);
     }
 
@@ -768,6 +886,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     if (maxCombo > 0) {
       _updateAchievement(AchievementType.combos, maxCombo);
     }
+
+    // Check system unlocks
+    _checkUnlocks();
   }
 
   /// Chain lightning: find nearest enemy to the killed one and deal 50% damage.
@@ -799,7 +920,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void addGold(int amount, {Vector2? popupPos}) {
     final goldMult = upgradeManager.goldGainMultiplier *
         relicManager.goldMultiplier *
-        rewardGoldMultiplier;
+        rewardGoldMultiplier *
+        waveManager.waveModifier.goldMultiplier;
     final finalAmount = (amount * goldMult).round();
     gold += finalAmount;
     _runGoldEarned += finalAmount;
@@ -831,6 +953,16 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _updateAchievement(AchievementType.waves, waveManager.currentWave);
     _updateAchievement(AchievementType.gold, _runGoldEarned);
     _updateAchievement(AchievementType.relics, relicManager.ownedRelics.length);
+
+    // Check daily challenge
+    if (!dailyManager.challengeComplete &&
+        waveManager.currentWave >= dailyManager.challengeTargetWave) {
+      final bonus = dailyManager.challengeBonus;
+      dailyManager.completeChallenge();
+      stars += bonus;
+      totalStarsEarned += bonus;
+      _achievementQueue.add('📅 일일 도전 완료! +⭐$bonus');
+    }
 
     // Save & clear in-run state
     saveGame();
@@ -890,6 +1022,132 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   // ══════════════════════════════════════
+  // Active Skill
+  // ══════════════════════════════════════
+
+  /// Activate the charged skill. Called from HUD button.
+  void activateSkill() {
+    final effectId = skillManager.activate();
+    if (effectId == null) return;
+
+    // Apply immediate effects
+    switch (effectId) {
+      case 'arrow_rain':
+        // Damage all enemies for ATK x2
+        final enemies = world.children.whereType<DefenseEnemy>().toList();
+        final avgAtk = _getAverageUnitAtk();
+        for (final e in enemies) {
+          if (e.isDead) continue;
+          e.takeDamage(avgAtk * 2);
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+        }
+        break;
+      case 'war_cry':
+        // 5s ATK +50% — handled via skillManager.isEffectActive in unit damage calc
+        break;
+      case 'meteor':
+        // Big explosion near wall center
+        final enemies = world.children.whereType<DefenseEnemy>().toList();
+        final avgAtk = _getAverageUnitAtk();
+        for (final e in enemies) {
+          if (e.isDead) continue;
+          final dist = e.position.distanceTo(wall.position);
+          if (dist < 150) {
+            e.takeDamage(avgAtk * 5);
+            particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+          }
+        }
+        break;
+      case 'ice_wall':
+        // 5s all enemies speed -70% — handled via skillManager.isEffectActive in enemy update
+        break;
+      case 'assassin_mark':
+        // 10s 100% crit — handled via skillManager.isEffectActive in unit damage calc
+        skillManager.setEffectDuration(10.0); // Override to 10s
+        break;
+      case 'storm_call':
+        // All flying instant kill + ground ATK x3
+        final enemies = world.children.whereType<DefenseEnemy>().toList();
+        final avgAtk = _getAverageUnitAtk();
+        for (final e in enemies) {
+          if (e.isDead) continue;
+          if (e.isFlying) {
+            e.takeDamage(e.hp * 2); // instant kill
+          } else {
+            e.takeDamage(avgAtk * 3);
+          }
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+        }
+        break;
+      case 'wall_heal':
+        // Heal wall 30%
+        wall.currentHp =
+            (wall.currentHp + wall.maxHp * 0.3).clamp(0.0, wall.maxHp);
+        // 5s invincible — handled via skillManager.isEffectActive
+        break;
+      case 'mana_burst':
+        // All enemies lose 30% HP
+        final enemies = world.children.whereType<DefenseEnemy>().toList();
+        for (final e in enemies) {
+          if (e.isDead) continue;
+          e.takeDamage(e.hp * 0.3);
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+        }
+        break;
+    }
+
+    // Game feel
+    gameFeel.slowMotion(scale: 0.3, duration: 0.3);
+    gameFeel.zoomPunch(targetZoom: 1.05, duration: 0.3);
+    soundManager.playMerge(); // Reuse existing sound
+  }
+
+  /// Average ATK of all placed units, for skill damage calculations.
+  double _getAverageUnitAtk() {
+    int count = 0;
+    double total = 0;
+    for (final s in _unitSlots) {
+      final u = s.unit;
+      if (u != null) {
+        final baseAtk = _lookupBaseAtk(u.unitTypeId);
+        total += baseAtk * pow(BalanceConfig.unitAtkLevelBase, u.level - 1);
+        count++;
+      }
+    }
+    return count > 0 ? total / count : 10.0;
+  }
+
+  /// Look up base ATK for a unit type ID (supports both normal and hybrid).
+  static double _lookupBaseAtk(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.baseAtk;
+    for (final u in UnitDatabase.all) {
+      if (_toSnakeCase(u.id) == typeId) return u.baseAtk;
+    }
+    return 10.0;
+  }
+
+  /// Update the dominant unit type for skill selection.
+  /// Called whenever the unit composition changes.
+  void _updateSkillType() {
+    final counts = <String, int>{};
+    for (final s in _unitSlots) {
+      final u = s.unit;
+      if (u != null) {
+        // For hybrids, count toward both parent types
+        final hybridData = HybridDatabase.get(u.unitTypeId);
+        if (hybridData != null) {
+          counts[hybridData.parentA] = (counts[hybridData.parentA] ?? 0) + 1;
+          counts[hybridData.parentB] = (counts[hybridData.parentB] ?? 0) + 1;
+        } else {
+          counts[u.unitTypeId] = (counts[u.unitTypeId] ?? 0) + 1;
+        }
+      }
+    }
+    skillManager.updateDominantType(counts);
+  }
+
+  // ══════════════════════════════════════
   // Unit Buying & Merging
   // ══════════════════════════════════════
 
@@ -931,6 +1189,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       level: 1,
     ));
 
+    // Codex: discover this unit type
+    codexManager.discoverUnit(typeId);
+
     // Relic: twin — 30% chance to spawn an extra unit
     if (relicManager.twinProc(_rng)) {
       final twinIdx = _unitSlots.indexWhere((s) => s.isEmpty);
@@ -946,6 +1207,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _tryAutoMerge();
 
     // Refresh visual components
+    // Update skill type after buying unit
+    _updateSkillType();
     _refreshSlotComponents();
   }
 
@@ -1010,14 +1273,20 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         if (dist <= 120.0) {
           enemy.takeDamage(mergeBombDmg * newLevel);
         }
+    // Update skill type after unit composition change
+    _updateSkillType();
+
       }
     }
 
     // Recursive merge check
     _tryAutoMerge();
 
-    // Try cross-breed merge after same-type merge
-    _tryCrossBreedMerge();
+    // NOTE: Cross-breed (hybrid) merge now requires manual drag (Phase 1).
+    // _tryCrossBreedMerge() is only called from manualMerge().
+
+    // Check system unlocks after merge
+    _checkUnlocks();
   }
 
   /// Try to cross-breed merge two different unit types into a hybrid.
@@ -1044,6 +1313,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Achievement: hybrid creation
     achievementManager.totalHybridsCreated++;
     _updateAchievement(AchievementType.hybrids, achievementManager.totalHybridsCreated);
+
+    // Codex: discover this hybrid
+    codexManager.discoverHybrid(hybrid.unitTypeId);
 
     _refreshSlotComponents();
   }
@@ -1073,6 +1345,35 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void closeStarShop() {
     overlays.remove('StarShop');
     saveGame();
+  }
+
+  /// Open the daily rewards screen.
+  void openDaily() {
+    overlays.add('Daily');
+    overlays.remove('DefenseMainMenu');
+  }
+
+  /// Close the daily rewards screen and return to menu.
+  void closeDaily() {
+    overlays.remove('Daily');
+    overlays.add('DefenseMainMenu');
+  }
+
+  /// Open the codex (encyclopedia) screen.
+  void openCodex() {
+    overlays.add('Codex');
+    overlays.remove('DefenseMainMenu');
+  }
+
+  /// Close the codex screen and return to menu.
+  void closeCodex() {
+    overlays.remove('Codex');
+    overlays.add('DefenseMainMenu');
+  }
+
+  /// Toggle game speed between 1x and 2x.
+  void toggleGameSpeed() {
+    gameSpeed = gameSpeed >= 2.0 ? 1.0 : 2.0;
   }
 
   /// Go back to main menu from results.
@@ -1119,6 +1420,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void onRelicSelected(String relicId) {
     relicManager.addRelic(relicId);
 
+    // Codex: discover this relic
+    codexManager.discoverRelic(relicId);
+
     // Immediate effects on acquire
     if (relicId == 'relic_war_god') {
       // War God: ATK x3 but wall HP halved
@@ -1151,6 +1455,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       const Color(0xFFFFD54F),
     );
 
+    // Update skill type after selling unit
+    _updateSkillType();
     _refreshSlotComponents();
   }
 
@@ -1209,7 +1515,149 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   @override
   void onTapDown(TapDownEvent event) {
-    // Can be used for direct tap interactions in the future
     super.onTapDown(event);
+    if (!isPlaying || _isPaused) return;
+
+    final tapPos = event.localPosition;
+    final distToWall = tapPos.distanceTo(wall.position);
+
+    // Tap on wall = emergency heal (costs gold, has cooldown)
+    if (distToWall <= 50 && _healCooldown <= 0) {
+      final cost = 10 + waveManager.currentWave * 2;
+      if (gold >= cost) {
+        gold -= cost;
+        final healAmount = wall.maxHp * 0.05;
+        wall.heal(healAmount);
+        _healCooldown = healCooldownDuration;
+        gameFeel.onMerge(1);
+        showDamageNumber(
+          wall.position,
+          '+${healAmount.toInt()} HP',
+          const Color(0xFF66BB6A),
+        );
+      }
+    }
+  }
+
+  // ══════════════════════════════════════
+  // Manual Merge (Drag-based)
+  // ══════════════════════════════════════
+
+  /// Manual merge/move via drag-and-drop from HUD.
+  /// Returns a description of what happened for UI feedback.
+  String? manualMerge(int fromSlot, int toSlot) {
+    if (fromSlot == toSlot) return null;
+    if (fromSlot < 0 || fromSlot >= _unitSlots.length) return null;
+    if (toSlot < 0 || toSlot >= _unitSlots.length) return null;
+
+    final unitA = _unitSlots[fromSlot].unit;
+    if (unitA == null) return null;
+
+    final unitB = _unitSlots[toSlot].unit;
+
+    // Case 1: Drop on empty slot → move
+    if (unitB == null) {
+      _unitSlots[toSlot].place(unitA);
+      _unitSlots[fromSlot].clear();
+      _refreshSlotComponents();
+      return 'move';
+    }
+
+    // Case 2: Same type + same level → manual merge (only 2 needed for drag!)
+    if (unitA.unitTypeId == unitB.unitTypeId &&
+        unitA.level == unitB.level &&
+        unitA.level < merge.MergeManager.maxLevel &&
+        !unitA.isEvolved) {
+      final newLevel = unitA.level + 1;
+      _unitSlots[fromSlot].clear();
+      _unitSlots[toSlot].place(merge.DefenseUnit(
+        unitTypeId: unitA.unitTypeId,
+        level: newLevel,
+      ));
+      _totalMerges++;
+      _updateAchievement(AchievementType.merges, _totalMerges);
+      gameFeel.onMerge(newLevel);
+      particleEffect.spawnMerge(wall.position.x, wall.position.y);
+
+      // Relic: merge bomb
+      final mergeBombDmg = relicManager.mergeBombDamage;
+      if (mergeBombDmg > 0) {
+        final enemies = world.children.whereType<DefenseEnemy>().toList();
+        for (final enemy in enemies) {
+          if (enemy.isDead) continue;
+          final dist = wall.position.distanceTo(enemy.position);
+          if (dist <= 120.0) {
+            enemy.takeDamage(mergeBombDmg * newLevel);
+          }
+        }
+      }
+
+      // Recursive auto-merge check (same-type only)
+      _tryAutoMerge();
+      _checkUnlocks();
+      _refreshSlotComponents();
+      return 'merge';
+    }
+
+    // Case 3: Cross-breed (different types, both Lv3+)
+    if (merge.MergeManager.canCrossBreed(unitA, unitB)) {
+      final recipe = HybridDatabase.findRecipe(unitA.unitTypeId, unitB.unitTypeId);
+      if (recipe != null) {
+        _unitSlots[fromSlot].clear();
+        _unitSlots[toSlot].place(merge.DefenseUnit(
+          unitTypeId: recipe.hybridId,
+          level: unitA.level,
+        ));
+        gameFeel.onEvolve();
+        particleEffect.spawnHybridMerge(wall.position.x, wall.position.y);
+        achievementManager.totalHybridsCreated++;
+        _updateAchievement(
+            AchievementType.hybrids, achievementManager.totalHybridsCreated);
+        // Codex: discover this hybrid
+        codexManager.discoverHybrid(recipe.hybridId);
+        _checkUnlocks();
+        _refreshSlotComponents();
+        return 'hybrid';
+      }
+    }
+
+    // Case 4: Swap positions (fallback)
+    _unitSlots[fromSlot].place(unitB);
+    _unitSlots[toSlot].place(unitA);
+    _refreshSlotComponents();
+    return 'swap';
+  }
+
+  /// Get the hybrid preview for a potential cross-breed between two slots.
+  /// Returns [hybridId, hybridEmoji, hybridName] or null.
+  Map<String, String>? getCrossBreedPreview(int slotA, int slotB) {
+    if (slotA < 0 || slotA >= _unitSlots.length) return null;
+    if (slotB < 0 || slotB >= _unitSlots.length) return null;
+    final unitA = _unitSlots[slotA].unit;
+    final unitB = _unitSlots[slotB].unit;
+    if (unitA == null || unitB == null) return null;
+    if (!merge.MergeManager.canCrossBreed(unitA, unitB)) return null;
+    final recipe = HybridDatabase.findRecipe(unitA.unitTypeId, unitB.unitTypeId);
+    if (recipe == null) return null;
+    final hybrid = HybridDatabase.get(recipe.hybridId);
+    if (hybrid == null) return null;
+    return {
+      'id': recipe.hybridId,
+      'emoji': hybrid.emoji,
+      'name': hybrid.name,
+      'ability': hybrid.specialAbilityDesc,
+    };
+  }
+
+  // ══════════════════════════════════════
+  // Wave Rush (Skip between-wave pause)
+  // ══════════════════════════════════════
+
+  /// Skip the between-wave pause for a rush bonus.
+  void rushWave() {
+    if (!waveManager.betweenWaves) return;
+    waveManager.skipPause();
+    addGold(5, popupPos: wall.position);
+    showDamageNumber(wall.position, 'RUSH +5G', const Color(0xFF64FFDA));
   }
 }

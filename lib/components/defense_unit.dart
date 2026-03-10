@@ -134,13 +134,16 @@ class DefenseUnit extends PositionComponent
       }
     }
     final wallHpPct = game.wall.hpPercent;
+    // Skill: war_cry gives +50% ATK while active
+    final skillAtkMult = game.skillManager.isEffectActive('war_cry') ? 1.5 : 1.0;
     return base *
         game.rewardAtkMultiplier *
         game.relicManager.atkMultiplier *
         game.upgradeManager.unitAtkMultiplier *
         (isHybrid ? game.upgradeManager.hybridAtkMultiplier : 1.0) *
         game.relicManager.berserkerMultiplier(wallHpPct) *
-        game.relicManager.reverseMultiplier(wallHpPct);
+        game.relicManager.reverseMultiplier(wallHpPct) *
+        skillAtkMult;
   }
 
   /// Attack speed improves per level, plus reward/relic/upgrade bonuses.
@@ -216,9 +219,13 @@ class DefenseUnit extends PositionComponent
     if (unitTypeId == 'hybrid_shadow_sage') baseCritChance = 0.30;
     if (unitTypeId == 'hybrid_wolf_blade') baseCritChance = 0.25;
 
-    final critChance = baseCritChance +
-        game.relicManager.critChanceBonus +
-        game.upgradeManager.baseCritChance;
+    // Active skill: assassin_mark forces 100% crit
+    final assassinMark = game.skillManager.isEffectActive('assassin_mark');
+    final critChance = assassinMark
+        ? 1.0
+        : baseCritChance +
+            game.relicManager.critChanceBonus +
+            game.upgradeManager.baseCritChance;
     if (critChance > 0 && _random.nextDouble() < critChance) {
       dmg *= game.relicManager.critDamageMultiplier;
     }

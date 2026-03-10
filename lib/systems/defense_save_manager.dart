@@ -19,6 +19,7 @@ class DefenseSaveManager {
   static const String _keyTotalStarsEarned = '${_prefix}totalStarsEarned';
   static const String _keyTotalBossKills = '${_prefix}totalBossKills';
   static const String _keyTotalMerges = '${_prefix}totalMerges';
+  static const String _keyUnlockedSystems = '${_prefix}unlockedSystems';
 
   late SharedPreferences _prefs;
 
@@ -55,6 +56,25 @@ class DefenseSaveManager {
 
   int get totalMerges => _prefs.getInt(_keyTotalMerges) ?? 0;
   set totalMerges(int v) => _prefs.setInt(_keyTotalMerges, v);
+
+  // === System Unlock tracking ===
+
+  Set<String> get unlockedSystems {
+    final raw = _prefs.getString(_keyUnlockedSystems) ?? '';
+    if (raw.isEmpty) return {};
+    return raw.split(',').toSet();
+  }
+
+  set unlockedSystems(Set<String> v) =>
+      _prefs.setString(_keyUnlockedSystems, v.join(','));
+
+  void unlockSystem(String id) {
+    final current = unlockedSystems;
+    current.add(id);
+    unlockedSystems = current;
+  }
+
+  bool isUnlocked(String id) => unlockedSystems.contains(id);
 
   String get lastOnlineTime => _prefs.getString(_keyLastOnline) ?? '';
   set lastOnlineTime(String v) => _prefs.setString(_keyLastOnline, v);

@@ -65,7 +65,7 @@ class AchievementDatabase {
     // ── Hybrid achievements ──
     AchievementDef(id: 'hybrid_1', name: '첫 하이브리드', description: '하이브리드 유닛 1마리 생성', icon: '🧬', starReward: 10, type: AchievementType.hybrids, target: 1),
     AchievementDef(id: 'hybrid_5', name: '교배 전문가', description: '하이브리드 유닛 5마리 생성', icon: '🧬', starReward: 25, type: AchievementType.hybrids, target: 5),
-    AchievementDef(id: 'hybrid_12', name: '하이브리드 마스터', description: '모든 하이브리드 발견', icon: '🌈', starReward: 100, type: AchievementType.hybrids, target: 12),
+    AchievementDef(id: 'hybrid_28', name: '하이브리드 마스터', description: '모든 28종 하이브리드 발견', icon: '🌈', starReward: 100, type: AchievementType.hybrids, target: 28),
 
     // ── Merge achievements ──
     AchievementDef(id: 'merge_10', name: '초보 조련사', description: '유닛 10회 머지', icon: '🔄', starReward: 5, type: AchievementType.merges, target: 10),

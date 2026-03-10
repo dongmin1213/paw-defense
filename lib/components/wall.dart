@@ -35,6 +35,8 @@ class Wall extends PositionComponent
   /// Apply damage from an enemy reaching the wall.
   void takeDamage(double amount) {
     if (isDestroyed) return;
+    // Active skill: wall_heal grants invincibility
+    if (game.skillManager.isEffectActive('wall_heal')) return;
     currentHp = (currentHp - amount).clamp(0, maxHp);
     _isDamageFlash = true;
     _damageFlashTimer = 0.15;

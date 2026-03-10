@@ -699,6 +699,7 @@ class UnitRenderer {
 
   /// Color map for hybrid types (glow + tint).
   static const Map<String, Color> _hybridColors = {
+    // ── Original 12 ──
     'hybrid_flame_hunter': Color(0xFFFF6D00),
     'hybrid_iron_warrior': Color(0xFF607D8B),
     'hybrid_archmage': Color(0xFF7B1FA2),
@@ -711,6 +712,23 @@ class UnitRenderer {
     'hybrid_shadow_sage': Color(0xFF311B92),
     'hybrid_wolf_blade': Color(0xFFBDBDBD),
     'hybrid_spell_sniper': Color(0xFFE040FB),
+    // ── New 16 ──
+    'hybrid_battle_archer': Color(0xFFEF5350),          // cat+dog: red light
+    'hybrid_hunter_bear': Color(0xFFA1887F),            // cat+bear: light brown
+    'hybrid_healing_archer': Color(0xFF00C853),         // cat+turtle: green accent
+    'hybrid_magic_sniper': Color(0xFF7E57C2),           // cat+owl: deep purple
+    'hybrid_charge_mage': Color(0xFF5C6BC0),            // dog+rabbit: indigo
+    'hybrid_assault_flyer': Color(0xFF29B6F6),          // dog+bird: light blue
+    'hybrid_tactical_commander': Color(0xFF8D6E63),     // dog+owl: brown-grey
+    'hybrid_earth_mage': Color(0xFFFF8A65),             // rabbit+bear: deep orange
+    'hybrid_illusion_caster': Color(0xFFAB47BC),        // rabbit+fox: purple
+    'hybrid_sky_mage': Color(0xFF81D4FA),               // rabbit+bird: sky blue
+    'hybrid_rage_beast': Color(0xFFD32F2F),             // bear+fox: red
+    'hybrid_sky_guardian': Color(0xFF26A69A),            // bear+bird: teal
+    'hybrid_venom_ninja': Color(0xFF66BB6A),            // fox+turtle: green
+    'hybrid_nature_scout': Color(0xFF4CAF50),           // bird+turtle: nature green
+    'hybrid_celestial_mage': Color(0xFF1565C0),         // bird+owl: dark blue
+    'hybrid_time_sage': Color(0xFFFFCA28),              // turtle+owl: amber
   };
 
   /// Render a hybrid unit using parent A sprite with color tint overlay.

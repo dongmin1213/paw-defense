@@ -269,6 +269,42 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           ),
           const SizedBox(height: 12),
         ],
+        // Daily reward button with notification badge
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GameTheme.pixelButton(
+              label: '일일 보상',
+              onTap: () => widget.game.openDaily(),
+              gradient: GameTheme.gradientGold,
+              fontSize: 9,
+              verticalPad: 12,
+              horizontalPad: 28,
+              icon: Icons.calendar_today,
+            ),
+            if (widget.game.dailyManager.hasUnclaimedReward)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: GameTheme.accentRed,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: GameTheme.bgDeep, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: GameTheme.accentRed.withValues(alpha: 0.6),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         // Start game button with pulse glow
         AnimatedBuilder(
           animation: _pulseController,
@@ -315,17 +351,31 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           icon: Icons.auto_awesome,
         ),
         const SizedBox(height: 12),
-        // Achievement button
+        // Codex button
         GameTheme.pixelButton(
-          label: '업적',
-          onTap: () => widget.game.overlays.add('Achievement'),
-          gradient: GameTheme.gradientPurple,
+          label: '\uB3C4\uAC10',
+          onTap: () => widget.game.openCodex(),
+          gradient: GameTheme.gradientGreen,
           fontSize: 9,
           verticalPad: 12,
           horizontalPad: 28,
-          icon: Icons.emoji_events,
+          icon: Icons.menu_book,
         ),
         const SizedBox(height: 12),
+        // Achievement button (only if unlocked or enough achievements completed)
+        if (widget.game.isSystemUnlocked(DefenseGame.unlockAchievement) ||
+            widget.game.achievementManager.completedAchievements.length >= 3) ...[
+          GameTheme.pixelButton(
+            label: '\uC5C5\uC801',
+            onTap: () => widget.game.overlays.add('Achievement'),
+            gradient: GameTheme.gradientPurple,
+            fontSize: 9,
+            verticalPad: 12,
+            horizontalPad: 28,
+            icon: Icons.emoji_events,
+          ),
+          const SizedBox(height: 12),
+        ],
         // Settings button
         GameTheme.pixelButton(
           label: '설정',

@@ -158,7 +158,8 @@ class DefenseEnemy extends PositionComponent
     }
   }
 
-  /// Effective speed accounting for slow debuff, relic slow aura, and time sand.
+  /// Effective speed accounting for slow debuff, relic slow aura, time sand,
+  /// and active ice_wall skill effect.
   double get _effectiveSpeed {
     double s = speed;
     // Relic: time sand — global enemy speed reduction
@@ -173,6 +174,10 @@ class DefenseEnemy extends PositionComponent
       if (distToWall <= BalanceConfig.relicSlowAuraRadius) {
         s *= (1.0 - BalanceConfig.relicSlowAuraIntensity);
       }
+    }
+    // Active skill: ice_wall — all enemies speed -70%
+    if (game.skillManager.isEffectActive('ice_wall')) {
+      s *= 0.3;
     }
     return s;
   }

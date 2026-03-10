@@ -13,6 +13,8 @@ import 'ui/relic_selection_screen.dart';
 import 'ui/tutorial_screen.dart';
 import 'ui/settings_screen.dart';
 import 'ui/achievement_screen.dart';
+import 'ui/daily_screen.dart';
+import 'ui/codex_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -123,6 +125,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               SettingsScreen(game: game as DefenseGame),
           'Achievement': (context, game) =>
               AchievementScreen(game: game as DefenseGame),
+          'Daily': (context, game) =>
+              DailyScreen(game: game as DefenseGame),
+          'Codex': (context, game) =>
+              CodexScreen(game: game as DefenseGame),
         },
       ),
     );

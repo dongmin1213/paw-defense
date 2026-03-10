@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import '../game/defense_game.dart';
 import '../data/enemy_data.dart';
 import '../data/balance_config.dart';
+import 'wave_modifier.dart';
 
 /// Enemy wave spawning system for castle defense.
 /// Manages wave progression, enemy spawn timing, difficulty scaling,
@@ -22,6 +23,9 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   // Perfect wave tracking (wall took no damage during wave)
   bool wallTookDamage = false;
   int consecutivePerfects = 0;
+
+  // Wave modifier system
+  final WaveModifier waveModifier = WaveModifier();
 
   // Wave duration & spawn interval (from BalanceConfig or relic override)
   double get waveDuration => game.relicManager.waveDurationOverride;
@@ -47,11 +51,15 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     currentWave++;
     wallTookDamage = false;
 
+    // Roll wave modifier (may be null if conditions not met)
+    waveModifier.rollModifier(currentWave);
+
     final unitCount = game.unitSlots.where((s) => s.isOccupied).length;
     final baseCount = _baseEnemyCount;
     totalEnemiesInWave = ((baseCount +
                 (currentWave * BalanceConfig.enemyCountWaveScale).floor()) *
-            (1 + unitCount * BalanceConfig.enemyCountUnitScale))
+            (1 + unitCount * BalanceConfig.enemyCountUnitScale) *
+            waveModifier.enemyCountMultiplier)
         .round()
         .clamp(1, BalanceConfig.maxEnemiesPerWave);
 
@@ -153,21 +161,33 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   }
 
   /// Pick enemy type based on current wave (data-driven unlock).
+  /// Applies wave modifier overrides: sky_threat (all bat), shield_march (50% shielded),
+  /// chaos (pick from ALL enemy types regardless of unlock wave).
   String _pickEnemyType() {
-    final available = DefenseEnemyDatabase.availableAt(currentWave);
+    // sky_threat: force all enemies to be bat (flying)
+    if (waveModifier.allFlying) return 'bat';
+
+    // shield_march: 50% chance each enemy is shielded
+    if (waveModifier.shieldMarch && _rng.nextBool()) return 'shielded';
+
+    // chaos: pick from ALL enemy types regardless of wave unlock
+    final available = waveModifier.chaosSpawn
+        ? DefenseEnemyDatabase.all
+        : DefenseEnemyDatabase.availableAt(currentWave);
     return available[_rng.nextInt(available.length)].id;
   }
 
-  /// Scale HP by wave and unit count.
+  /// Scale HP by wave and unit count, with wave modifier multiplier.
   double _scaledHp(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseHp = data?.baseHp ?? 20;
     return baseHp *
         pow(BalanceConfig.enemyHpWaveScale, currentWave).toDouble() *
-        (1 + unitCount * BalanceConfig.enemyHpUnitScale);
+        (1 + unitCount * BalanceConfig.enemyHpUnitScale) *
+        waveModifier.enemyHpMultiplier;
   }
 
-  /// Scale speed by wave and unit count.
+  /// Scale speed by wave and unit count, with wave modifier multiplier.
   double _scaledSpeed(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseSpeed = data?.baseSpeed ?? 40;
@@ -175,7 +195,8 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
         (1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
         (1 +
             max(0, currentWave - BalanceConfig.enemySpeedLateWaveStart) *
-                BalanceConfig.enemySpeedLateWaveScale);
+                BalanceConfig.enemySpeedLateWaveScale) *
+        waveModifier.enemySpeedMultiplier;
   }
 
   /// Generate a spawn position just outside one of the 4 screen edges.
@@ -281,6 +302,28 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     bossesKilled = 0;
     wallTookDamage = false;
     consecutivePerfects = 0;
+    waveModifier.reset();
+  }
+
+  /// Skip the between-wave pause and start the next wave immediately.
+  void skipPause() {
+    if (betweenWaves) {
+      betweenWaveTimer = 0;
+    }
+  }
+
+  /// Progress of the between-wave pause (0.0 = just started, 1.0 = about to start).
+  double get pauseProgress {
+    if (!betweenWaves || betweenWavePause <= 0) return 1.0;
+    return 1.0 - (betweenWaveTimer / betweenWavePause).clamp(0.0, 1.0);
+  }
+
+  /// Preview enemy types available for the next wave.
+  List<String> previewNextWaveEnemyTypes() {
+    final nextWave = currentWave + 1;
+    return DefenseEnemyDatabase.availableAt(nextWave)
+        .map((e) => e.id)
+        .toList();
   }
 
   /// Resume from a specific wave (for mid-run resume).

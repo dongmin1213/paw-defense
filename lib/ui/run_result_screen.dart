@@ -2,6 +2,32 @@ import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
+/// Performance rank based on wave cleared.
+enum RunRank {
+  f('F', 'Beginner', 0xFF888888, 0),
+  d('D', 'Novice', 0xFF8888FF, 5),
+  c('C', 'Fighter', 0xFF88FF88, 10),
+  b('B', 'Warrior', 0xFF88FFFF, 15),
+  a('A', 'Champion', 0xFFFFCC44, 25),
+  s('S', 'Master', 0xFFFF8844, 35),
+  ss('SS', 'Legend', 0xFFFF44FF, 50);
+
+  final String label;
+  final String title;
+  final int color;
+  final int minWave;
+
+  const RunRank(this.label, this.title, this.color, this.minWave);
+
+  static RunRank fromWave(int wave) {
+    final ranks = RunRank.values.reversed;
+    for (final r in ranks) {
+      if (wave >= r.minWave) return r;
+    }
+    return RunRank.f;
+  }
+}
+
 /// Run result screen shown when the wall is destroyed.
 class RunResultScreen extends StatefulWidget {
   final DefenseGame game;
@@ -35,11 +61,20 @@ class _RunResultScreenState extends State<RunResultScreen>
   late AnimationController _statsRevealController;
   late List<Animation<double>> _statAnimations;
 
+  late AnimationController _rankRevealController;
+  late Animation<double> _rankScale;
+
   bool _showButtons = false;
+  bool _isNewRecord = false;
+  late RunRank _rank;
 
   @override
   void initState() {
     super.initState();
+
+    _rank = RunRank.fromWave(widget.wavesCleared);
+    _isNewRecord = widget.wavesCleared >= widget.game.highestWave &&
+        widget.wavesCleared > 0;
 
     // Entry animation
     _entryController = AnimationController(
@@ -67,28 +102,40 @@ class _RunResultScreenState extends State<RunResultScreen>
       });
     });
 
-    // Stats reveal (staggered)
+    // Stats reveal (staggered) - 5 stats now
     _statsRevealController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    _statAnimations = List.generate(4, (i) {
-      final start = i * 0.2;
-      final end = (start + 0.4).clamp(0.0, 1.0);
+    _statAnimations = List.generate(5, (i) {
+      final start = i * 0.15;
+      final end = (start + 0.35).clamp(0.0, 1.0);
       return CurvedAnimation(
         parent: _statsRevealController,
         curve: Interval(start, end, curve: Curves.easeOutCubic),
       );
     });
 
-    // Sequence: entry -> stats -> star count -> buttons
+    // Rank reveal animation
+    _rankRevealController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _rankScale = Tween<double>(begin: 3.0, end: 1.0).animate(
+      CurvedAnimation(parent: _rankRevealController, curve: Curves.elasticOut),
+    );
+
+    // Sequence: entry -> rank -> stats -> star count -> buttons
     _entryController.forward().then((_) {
       if (!mounted) return;
-      _statsRevealController.forward().then((_) {
+      _rankRevealController.forward().then((_) {
         if (!mounted) return;
-        _starCountController.forward().then((_) {
+        _statsRevealController.forward().then((_) {
           if (!mounted) return;
-          setState(() => _showButtons = true);
+          _starCountController.forward().then((_) {
+            if (!mounted) return;
+            setState(() => _showButtons = true);
+          });
         });
       });
     });
@@ -99,6 +146,7 @@ class _RunResultScreenState extends State<RunResultScreen>
     _entryController.dispose();
     _starCountController.dispose();
     _statsRevealController.dispose();
+    _rankRevealController.dispose();
     super.dispose();
   }
 
@@ -130,21 +178,23 @@ class _RunResultScreenState extends State<RunResultScreen>
             ),
           ),
           child: SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 children: [
-                  const Spacer(flex: 2),
+                  const SizedBox(height: 16),
                   _buildTitle(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  _buildRankBadge(),
+                  const SizedBox(height: 16),
                   _buildStatsPanel(),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   _buildBuildSummary(),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   _buildStarReward(),
-                  const Spacer(flex: 1),
+                  const SizedBox(height: 20),
                   if (_showButtons) _buildButtons(),
-                  const Spacer(flex: 1),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -171,7 +221,7 @@ class _RunResultScreenState extends State<RunResultScreen>
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           '성벽이 무너졌습니다',
           style: GameTheme.pixel(
@@ -179,16 +229,132 @@ class _RunResultScreenState extends State<RunResultScreen>
             color: GameTheme.textSecondary,
           ),
         ),
+        if (_isNewRecord) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: GameTheme.pixelCardDecoration(
+              fillColor: GameTheme.accentGold.withValues(alpha: 0.15),
+              borderColor: GameTheme.accentGold,
+              glow: true,
+              glowColor: GameTheme.accentGold,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events, color: GameTheme.accentGold, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'NEW RECORD!',
+                  style: GameTheme.pixel(
+                    fontSize: 10,
+                    color: GameTheme.accentGold,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
+  Widget _buildRankBadge() {
+    final rankColor = Color(_rank.color);
+
+    return AnimatedBuilder(
+      animation: _rankRevealController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _rankRevealController.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: _rankScale.value,
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: rankColor, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: rankColor.withValues(alpha: 0.4),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+          gradient: RadialGradient(
+            colors: [
+              rankColor.withValues(alpha: 0.25),
+              rankColor.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _rank.label,
+              style: GameTheme.pixel(
+                fontSize: 24,
+                color: rankColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              _rank.title,
+              style: GameTheme.pixel(
+                fontSize: 6,
+                color: rankColor.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatsPanel() {
+    final dps = widget.killCount > 0 && widget.wavesCleared > 0
+        ? (widget.killCount / (widget.wavesCleared * 10)).toStringAsFixed(1)
+        : '0.0';
+
     final stats = [
-      _StatEntry(icon: Icons.waves, label: '클리어 웨이브', value: '${widget.wavesCleared}'),
-      _StatEntry(icon: Icons.dangerous, label: '처치 수', value: GameTheme.formatInt(widget.killCount)),
-      _StatEntry(icon: Icons.monetization_on, label: '획득 골드', value: GameTheme.formatInt(widget.goldEarned)),
-      _StatEntry(icon: Icons.timer, label: '최고 기록', value: '${widget.game.highestWave}'),
+      _StatEntry(
+        icon: Icons.waves,
+        label: '클리어 웨이브',
+        value: '${widget.wavesCleared}',
+        valueColor: GameTheme.accent,
+      ),
+      _StatEntry(
+        icon: Icons.dangerous,
+        label: '처치 수',
+        value: GameTheme.formatInt(widget.killCount),
+        valueColor: GameTheme.accentRed,
+      ),
+      _StatEntry(
+        icon: Icons.speed,
+        label: '초당 처치',
+        value: '$dps/s',
+        valueColor: GameTheme.accentOrange,
+      ),
+      _StatEntry(
+        icon: Icons.monetization_on,
+        label: '획득 골드',
+        value: GameTheme.formatInt(widget.goldEarned),
+        valueColor: GameTheme.accentGold,
+      ),
+      _StatEntry(
+        icon: Icons.emoji_events,
+        label: '최고 기록',
+        value: '${widget.game.highestWave}',
+        valueColor: _isNewRecord ? GameTheme.accentGold : GameTheme.textSecondary,
+      ),
     ];
 
     return Container(
@@ -232,10 +398,10 @@ class _RunResultScreenState extends State<RunResultScreen>
 
   Widget _buildStatRow(_StatEntry stat) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Icon(stat.icon, color: GameTheme.textSecondary, size: 16),
+          Icon(stat.icon, color: stat.valueColor.withValues(alpha: 0.7), size: 14),
           const SizedBox(width: 8),
           Text(
             stat.label,
@@ -249,7 +415,7 @@ class _RunResultScreenState extends State<RunResultScreen>
             stat.value,
             style: GameTheme.pixel(
               fontSize: 9,
-              color: GameTheme.accentGold,
+              color: stat.valueColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -279,7 +445,7 @@ class _RunResultScreenState extends State<RunResultScreen>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.auto_awesome,
                 color: GameTheme.accentPurple,
                 size: 22,
@@ -299,6 +465,14 @@ class _RunResultScreenState extends State<RunResultScreen>
                 },
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '보유: ${GameTheme.formatInt(widget.game.stars)}',
+            style: GameTheme.pixel(
+              fontSize: 6,
+              color: GameTheme.textMuted,
+            ),
           ),
         ],
       ),
@@ -445,10 +619,12 @@ class _StatEntry {
   final IconData icon;
   final String label;
   final String value;
+  final Color valueColor;
 
   const _StatEntry({
     required this.icon,
     required this.label,
     required this.value,
+    this.valueColor = GameTheme.accentGold,
   });
 }
