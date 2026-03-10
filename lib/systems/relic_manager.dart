@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../data/balance_config.dart';
+
 /// Manages relics obtained from boss kills during a run.
 /// Relics provide passive bonuses and enable unit evolution.
 /// Maximum 3 relics per run; reset on run end.
@@ -82,19 +84,26 @@ class RelicManager {
   // === Relic effect queries ===
 
   /// ATK multiplier from relics. Base 1.0.
-  double get atkMultiplier => hasRelic('relic_atk_boost') ? 1.15 : 1.0;
+  double get atkMultiplier =>
+      hasRelic('relic_atk_boost') ? 1.0 + BalanceConfig.relicAtkBonus : 1.0;
 
   /// ATK speed multiplier from relics. Base 1.0.
-  double get atkSpeedMultiplier => hasRelic('relic_speed_boost') ? 1.15 : 1.0;
+  double get atkSpeedMultiplier =>
+      hasRelic('relic_speed_boost')
+          ? 1.0 + BalanceConfig.relicAtkSpeedBonus
+          : 1.0;
 
   /// Gold gain multiplier from relics. Base 1.0.
-  double get goldMultiplier => hasRelic('relic_gold_boost') ? 1.30 : 1.0;
+  double get goldMultiplier =>
+      hasRelic('relic_gold_boost') ? 1.0 + BalanceConfig.relicGoldBonus : 1.0;
 
   /// Wall damage reduction from relics. 0.0 = no reduction.
-  double get wallDamageReduction => hasRelic('relic_wall_shield') ? 0.20 : 0.0;
+  double get wallDamageReduction =>
+      hasRelic('relic_wall_shield') ? BalanceConfig.relicWallDefenseBonus : 0.0;
 
   /// Crit chance bonus from relics. 0.0 = no bonus.
-  double get critChanceBonus => hasRelic('relic_crit_chance') ? 0.10 : 0.0;
+  double get critChanceBonus =>
+      hasRelic('relic_crit_chance') ? BalanceConfig.relicCritBonus : 0.0;
 
   /// Whether splash damage is enabled.
   bool get hasSplash => hasRelic('relic_splash');
@@ -103,13 +112,15 @@ class RelicManager {
   bool get hasSlowAura => hasRelic('relic_slow_aura');
 
   /// Lifesteal percentage (fraction of damage dealt heals wall).
-  double get lifestealPercent => hasRelic('relic_lifesteal') ? 0.02 : 0.0;
+  double get lifestealPercent =>
+      hasRelic('relic_lifesteal') ? BalanceConfig.relicLifestealPercent : 0.0;
 
   /// Whether merge requires only 2 units instead of 3.
   bool get hasDoubleMerge => hasRelic('relic_double_merge');
 
   /// Star gain bonus multiplier.
-  double get starMultiplier => hasRelic('relic_star_magnet') ? 1.20 : 1.0;
+  double get starMultiplier =>
+      hasRelic('relic_star_magnet') ? 1.0 + BalanceConfig.relicStarBonus : 1.0;
 
   // === Save/Load (for mid-run save) ===
 

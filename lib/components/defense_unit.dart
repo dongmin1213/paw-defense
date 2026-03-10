@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../data/unit_data.dart';
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 import '../renderers/unit_renderer.dart';
 import 'defense_enemy.dart';
@@ -68,14 +69,30 @@ class DefenseUnit extends PositionComponent
     return UnitDatabase.get(unitType);
   }
 
-  /// Attack power scales exponentially with level.
-  double get atk => baseAtk * pow(2.0, level - 1);
+  /// Attack power scales exponentially with level, plus reward/relic/upgrade bonuses.
+  double get atk {
+    final base = baseAtk * pow(BalanceConfig.unitAtkLevelBase, level - 1);
+    return base *
+        game.rewardAtkMultiplier *
+        game.relicManager.atkMultiplier *
+        game.upgradeManager.unitAtkMultiplier;
+  }
 
-  /// Attack speed improves slightly per level.
-  double get atkSpeed => baseAtkSpeed * (1.0 + (level - 1) * 0.1);
+  /// Attack speed improves per level, plus reward/relic/upgrade bonuses.
+  double get atkSpeed {
+    final base = baseAtkSpeed *
+        (1.0 + (level - 1) * BalanceConfig.unitAtkSpeedPerLevel);
+    return base *
+        game.rewardAtkSpeedMultiplier *
+        game.relicManager.atkSpeedMultiplier *
+        game.upgradeManager.unitAtkSpeedMultiplier;
+  }
 
-  /// Range grows marginally with level.
-  double get range => baseRange + (level - 1) * 5.0;
+  /// Range grows per level, plus reward bonus.
+  double get range {
+    final base = baseRange + (level - 1) * BalanceConfig.unitRangePerLevel;
+    return base * game.rewardRangeMultiplier;
+  }
 
   /// Interval between attacks in seconds.
   double get attackInterval => 1.0 / atkSpeed;
@@ -122,10 +139,14 @@ class DefenseUnit extends PositionComponent
   void _attack() {
     if (_target == null || _target!.isDead) return;
 
-    // Calculate damage with fox assassin crit chance
+    // Calculate damage with crit chance (fox base + relic bonus)
     double dmg = atk;
-    if (unitTypeId == 'fox_assassin' && _random.nextDouble() < 0.20) {
-      dmg *= 2.0; // 20% chance for 2x crit damage
+    final critChance = (unitTypeId == 'fox_assassin'
+            ? BalanceConfig.foxCritChance
+            : 0.0) +
+        game.relicManager.critChanceBonus;
+    if (critChance > 0 && _random.nextDouble() < critChance) {
+      dmg *= BalanceConfig.foxCritMultiplier;
     }
 
     if (isMelee) {
@@ -140,16 +161,17 @@ class DefenseUnit extends PositionComponent
       }
     } else {
       // Ranged: fire a projectile
-      final direction = (_target!.position - position).normalized();
-      final speed = 200.0;
+      final dir = (_target!.position - position).normalized();
 
       game.world.add(Projectile(
         spawnPosition: position.clone(),
-        velocity: direction * speed,
+        velocity: dir * BalanceConfig.projectileSpeed,
         damage: dmg,
-        isPiercing: isPiercing || isEvolved, // unit data piercing OR evolved
-        isSplash: isSplash,
-        splashRadius: isSplash ? 40.0 : 0,
+        isPiercing: isPiercing || isEvolved,
+        isSplash: isSplash || game.relicManager.hasSplash,
+        splashRadius: (isSplash || game.relicManager.hasSplash)
+            ? BalanceConfig.splashRadius
+            : 0,
         ownerTypeId: unitTypeId,
       ));
     }

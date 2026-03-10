@@ -136,8 +136,9 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
       game.spawnBoss(
         wave: currentWave,
         position: bossPos,
-        hpMultiplier: pow(1.08, currentWave).toDouble() *
-            (1 + unitCount * 0.12),
+        hpMultiplier:
+            pow(BalanceConfig.enemyHpWaveScale, currentWave).toDouble() *
+                (1 + unitCount * BalanceConfig.enemyHpUnitScale),
       );
     }
   }

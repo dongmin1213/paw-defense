@@ -101,6 +101,12 @@ class DefenseEnemy extends PositionComponent
     _isHit = true;
     _hitFlashTimer = 0.1;
 
+    // Lifesteal: heal wall for a percentage of damage dealt
+    final lifesteal = game.relicManager.lifestealPercent;
+    if (lifesteal > 0 && !game.wall.isDestroyed) {
+      game.wall.heal(finalAmount * lifesteal);
+    }
+
     // Knockback away from wall
     position.add(direction * -3);
 
@@ -137,7 +143,11 @@ class DefenseEnemy extends PositionComponent
   /// Bomber: explode on reaching wall, dealing 3x damage and dying.
   void _explode() {
     if (game.wall.isDestroyed) return;
-    game.wall.takeDamage(damage * 3.0);
+    final wallDefense = game.rewardWallDefenseMultiplier *
+        (1.0 - game.relicManager.wallDamageReduction) *
+        game.upgradeManager.wallDefenseMultiplier;
+    game.wall.takeDamage(damage * 3.0 * wallDefense);
+    game.waveManager.onWallDamaged();
     game.particleEffect.spawnEnemyDeath(position.x, position.y);
     _isDead = true;
     game.addGold(goldDrop, popupPos: position);
@@ -222,7 +232,11 @@ class DefenseEnemy extends PositionComponent
 
   void _attackWall() {
     if (game.wall.isDestroyed) return;
-    game.wall.takeDamage(damage);
+    final wallDefense = game.rewardWallDefenseMultiplier *
+        (1.0 - game.relicManager.wallDamageReduction) *
+        game.upgradeManager.wallDefenseMultiplier;
+    game.wall.takeDamage(damage * wallDefense);
+    game.waveManager.onWallDamaged();
   }
 
   @override
