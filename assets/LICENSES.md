@@ -114,6 +114,39 @@
 
 ---
 
+## Superpowers Asset Packs - Ninja Adventure (CC0 1.0 Universal)
+
+**출처**: https://github.com/sparklinlabs/superpowers-asset-packs
+**작성자**: Pixel-boy (Superpowers)
+**라이선스**: CC0 1.0 Universal (Public Domain)
+**상용 사용**: 가능 (제한 없음)
+**크레딧 표기**: 불필요
+
+### 몬스터 스프라이트 (22종)
+- **위치**: `images/sprites/monsters/`
+- **내용**: 16x16 애니메이션 몬스터 스프라이트시트
+  - 각 몬스터별 걷기/공격/피격 애니메이션 프레임 포함
+- **용도**: 적 유닛 스프라이트
+
+### 캐릭터 스프라이트 (26종)
+- **위치**: `images/sprites/characters/`
+- **내용**: 16x16 애니메이션 캐릭터 스프라이트시트
+  - 각 캐릭터별 4방향 걷기 애니메이션 포함
+  - 개(dog) 캐릭터 포함
+- **용도**: 아군 유닛 스프라이트
+
+### 아이템 스프라이트 (13종)
+- **위치**: `images/sprites/items/`
+- **내용**: 화살, 코인, 파이어볼, 하트, 열쇠, 포션, 보물상자 등
+- **용도**: 게임 아이템/보상 아이콘
+
+### 환경 타일셋
+- **위치**: `images/sprites/ninja_tileset.png`
+- **내용**: 건물, 나무, 지형, 물, 눈, 사막 등 다양한 환경 타일
+- **용도**: 게임 배경/환경
+
+---
+
 ## CC0 1.0 Universal 라이선스 요약
 
 - 어떤 목적으로든 자유롭게 사용 가능 (상용 포함)
