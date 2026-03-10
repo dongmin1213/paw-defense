@@ -285,6 +285,17 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           icon: Icons.auto_awesome,
         ),
         const SizedBox(height: 12),
+        // Achievement button
+        GameTheme.pixelButton(
+          label: '업적',
+          onTap: () => widget.game.overlays.add('Achievement'),
+          gradient: GameTheme.gradientPurple,
+          fontSize: 9,
+          verticalPad: 12,
+          horizontalPad: 28,
+          icon: Icons.emoji_events,
+        ),
+        const SizedBox(height: 12),
         // Settings button
         GameTheme.pixelButton(
           label: '설정',

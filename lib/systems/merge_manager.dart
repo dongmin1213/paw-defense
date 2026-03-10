@@ -1,6 +1,9 @@
+import '../data/hybrid_unit_data.dart';
+
 /// Handles unit merging logic for castle defense.
 /// 3 same units (same type + same level) = 1 unit of level+1.
 /// Max unit level is 5. Level 5 units can evolve with a matching relic.
+/// Cross-breed merge: 2 different types at same level (Lv3+) = hybrid unit.
 class MergeManager {
   /// Maximum unit level before evolution.
   static const int maxLevel = 5;
@@ -98,6 +101,84 @@ class MergeManager {
       isEvolved: true,
     );
   }
+
+  // ══════════════════════════════════════
+  // Cross-Breed Merge (Hybrid Units)
+  // ══════════════════════════════════════
+
+  /// Minimum level required for cross-breed merge.
+  static const int crossBreedMinLevel = 3;
+
+  /// Check if two units can cross-breed.
+  /// Requires: different types, same level, both Lv3+, valid recipe.
+  static bool canCrossBreed(DefenseUnit a, DefenseUnit b) {
+    if (a.unitTypeId == b.unitTypeId) return false;
+    if (a.level != b.level) return false;
+    if (a.level < crossBreedMinLevel) return false;
+    if (HybridDatabase.isHybrid(a.unitTypeId)) return false;
+    if (HybridDatabase.isHybrid(b.unitTypeId)) return false;
+    return HybridDatabase.findRecipe(a.unitTypeId, b.unitTypeId) != null;
+  }
+
+  /// Find all possible cross-breed merges in the slot list.
+  /// Returns list of [slotA, slotB, hybridId].
+  static List<CrossBreedMerge> findCrossBreedMerges(List<UnitSlot> slots) {
+    final result = <CrossBreedMerge>[];
+    final occupied = <int>[];
+
+    for (int i = 0; i < slots.length; i++) {
+      if (slots[i].unit != null && slots[i].unit!.level >= crossBreedMinLevel) {
+        if (!HybridDatabase.isHybrid(slots[i].unit!.unitTypeId)) {
+          occupied.add(i);
+        }
+      }
+    }
+
+    for (int i = 0; i < occupied.length; i++) {
+      for (int j = i + 1; j < occupied.length; j++) {
+        final unitA = slots[occupied[i]].unit!;
+        final unitB = slots[occupied[j]].unit!;
+        if (unitA.unitTypeId == unitB.unitTypeId) continue;
+        if (unitA.level != unitB.level) continue;
+
+        final recipe = HybridDatabase.findRecipe(
+            unitA.unitTypeId, unitB.unitTypeId);
+        if (recipe != null) {
+          result.add(CrossBreedMerge(
+            slotIndexA: occupied[i],
+            slotIndexB: occupied[j],
+            hybridId: recipe.hybridId,
+            level: unitA.level,
+          ));
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Perform a cross-breed merge. Returns the hybrid unit.
+  static DefenseUnit performCrossBreed(CrossBreedMerge merge) {
+    return DefenseUnit(
+      unitTypeId: merge.hybridId,
+      level: merge.level,
+      isEvolved: false,
+    );
+  }
+}
+
+/// Result of a cross-breed merge lookup.
+class CrossBreedMerge {
+  final int slotIndexA;
+  final int slotIndexB;
+  final String hybridId;
+  final int level;
+
+  const CrossBreedMerge({
+    required this.slotIndexA,
+    required this.slotIndexB,
+    required this.hybridId,
+    required this.level,
+  });
 }
 
 /// Lightweight data class representing a defense unit.

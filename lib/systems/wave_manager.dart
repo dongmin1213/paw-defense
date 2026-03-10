@@ -23,8 +23,8 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   bool wallTookDamage = false;
   int consecutivePerfects = 0;
 
-  // Wave duration & spawn interval (from BalanceConfig)
-  double get waveDuration => BalanceConfig.waveDuration;
+  // Wave duration & spawn interval (from BalanceConfig or relic override)
+  double get waveDuration => game.relicManager.waveDurationOverride;
   double get betweenWavePause => BalanceConfig.betweenWavePause;
 
   // Spawn boundaries (just outside the 400x420 field area)
@@ -61,10 +61,19 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     waveTimer = 0;
     waveActive = true;
     betweenWaves = false;
+
+    // Notify game of wave start (relic hooks: gold, heal, rift, time warp)
+    game.onWaveStart(currentWave);
   }
 
-  /// Base enemy count per wave tier (from BalanceConfig).
+  /// Base enemy count per wave tier with late-game scaling.
   int get _baseEnemyCount {
+    // Late-game scaling: massive enemy counts for spectacle
+    if (currentWave > 30) return 60;
+    if (currentWave > 24) return 40;
+    if (currentWave > 20) return 30;
+    if (currentWave > 15) return 20;
+
     for (final tier in BalanceConfig.baseEnemyCountTiers) {
       if (currentWave <= tier[0]) return tier[1];
     }

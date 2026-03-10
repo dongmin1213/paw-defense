@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 
 import '../data/unit_data.dart';
 import '../data/balance_config.dart';
+import '../data/hybrid_unit_data.dart';
 import '../game/defense_game.dart';
 import '../renderers/unit_renderer.dart';
 import 'defense_enemy.dart';
@@ -46,23 +47,70 @@ class DefenseUnit extends PositionComponent
     'owl_wizard': UnitType.owlWizard,
   };
 
+  /// Whether this is a hybrid unit.
+  bool get isHybrid => HybridDatabase.isHybrid(unitTypeId);
+
   DefenseUnit({
     required this.unitTypeId,
     this.level = 1,
     this.isEvolved = false,
     this.slotIndex = -1,
-  })  : baseAtk = _lookupData(unitTypeId)?.baseAtk ?? 10,
-        baseAtkSpeed = _lookupData(unitTypeId)?.baseAtkSpeed ?? 1.0,
-        baseRange = _lookupData(unitTypeId)?.range ?? 80,
-        isSplash = _lookupData(unitTypeId)?.isSplash ?? false,
-        isPiercing = _lookupData(unitTypeId)?.isPiercing ?? false,
-        isMelee = _lookupData(unitTypeId)?.isMelee ?? false,
-        canHitAir = _lookupData(unitTypeId)?.canHitAir ?? false,
+  })  : baseAtk = _lookupAtk(unitTypeId),
+        baseAtkSpeed = _lookupAtkSpeed(unitTypeId),
+        baseRange = _lookupRange(unitTypeId),
+        isSplash = _lookupSplash(unitTypeId),
+        isPiercing = _lookupPierce(unitTypeId),
+        isMelee = _lookupMelee(unitTypeId),
+        canHitAir = _lookupAir(unitTypeId),
         super(
           size: Vector2(24, 24),
           anchor: Anchor.center,
           priority: 15,
         );
+
+  // ── Stat lookups (support both normal and hybrid units) ──
+
+  static double _lookupAtk(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.baseAtk;
+    return _lookupData(typeId)?.baseAtk ?? 10;
+  }
+
+  static double _lookupAtkSpeed(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.baseAtkSpeed;
+    return _lookupData(typeId)?.baseAtkSpeed ?? 1.0;
+  }
+
+  static double _lookupRange(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.range;
+    return _lookupData(typeId)?.range ?? 80;
+  }
+
+  static bool _lookupSplash(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.isSplash;
+    return _lookupData(typeId)?.isSplash ?? false;
+  }
+
+  static bool _lookupPierce(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.isPiercing;
+    return _lookupData(typeId)?.isPiercing ?? false;
+  }
+
+  static bool _lookupMelee(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.isMelee;
+    return _lookupData(typeId)?.isMelee ?? false;
+  }
+
+  static bool _lookupAir(String typeId) {
+    final hybrid = HybridDatabase.get(typeId);
+    if (hybrid != null) return hybrid.canHitAir;
+    return _lookupData(typeId)?.canHitAir ?? false;
+  }
 
   /// Look up UnitData by string unitTypeId. Returns null if not found.
   static UnitData? _lookupData(String typeId) {
@@ -72,12 +120,17 @@ class DefenseUnit extends PositionComponent
   }
 
   /// Attack power scales exponentially with level, plus reward/relic/upgrade bonuses.
+  /// Includes berserker (wall HP < 30% → x2) and reverse (low HP → high ATK).
   double get atk {
     final base = baseAtk * pow(BalanceConfig.unitAtkLevelBase, level - 1);
+    final wallHpPct = game.wall.hpPercent;
     return base *
         game.rewardAtkMultiplier *
         game.relicManager.atkMultiplier *
-        game.upgradeManager.unitAtkMultiplier;
+        game.upgradeManager.unitAtkMultiplier *
+        (isHybrid ? game.upgradeManager.hybridAtkMultiplier : 1.0) *
+        game.relicManager.berserkerMultiplier(wallHpPct) *
+        game.relicManager.reverseMultiplier(wallHpPct);
   }
 
   /// Attack speed improves per level, plus reward/relic/upgrade bonuses.
@@ -90,10 +143,10 @@ class DefenseUnit extends PositionComponent
         game.upgradeManager.unitAtkSpeedMultiplier;
   }
 
-  /// Range grows per level, plus reward bonus.
+  /// Range grows per level, plus reward and relic bonuses.
   double get range {
     final base = baseRange + (level - 1) * BalanceConfig.unitRangePerLevel;
-    return base * game.rewardRangeMultiplier;
+    return base * game.rewardRangeMultiplier * game.relicManager.rangeMultiplier;
   }
 
   /// Interval between attacks in seconds.
@@ -141,19 +194,29 @@ class DefenseUnit extends PositionComponent
   void _attack() {
     if (_target == null || _target!.isDead) return;
 
-    // Calculate damage with crit chance (fox base + relic bonus)
+    // Calculate damage with crit chance (fox/hybrid base + relic bonus)
     double dmg = atk;
-    final critChance = (unitTypeId == 'fox_assassin'
-            ? BalanceConfig.foxCritChance
-            : 0.0) +
-        game.relicManager.critChanceBonus;
+    double baseCritChance = 0.0;
+    if (unitTypeId == 'fox_assassin') baseCritChance = BalanceConfig.foxCritChance;
+    if (unitTypeId == 'hybrid_flame_hunter') baseCritChance = 0.20;
+    if (unitTypeId == 'hybrid_shadow_sage') baseCritChance = 0.30;
+    if (unitTypeId == 'hybrid_wolf_blade') baseCritChance = 0.25;
+
+    final critChance = baseCritChance +
+        game.relicManager.critChanceBonus +
+        game.upgradeManager.baseCritChance;
     if (critChance > 0 && _random.nextDouble() < critChance) {
-      dmg *= BalanceConfig.foxCritMultiplier;
+      dmg *= game.relicManager.critDamageMultiplier;
     }
 
-    // Turtle healer: heal wall on each attack
-    if (unitTypeId == 'turtle_healer' && !game.wall.isDestroyed) {
-      game.wall.heal(dmg * BalanceConfig.turtleHealerHealFraction);
+    // Turtle healer / hybrid healer: heal wall on each attack
+    if ((unitTypeId == 'turtle_healer' ||
+        unitTypeId == 'hybrid_holy_knight' ||
+        unitTypeId == 'hybrid_mystic_sage' ||
+        unitTypeId == 'hybrid_mountain_guard') &&
+        !game.wall.isDestroyed) {
+      final healFrac = unitTypeId == 'hybrid_mystic_sage' ? 0.03 : BalanceConfig.turtleHealerHealFraction;
+      game.wall.heal(dmg * healFrac);
     }
 
     if (isMelee) {
@@ -164,10 +227,14 @@ class DefenseUnit extends PositionComponent
         final dist = position.distanceTo(enemy.position);
         if (dist <= range) {
           enemy.takeDamage(dmg, sourcePosition: position);
-          // Bear tanker: slow enemies on hit
-          if (unitTypeId == 'bear_tanker') {
+          // Bear tanker + bear hybrids: slow enemies on hit
+          if (unitTypeId == 'bear_tanker' ||
+              unitTypeId == 'hybrid_iron_warrior' ||
+              unitTypeId == 'hybrid_mountain_guard' ||
+              unitTypeId == 'hybrid_wise_bear') {
+            final slowIntensity = unitTypeId == 'hybrid_wise_bear' ? 0.40 : BalanceConfig.bearSlowIntensity;
             enemy.applySlow(
-              BalanceConfig.bearSlowIntensity,
+              slowIntensity,
               BalanceConfig.bearSlowDuration,
             );
           }
@@ -177,11 +244,13 @@ class DefenseUnit extends PositionComponent
       // Ranged: fire a projectile
       final dir = (_target!.position - position).normalized();
 
+      final projSpeed = BalanceConfig.projectileSpeed *
+          game.relicManager.projectileSpeedMultiplier;
       game.world.add(Projectile(
         spawnPosition: position.clone(),
-        velocity: dir * BalanceConfig.projectileSpeed,
+        velocity: dir * projSpeed,
         damage: dmg,
-        isPiercing: isPiercing || isEvolved,
+        isPiercing: isPiercing || isEvolved || game.relicManager.hasPierceAll,
         isSplash: isSplash || game.relicManager.hasSplash,
         splashRadius: (isSplash || game.relicManager.hasSplash)
             ? BalanceConfig.splashRadius

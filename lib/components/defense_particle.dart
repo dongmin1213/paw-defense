@@ -141,6 +141,110 @@ class DefenseParticle extends PositionComponent
     }
   }
 
+  /// Critical hit effect — star-shaped burst with white/yellow.
+  void spawnCriticalHit(double wx, double wy, {double scale = 1.0}) {
+    final rng = Random();
+    final count = (12 * scale).toInt();
+    for (var i = 0; i < count; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = (50 + rng.nextDouble() * 80) * scale;
+      const colors = [
+        Color(0xFFFFFFFF),
+        Color(0xFFFFD700),
+        Color(0xFFFFE44D),
+      ];
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 30,
+        size: (3 + rng.nextDouble() * 3) * scale,
+        life: 0.3 + rng.nextDouble() * 0.2,
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Chain kill effect — lightning arc between two points.
+  void spawnChainKill(double x1, double y1, double x2, double y2) {
+    final rng = Random();
+    const steps = 8;
+    for (var i = 0; i < steps; i++) {
+      final t = i / steps;
+      final px = x1 + (x2 - x1) * t + (rng.nextDouble() - 0.5) * 10;
+      final py = y1 + (y2 - y1) * t + (rng.nextDouble() - 0.5) * 10;
+      _particles.add(_FxParticle(
+        x: px,
+        y: py,
+        vx: (rng.nextDouble() - 0.5) * 20,
+        vy: (rng.nextDouble() - 0.5) * 20,
+        size: 2 + rng.nextDouble() * 2,
+        life: 0.2 + rng.nextDouble() * 0.15,
+        color: const Color(0xFF42A5F5),
+      ));
+    }
+  }
+
+  /// Hybrid merge effect — two-color swirl.
+  void spawnHybridMerge(double wx, double wy) {
+    final rng = Random();
+    const colorsA = [Color(0xFFFF6D00), Color(0xFFFFAB00)];
+    const colorsB = [Color(0xFF2979FF), Color(0xFF00B0FF)];
+    for (var i = 0; i < 25; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 40 + rng.nextDouble() * 60;
+      final isA = i % 2 == 0;
+      final colors = isA ? colorsA : colorsB;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 25,
+        size: 3 + rng.nextDouble() * 3,
+        life: 0.6 + rng.nextDouble() * 0.4,
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Combo milestone effect — screen-wide flash burst.
+  void spawnComboFlash(double centerX, double centerY, int comboColor) {
+    final rng = Random();
+    final color = Color(comboColor);
+    for (var i = 0; i < 40; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 80 + rng.nextDouble() * 150;
+      _particles.add(_FxParticle(
+        x: centerX + (rng.nextDouble() - 0.5) * 100,
+        y: centerY + (rng.nextDouble() - 0.5) * 50,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 20,
+        size: 3 + rng.nextDouble() * 4,
+        life: 0.5 + rng.nextDouble() * 0.5,
+        color: color,
+      ));
+    }
+  }
+
+  /// Scaled enemy death effect — size proportional to combo.
+  void spawnEnemyDeathScaled(double wx, double wy, double scale) {
+    final rng = Random();
+    final count = (8 * scale).clamp(4, 20).toInt();
+    for (var i = 0; i < count; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = (40 + rng.nextDouble() * 70) * scale;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 20,
+        size: (2 + rng.nextDouble() * 3) * scale,
+        life: (0.3 + rng.nextDouble() * 0.3) * scale,
+        color: const Color(0xFFFF4444),
+      ));
+    }
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -154,9 +258,9 @@ class DefenseParticle extends PositionComponent
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Cap particle count
-    if (_particles.length > 200) {
-      _particles.removeRange(0, _particles.length - 200);
+    // Cap particle count (increased for late-game spectacle)
+    if (_particles.length > 500) {
+      _particles.removeRange(0, _particles.length - 500);
     }
   }
 

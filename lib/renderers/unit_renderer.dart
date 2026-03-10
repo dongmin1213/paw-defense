@@ -1,10 +1,12 @@
 import 'dart:ui';
 import 'dart:math';
 import '../utils/pixel_art.dart';
+import '../data/hybrid_unit_data.dart';
 
-/// Pixel art renderer for 6 animal defender units.
+/// Pixel art renderer for 6 animal defender units + hybrid units.
 /// Each unit has base sprite, 2-frame idle animation, level visual scaling,
 /// and an evolved form with glow effects.
+/// Hybrid units render with parent A base sprite + parent B color overlay.
 class UnitRenderer {
   /// Render a unit by type string and level.
   static void render(Canvas canvas, Size size, {
@@ -14,6 +16,13 @@ class UnitRenderer {
     bool isEvolved = false,
     bool hasTarget = false,
   }) {
+    // Check if this is a hybrid unit
+    if (HybridDatabase.isHybrid(unitTypeId)) {
+      _renderHybrid(canvas, size,
+          hybridId: unitTypeId, level: level, animTimer: animTimer);
+      return;
+    }
+
     final frame = (animTimer * 3).toInt() % 2;
     final data = _getSpriteData(unitTypeId, frame, isEvolved: isEvolved);
     if (data.frames.isEmpty) return;
@@ -684,6 +693,93 @@ class UnitRenderer {
       'b': const Color(0xFFFF8F00),
       'p': const Color(0xFFCE93D8),
     });
+  }
+
+  // ========== HYBRID UNIT RENDERING ==========
+
+  /// Color map for hybrid types (glow + tint).
+  static const Map<String, Color> _hybridColors = {
+    'hybrid_flame_hunter': Color(0xFFFF6D00),
+    'hybrid_iron_warrior': Color(0xFF607D8B),
+    'hybrid_archmage': Color(0xFF7B1FA2),
+    'hybrid_mountain_guard': Color(0xFF4CAF50),
+    'hybrid_storm_archer': Color(0xFF42A5F5),
+    'hybrid_wind_thief': Color(0xFF80CBC4),
+    'hybrid_holy_knight': Color(0xFFFFD54F),
+    'hybrid_mystic_sage': Color(0xFFCE93D8),
+    'hybrid_wise_bear': Color(0xFF795548),
+    'hybrid_shadow_sage': Color(0xFF311B92),
+    'hybrid_wolf_blade': Color(0xFFBDBDBD),
+    'hybrid_spell_sniper': Color(0xFFE040FB),
+  };
+
+  /// Render a hybrid unit using parent A sprite with color tint overlay.
+  static void _renderHybrid(Canvas canvas, Size size, {
+    required String hybridId,
+    required int level,
+    required double animTimer,
+  }) {
+    final hybridData = HybridDatabase.get(hybridId);
+    if (hybridData == null) return;
+
+    // Use parent A as base sprite
+    final frame = (animTimer * 3).toInt() % 2;
+    final baseData = _getSpriteData(hybridData.parentA, frame);
+    if (baseData.frames.isEmpty) return;
+
+    final spriteW = baseData.frames[0].length;
+    final spriteH = baseData.frames.length;
+    final basePx = min(size.width / spriteW, size.height / spriteH);
+    final px = basePx * (1.0 + (level - 1) * 0.04);
+
+    // Hybrid glow effect (dual color pulse)
+    final glowColor = _hybridColors[hybridId] ?? const Color(0xFFFFFFFF);
+    final pulse = 0.5 + sin(animTimer * 3) * 0.2;
+    PixelArt.drawGlow(
+      canvas, size,
+      glowColor.withAlpha((pulse * 180).toInt()),
+      size.width * 0.4,
+    );
+
+    // Tint palette toward hybrid color
+    final tintedPalette = _tintPalette(baseData.palette, glowColor, 0.3);
+    final palette = level >= 3
+        ? _brightenPalette(tintedPalette, (level - 2) * 15)
+        : tintedPalette;
+
+    PixelArt.drawCentered(canvas, baseData.frames, palette, size, pixelSize: px);
+
+    // Draw hybrid badge (small emoji indicator)
+    _drawHybridBadge(canvas, size, hybridData.emoji, animTimer);
+
+    // Level 3+ sparkle effect
+    if (level >= 3) {
+      _drawSparkles(canvas, size, animTimer);
+    }
+  }
+
+  /// Tint a palette toward a target color by [amount] (0.0~1.0).
+  static Map<String, Color> _tintPalette(
+      Map<String, Color> p, Color target, double amount) {
+    return p.map((k, v) => MapEntry(k, Color.fromARGB(
+      v.alpha,
+      (v.red + (target.red - v.red) * amount).toInt().clamp(0, 255),
+      (v.green + (target.green - v.green) * amount).toInt().clamp(0, 255),
+      (v.blue + (target.blue - v.blue) * amount).toInt().clamp(0, 255),
+    )));
+  }
+
+  /// Draw a small badge indicator for hybrid units.
+  static void _drawHybridBadge(Canvas canvas, Size size, String emoji, double t) {
+    // Pulsing indicator dot in corner
+    final dotPaint = Paint()
+      ..color = const Color(0xCCFFFFFF)
+      ..isAntiAlias = false;
+    final dotSize = 3.0 + sin(t * 5) * 0.5;
+    canvas.drawRect(
+      Rect.fromLTWH(size.width - dotSize - 1, 1, dotSize, dotSize),
+      dotPaint,
+    );
   }
 }
 

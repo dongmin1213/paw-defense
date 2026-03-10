@@ -13,6 +13,12 @@ enum DefenseUpgradeId {
   starBonus,
   slotExpansion,
   relicChance,
+  // Phase 4: New upgrades
+  startGold,
+  relicQuality,
+  comboDuration,
+  hybridBonus,
+  critChance,
 }
 
 /// Static data definition for a defense upgrade.
@@ -118,6 +124,42 @@ class DefenseUpgradeDatabase {
       baseCost: 30,
       maxLevel: 10,
     ),
+    // Phase 4: New upgrades
+    DefenseUpgradeData(
+      id: DefenseUpgradeId.startGold,
+      name: '초기 자금',
+      description: '런 시작 시 골드 +20 / 레벨',
+      baseCost: 15,
+      maxLevel: 10,
+    ),
+    DefenseUpgradeData(
+      id: DefenseUpgradeId.relicQuality,
+      name: '유물 품질',
+      description: '높은 등급 유물 확률 +3% / 레벨',
+      baseCost: 40,
+      maxLevel: 10,
+    ),
+    DefenseUpgradeData(
+      id: DefenseUpgradeId.comboDuration,
+      name: '콤보 지속',
+      description: '콤보 유지 시간 +0.3초 / 레벨',
+      baseCost: 20,
+      maxLevel: 10,
+    ),
+    DefenseUpgradeData(
+      id: DefenseUpgradeId.hybridBonus,
+      name: '하이브리드 강화',
+      description: '하이브리드 유닛 공격력 +5% / 레벨',
+      baseCost: 35,
+      maxLevel: 10,
+    ),
+    DefenseUpgradeData(
+      id: DefenseUpgradeId.critChance,
+      name: '기본 크리티컬',
+      description: '기본 크리 확률 +2% / 레벨',
+      baseCost: 25,
+      maxLevel: 10,
+    ),
   ];
 
   static DefenseUpgradeData get(DefenseUpgradeId id) {
@@ -208,6 +250,27 @@ class DefenseUpgradeManager {
   /// Bonus relic choice chance. +5% per level.
   double get relicChanceBonus =>
       getLevel(DefenseUpgradeId.relicChance) * 0.05;
+
+  // === Phase 4: New upgrade getters ===
+
+  /// Bonus start gold. +20 per level.
+  int get startGoldBonus => getLevel(DefenseUpgradeId.startGold) * 20;
+
+  /// Relic quality bonus. +3% higher tier chance per level.
+  double get relicQualityBonus =>
+      getLevel(DefenseUpgradeId.relicQuality) * 0.03;
+
+  /// Combo duration bonus in seconds. +0.3s per level.
+  double get comboDurationBonus =>
+      getLevel(DefenseUpgradeId.comboDuration) * 0.3;
+
+  /// Hybrid unit ATK multiplier. +5% per level.
+  double get hybridAtkMultiplier =>
+      1.0 + getLevel(DefenseUpgradeId.hybridBonus) * 0.05;
+
+  /// Base crit chance bonus. +2% per level.
+  double get baseCritChance =>
+      getLevel(DefenseUpgradeId.critChance) * 0.02;
 
   /// Reset all upgrades to level 0.
   void resetAll() {

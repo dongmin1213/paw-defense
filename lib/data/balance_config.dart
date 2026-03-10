@@ -136,8 +136,8 @@ class BalanceConfig {
   // Relic Bonuses
   // ══════════════════════════════════════
 
-  /// Max relics per run.
-  static const int maxRelics = 3;
+  /// Max relics per run (base, can be increased by relic_infinity +2).
+  static const int maxRelics = 5;
 
   static const double relicAtkBonus = 0.15;
   static const double relicAtkSpeedBonus = 0.15;

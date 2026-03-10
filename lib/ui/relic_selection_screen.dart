@@ -1,138 +1,10 @@
 import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
-
-/// Relic data derived from relicId.
-class _RelicInfo {
-  final String name;
-  final String icon;
-  final String description;
-  final String rarity;
-
-  const _RelicInfo({
-    required this.name,
-    required this.icon,
-    required this.description,
-    required this.rarity,
-  });
-}
-
-/// Maps relicId → display data.
-const Map<String, _RelicInfo> _relicDatabase = {
-  // Evolution relics (epic rarity, one per unit type)
-  'evolve_cat_archer': _RelicInfo(
-    name: '궁수 진화석',
-    icon: '🏹',
-    description: '고양이 궁수를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_dog_warrior': _RelicInfo(
-    name: '기사 진화석',
-    icon: '🗡️',
-    description: '강아지 전사를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_rabbit_mage': _RelicInfo(
-    name: '마법사 진화석',
-    icon: '🔮',
-    description: '토끼 마법사를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_bear_tanker': _RelicInfo(
-    name: '수호자 진화석',
-    icon: '🛡️',
-    description: '곰 탱커를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_fox_assassin': _RelicInfo(
-    name: '암살자 진화석',
-    icon: '🗡️',
-    description: '여우 암살자를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_bird_scout': _RelicInfo(
-    name: '정찰대 진화석',
-    icon: '🦅',
-    description: '새 정찰대를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_turtle_healer': _RelicInfo(
-    name: '힐러 진화석',
-    icon: '💚',
-    description: '거북이 힐러를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  'evolve_owl_wizard': _RelicInfo(
-    name: '마도사 진화석',
-    icon: '🌙',
-    description: '부엉이 마도사를 진화시킵니다',
-    rarity: 'epic',
-  ),
-  // Passive bonus relics
-  'relic_atk_boost': _RelicInfo(
-    name: '분노의 부적',
-    icon: '⚔️',
-    description: '전체 유닛 공격력 +15%',
-    rarity: 'rare',
-  ),
-  'relic_speed_boost': _RelicInfo(
-    name: '신속의 부적',
-    icon: '⚡',
-    description: '전체 유닛 공격속도 +15%',
-    rarity: 'rare',
-  ),
-  'relic_gold_boost': _RelicInfo(
-    name: '황금 나침반',
-    icon: '💰',
-    description: '골드 획득량 +30%',
-    rarity: 'rare',
-  ),
-  'relic_wall_shield': _RelicInfo(
-    name: '수호의 방패',
-    icon: '🛡️',
-    description: '성벽 피해 -20%',
-    rarity: 'rare',
-  ),
-  'relic_crit_chance': _RelicInfo(
-    name: '치명의 반지',
-    icon: '💥',
-    description: '치명타 확률 +10%',
-    rarity: 'rare',
-  ),
-  'relic_splash': _RelicInfo(
-    name: '폭발의 룬',
-    icon: '💫',
-    description: '원거리 유닛 범위 공격',
-    rarity: 'epic',
-  ),
-  'relic_slow_aura': _RelicInfo(
-    name: '빙결의 오라',
-    icon: '❄️',
-    description: '성벽 근처 적 둔화 -20%',
-    rarity: 'rare',
-  ),
-  'relic_lifesteal': _RelicInfo(
-    name: '흡혈의 보석',
-    icon: '🩸',
-    description: '유닛 데미지의 2% 성벽 회복',
-    rarity: 'epic',
-  ),
-  'relic_double_merge': _RelicInfo(
-    name: '합성의 서',
-    icon: '📖',
-    description: '2마리만으로 합성 가능',
-    rarity: 'legendary',
-  ),
-  'relic_star_magnet': _RelicInfo(
-    name: '별의 나침반',
-    icon: '⭐',
-    description: '런 종료 시 별 +20%',
-    rarity: 'rare',
-  ),
-};
+import '../data/relic_data.dart';
 
 /// Relic selection screen shown when a boss is killed.
-/// Lets the player choose 1 of 2-3 relics.
+/// Lets the player choose 1 of 3 relics with weighted rarity.
 class RelicSelectionScreen extends StatefulWidget {
   final DefenseGame game;
   final List<String> relicChoices;
@@ -213,15 +85,34 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
     });
   }
 
-  Color _rarityColor(String rarity) => GameTheme.rarityToColor(rarity);
-
-  LinearGradient? _rarityGradient(String rarity) {
+  Color _rarityColor(RelicRarity rarity) {
     switch (rarity) {
-      case 'legendary':
+      case RelicRarity.common:
+        return GameTheme.textSecondary;
+      case RelicRarity.rare:
+        return const Color(0xFF42A5F5);
+      case RelicRarity.epic:
+        return const Color(0xFFAB47BC);
+      case RelicRarity.legendary:
+        return GameTheme.accentGold;
+      case RelicRarity.mythic:
+        return const Color(0xFFFF1744);
+    }
+  }
+
+  LinearGradient? _rarityGradient(RelicRarity rarity) {
+    switch (rarity) {
+      case RelicRarity.legendary:
         return GameTheme.gradientGold;
-      case 'epic':
+      case RelicRarity.epic:
         return GameTheme.gradientPurple;
-      case 'rare':
+      case RelicRarity.mythic:
+        return const LinearGradient(
+          colors: [Color(0xFFFF1744), Color(0xFFFF6D00), Color(0xFFFF1744)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case RelicRarity.rare:
         return const LinearGradient(
           colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
           begin: Alignment.topLeft,
@@ -229,19 +120,6 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
         );
       default:
         return null;
-    }
-  }
-
-  String _rarityLabel(String rarity) {
-    switch (rarity) {
-      case 'legendary':
-        return '전설';
-      case 'epic':
-        return '에픽';
-      case 'rare':
-        return '레어';
-      default:
-        return '일반';
     }
   }
 
@@ -275,6 +153,15 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                   style: GameTheme.pixel(
                     fontSize: 8,
                     color: GameTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Owned relics indicator
+                Text(
+                  '보유: ${widget.game.relicManager.relicCount}/${widget.game.relicManager.maxRelics}',
+                  style: GameTheme.pixel(
+                    fontSize: 6,
+                    color: GameTheme.textMuted,
                   ),
                 ),
                 const Spacer(flex: 1),
@@ -322,12 +209,12 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
 
   Widget _buildRelicCard(int index) {
     final relicId = widget.relicChoices[index];
-    final info = _relicDatabase[relicId];
-    if (info == null) return const SizedBox.shrink();
+    final def = RelicDatabase.get(relicId);
+    if (def == null) return const SizedBox.shrink();
 
     final isSelected = _selectedIndex == index;
     final isOtherSelected = _selectedIndex != null && !isSelected;
-    final borderColor = _rarityColor(info.rarity);
+    final borderColor = _rarityColor(def.rarity);
 
     return GestureDetector(
       onTap: () => _selectRelic(index),
@@ -341,7 +228,9 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
             padding: const EdgeInsets.all(10),
             decoration: GameTheme.pixelPanelDecoration(
               fillColor: isSelected ? GameTheme.bgCardHover : GameTheme.bgCard,
-              glow: isSelected || info.rarity == 'legendary',
+              glow: isSelected ||
+                  def.rarity == RelicRarity.legendary ||
+                  def.rarity == RelicRarity.mythic,
               glowColor: borderColor,
             ).copyWith(
               border: Border.all(color: borderColor, width: 2),
@@ -356,8 +245,8 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    gradient: _rarityGradient(info.rarity),
-                    color: _rarityGradient(info.rarity) == null
+                    gradient: _rarityGradient(def.rarity),
+                    color: _rarityGradient(def.rarity) == null
                         ? borderColor.withValues(alpha: 0.3)
                         : null,
                     border: Border.all(
@@ -365,10 +254,10 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                     ),
                   ),
                   child: Text(
-                    _rarityLabel(info.rarity),
+                    def.rarity.label,
                     style: GameTheme.pixel(
                       fontSize: 6,
-                      color: info.rarity == 'common'
+                      color: def.rarity == RelicRarity.common
                           ? GameTheme.textSecondary
                           : Colors.white,
                     ),
@@ -377,13 +266,13 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                 const SizedBox(height: 10),
                 // Icon
                 Text(
-                  info.icon,
+                  def.icon,
                   style: const TextStyle(fontSize: 28),
                 ),
                 const SizedBox(height: 8),
                 // Name
                 Text(
-                  info.name,
+                  def.name,
                   textAlign: TextAlign.center,
                   style: GameTheme.pixel(
                     fontSize: 7,
@@ -394,7 +283,7 @@ class _RelicSelectionScreenState extends State<RelicSelectionScreen>
                 const SizedBox(height: 6),
                 // Description
                 Text(
-                  info.description,
+                  def.description,
                   textAlign: TextAlign.center,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

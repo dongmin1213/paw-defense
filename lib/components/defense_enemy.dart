@@ -140,9 +140,11 @@ class DefenseEnemy extends PositionComponent
     _slowTimer = duration;
   }
 
-  /// Effective speed accounting for slow debuff and relic slow aura.
+  /// Effective speed accounting for slow debuff, relic slow aura, and time sand.
   double get _effectiveSpeed {
     double s = speed;
+    // Relic: time sand — global enemy speed reduction
+    s *= game.relicManager.enemySpeedMultiplier;
     // Slow debuff (from bear tanker)
     if (_slowTimer > 0) {
       s *= (1.0 - _slowIntensity);
@@ -277,6 +279,12 @@ class DefenseEnemy extends PositionComponent
         game.upgradeManager.wallDefenseMultiplier;
     game.wall.takeDamage(damage * wallDefense);
     game.waveManager.onWallDamaged();
+
+    // Relic: thorns — reflect damage back to attacker
+    final thornsDmg = game.relicManager.thornsDamage;
+    if (thornsDmg > 0) {
+      takeDamage(thornsDmg, sourcePosition: game.wall.position);
+    }
   }
 
   @override

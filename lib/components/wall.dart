@@ -38,9 +38,21 @@ class Wall extends PositionComponent
     currentHp = (currentHp - amount).clamp(0, maxHp);
     _isDamageFlash = true;
     _damageFlashTimer = 0.15;
-    game.gameFeel.shake(intensity: 4, duration: 0.15);
+    game.gameFeel.onWallHit();
     game.particleEffect.spawnWallHit(position.x, position.y);
     if (isDestroyed) {
+      // Check for last stand / phoenix relic before declaring death
+      if (game.relicManager.onWallFatalDamage()) {
+        if (game.relicManager.phoenixJustUsed) {
+          // Phoenix: revive with 50% HP
+          currentHp = maxHp * 0.5;
+        } else {
+          // Last stand: survive with 1 HP
+          currentHp = 1.0;
+        }
+        game.particleEffect.spawnBossExplosion(position.x, position.y);
+        return;
+      }
       game.onWallDestroyed();
     }
   }

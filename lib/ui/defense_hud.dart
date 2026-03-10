@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
+import '../data/relic_data.dart';
+import '../systems/combo_manager.dart';
 
 /// In-game HUD for the castle defense game.
 /// Shows wave info, gold, wall HP, and unit shop area.
@@ -90,6 +92,8 @@ class _DefenseHudState extends State<DefenseHud>
             if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
             // Wave progress indicator
             if (widget.game.waveManager.waveActive) _buildWaveProgress(),
+            // Combo counter
+            if (widget.game.comboManager.isActive) _buildComboCounter(),
             // Wave clear banner
             if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
             const Spacer(),
@@ -248,27 +252,8 @@ class _DefenseHudState extends State<DefenseHud>
   }
 
   String _relicEmoji(String relicId) {
-    const map = {
-      'relic_atk_boost': '⚔️',
-      'relic_speed_boost': '⚡',
-      'relic_gold_boost': '💰',
-      'relic_wall_shield': '🛡️',
-      'relic_crit_chance': '💥',
-      'relic_splash': '💫',
-      'relic_slow_aura': '❄️',
-      'relic_lifesteal': '🩸',
-      'relic_double_merge': '📖',
-      'relic_star_magnet': '⭐',
-      'evolve_cat_archer': '🏹',
-      'evolve_dog_warrior': '🗡️',
-      'evolve_rabbit_mage': '🔮',
-      'evolve_bear_tanker': '🛡️',
-      'evolve_fox_assassin': '🗡️',
-      'evolve_bird_scout': '🦅',
-      'evolve_turtle_healer': '💚',
-      'evolve_owl_wizard': '🌙',
-    };
-    return map[relicId] ?? '🔮';
+    final def = RelicDatabase.get(relicId);
+    return def?.icon ?? '🔮';
   }
 
   Widget _buildWaveProgress() {
@@ -325,6 +310,48 @@ class _DefenseHudState extends State<DefenseHud>
             letterSpacing: 2,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildComboCounter() {
+    final combo = widget.game.comboManager;
+    final tier = combo.currentTier;
+    final tierColor = Color(tier.color);
+    final isBigTier = tier.index >= ComboTier.amazing.index;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedScale(
+            scale: combo.tierJustChanged ? 1.3 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            child: Text(
+              'x${combo.comboCount}',
+              style: GameTheme.pixel(
+                fontSize: isBigTier ? 16 : 12,
+                color: tierColor,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          if (tier != ComboTier.none)
+            AnimatedScale(
+              scale: combo.tierJustChanged ? 1.2 : 1.0,
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                tier.label,
+                style: GameTheme.pixel(
+                  fontSize: isBigTier ? 10 : 8,
+                  color: tierColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
