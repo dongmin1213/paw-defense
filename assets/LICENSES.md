@@ -48,6 +48,70 @@
 - **내용**: NES 스타일 짧은 배경음악/징글
 - **용도**: 웨이브 시작/끝, 승리/패배 징글
 
+#### 8. Tower Defense Tilesheet (300 assets)
+- **위치**: `images/sprites/kenney_tower_defense.png`
+- **내용**: 타워, 적, 지형 타일, 도로, HUD 숫자, 파티클
+- **용도**: 타워디펜스 전용 스프라이트
+
+#### 9. Impact Sounds (130 sounds 중 16개 선택)
+- **위치**: `audio/sfx/kenney_impact_*.ogg`
+- **내용**: 펀치, 금속, 나무, 유리, 광물 타격음
+- **용도**: 전투 타격 효과음 (다양한 타격감)
+
+---
+
+## 0x72 DungeonTileset II (CC0 1.0 Universal)
+
+**출처**: https://0x72.itch.io/dungeontileset-ii
+**라이선스**: CC0 1.0 Universal (Public Domain)
+**상용 사용**: 가능 (제한 없음)
+**크레딧 표기**: 불필요
+
+- **위치**: `images/sprites/0x72_dungeon_tileset.png`
+- **내용**: 16x16 픽셀 던전 타일셋 (v1.3)
+  - 캐릭터: knight, wizard, elf, lizard 등 (애니메이션 포함)
+  - 적: slime, goblin, orc, skeleton, demon, bat, imp 등
+  - 무기: 검, 도끼, 활, 지팡이 등
+  - 환경: 던전 벽, 바닥, 문, 가구
+- **용도**: 캐릭터/적 스프라이트, 무기, 던전 환경
+
+---
+
+## DungeonRush Game Assets (CC0 / GPLv3)
+
+**출처**: https://github.com/yujqiao/DungeonRush
+**라이선스**: GPLv3 (코드), CC0 (0x72 에셋), 에셋은 개별 확인 필요
+**상용 사용**: 0x72 에셋은 CC0로 자유 사용, 기타 에셋은 확인 필요
+
+### 이펙트 스프라이트
+- **위치**: `images/sprites/` (SwordFx.png, ClawFx.png, blood.png 등)
+- **내용**: 검격, 폭발, 발사체, 피격 이펙트
+- **용도**: 전투 시각 이펙트
+
+### 오디오
+- **위치**: `audio/sfx/dr_*.wav`
+- **내용**: 화살 피격, 검 타격, 동전, 발사, 폭발 등
+- **용도**: 추가 전투/인터페이스 효과음
+
+### BGM
+- **위치**: `audio/bgm/bg1.ogg, bg2.ogg, bg3.ogg`
+- **내용**: 던전 분위기 배경음악 3곡
+- **용도**: 게임 배경음악
+
+---
+
+## RL Tiles (Public Domain)
+
+**출처**: https://github.com/statico/rltiles (원본: rltiles.sf.net)
+**라이선스**: Public Domain (크레딧 권장)
+**상용 사용**: 가능
+
+- **위치**: `images/sprites/rltiles_roguelike.png`
+- **내용**: 960x1760 로그라이크 스프라이트시트
+  - 수백 종의 몬스터, 캐릭터, 아이템, 무기, 방어구
+  - 32x32 직교 타일
+- **용도**: 로그라이크 캐릭터/몬스터/아이템 스프라이트
+
 ---
 
 ## CC0 1.0 Universal 라이선스 요약
