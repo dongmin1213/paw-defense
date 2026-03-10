@@ -17,6 +17,8 @@ import '../systems/defense_game_feel.dart';
 import '../systems/defense_upgrade_manager.dart';
 import '../systems/defense_save_manager.dart';
 import '../data/unit_data.dart';
+import '../data/enemy_data.dart';
+import '../data/balance_config.dart';
 import '../components/damage_number.dart';
 import '../ui/defense_hud.dart' as hud;
 import '../ui/relic_selection_screen.dart';
@@ -58,7 +60,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   // ── Unit placement cost ──
   int _unitsBought = 0;
-  static const int baseUnitCost = 10;
+
+  // ── Run-scoped reward buffs ──
+  double rewardAtkMultiplier = 1.0;
+  double rewardAtkSpeedMultiplier = 1.0;
+  double rewardGoldMultiplier = 1.0;
+  double rewardRangeMultiplier = 1.0;
+  double rewardUnitCostMultiplier = 1.0;
+  double rewardWallDefenseMultiplier = 1.0;
+  double rewardWallRegenBonus = 0.0;
 
   // ── Slot config ──
   int get maxSlots => 8 + upgradeManager.getLevel(DefenseUpgradeId.slotExpansion);
@@ -228,6 +238,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     isPlaying = true;
     _isPaused = false;
 
+    // Reset reward buffs
+    rewardAtkMultiplier = 1.0;
+    rewardAtkSpeedMultiplier = 1.0;
+    rewardGoldMultiplier = 1.0;
+    rewardRangeMultiplier = 1.0;
+    rewardUnitCostMultiplier = 1.0;
+    rewardWallDefenseMultiplier = 1.0;
+    rewardWallRegenBonus = 0.0;
+
     // Reset wall
     wall.currentHp = wall.maxHp;
     wall.level = 1;
@@ -309,8 +328,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     camera.viewfinder.position = gameFeel.shakeOffset;
     camera.viewfinder.zoom = gameFeel.currentZoom;
 
-    // Wall regen from upgrades
-    final regen = upgradeManager.wallRegenPerSec;
+    // Wall regen from upgrades + reward buffs
+    final regen = upgradeManager.wallRegenPerSec + rewardWallRegenBonus;
     if (regen > 0 && wall.currentHp < wall.maxHp && !wall.isDestroyed) {
       wall.heal(regen * effectiveDt);
     }
@@ -321,75 +340,26 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ══════════════════════════════════════
 
   /// Spawn an enemy. Called by WaveManager.
+  /// Stats are looked up from DefenseEnemyDatabase.
   void spawnEnemy({
     required String typeId,
     required Vector2 position,
     required double hp,
     required double speed,
   }) {
-    // Determine stats based on enemy type
-    double damage;
-    double atkSpeed;
-    int goldDrop;
-    bool isFlying;
-
-    switch (typeId) {
-      case 'bat':
-        damage = 3;
-        atkSpeed = 1.5;
-        goldDrop = 3;
-        isFlying = true;
-        break;
-      case 'goblin':
-        damage = 5;
-        atkSpeed = 1.2;
-        goldDrop = 4;
-        isFlying = false;
-        break;
-      case 'orc':
-        damage = 10;
-        atkSpeed = 0.6;
-        goldDrop = 8;
-        isFlying = false;
-        break;
-      case 'shielded':
-        damage = 7;
-        atkSpeed = 0.8;
-        goldDrop = 10;
-        isFlying = false;
-        break;
-      case 'bomber':
-        damage = 15;
-        atkSpeed = 0.5;
-        goldDrop = 12;
-        isFlying = false;
-        break;
-      case 'healer':
-        damage = 4;
-        atkSpeed = 1.0;
-        goldDrop = 6;
-        isFlying = false;
-        break;
-      default: // slime
-        damage = 3;
-        atkSpeed = 1.0;
-        goldDrop = 2;
-        isFlying = false;
-    }
-
+    final data = DefenseEnemyDatabase.get(typeId);
     final enemy = DefenseEnemy(
       enemyId: typeId,
       maxHp: hp,
       speed: speed,
-      damage: damage,
-      attackSpeed: atkSpeed,
-      goldDrop: goldDrop,
+      damage: data?.baseDamage ?? 3,
+      attackSpeed: data?.baseAtkSpeed ?? 1.0,
+      goldDrop: data?.goldDrop ?? 2,
       wave: waveManager.currentWave,
       spawnPosition: position,
       wallPosition: wall.position,
-      isFlying: isFlying,
+      isFlying: data?.isFlying ?? false,
     );
-
     world.add(enemy);
   }
 
@@ -399,14 +369,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     required Vector2 position,
     required double hpMultiplier,
   }) {
-    final bossHp = 200.0 * hpMultiplier;
+    final bossHp = BalanceConfig.bossBaseHp * hpMultiplier;
     final enemy = DefenseEnemy(
       enemyId: 'boss',
       maxHp: bossHp,
-      speed: 20,
-      damage: 20,
-      attackSpeed: 0.5,
-      goldDrop: 50,
+      speed: BalanceConfig.bossSpeed,
+      damage: BalanceConfig.bossDamage,
+      attackSpeed: BalanceConfig.bossAtkSpeed,
+      goldDrop: BalanceConfig.bossGoldDrop,
       wave: wave,
       spawnPosition: position,
       wallPosition: wall.position,
@@ -442,7 +412,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Add gold to the player. Optionally show a floating number at [popupPos].
   void addGold(int amount, {Vector2? popupPos}) {
     final goldMult = upgradeManager.goldGainMultiplier *
-        relicManager.goldMultiplier;
+        relicManager.goldMultiplier *
+        rewardGoldMultiplier;
     final finalAmount = (amount * goldMult).round();
     gold += finalAmount;
     _runGoldEarned += finalAmount;
@@ -491,7 +462,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void onPerfectWave(int consecutiveCount) {
     gameFeel.onPerfectWave();
     // Bonus gold for perfect waves
-    addGold(5 * consecutiveCount, popupPos: wall.position);
+    addGold(BalanceConfig.perfectWaveGoldPerStreak * consecutiveCount,
+        popupPos: wall.position);
   }
 
   // ══════════════════════════════════════
@@ -500,8 +472,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Get cost for buying a new unit.
   int getUnitCost() {
-    final discount = upgradeManager.unitCostDiscount;
-    return (baseUnitCost * pow(1.15, _unitsBought) * discount).ceil();
+    final discount = upgradeManager.unitCostDiscount * rewardUnitCostMultiplier;
+    return (BalanceConfig.baseUnitCost *
+            pow(BalanceConfig.unitCostScale, _unitsBought) *
+            discount)
+        .ceil();
   }
 
   /// Get a random unit type.
@@ -652,8 +627,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     _unitSlots[slotIndex].clear();
 
-    // Refund 50% of current unit cost
-    final refund = (getUnitCost() * 0.5).ceil();
+    // Refund based on sell rate
+    final refund = (getUnitCost() * BalanceConfig.sellRefundRate).ceil();
     gold += refund;
     _runGoldEarned += refund;
 
@@ -670,7 +645,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Reroll all units. Costs 20 gold.
   /// Clears all units and places the same count of random new ones.
   void rerollUnits() {
-    if (gold < 20) return;
+    if (gold < BalanceConfig.rerollCost) return;
 
     // Count existing units
     int unitCount = 0;
@@ -679,7 +654,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
     if (unitCount == 0) return;
 
-    gold -= 20;
+    gold -= BalanceConfig.rerollCost;
 
     // Clear all units
     for (final slot in _unitSlots) {

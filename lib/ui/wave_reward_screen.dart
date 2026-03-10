@@ -31,66 +31,76 @@ class RewardPool {
       description: '전체 유닛 공격력이 10% 증가합니다.',
       rarity: 'common',
       icon: '⚔️',
-      apply: (game) => game.addGold(10),
+      apply: (game) => game.rewardAtkMultiplier += 0.10,
     ),
     RewardCard(
-      name: '성벽 회복 5%',
-      description: '성벽 HP를 5% 회복합니다.',
+      name: '성벽 회복 10%',
+      description: '성벽 HP를 10% 회복합니다.',
       rarity: 'common',
       icon: '🛡️',
-      apply: (game) => game.addGold(5),
+      apply: (game) =>
+          game.wall.heal(game.wall.maxHp * 0.10),
     ),
     RewardCard(
       name: '골드 +15%',
       description: '이번 런 골드 획득량이 15% 증가합니다.',
       rarity: 'common',
       icon: '💰',
-      apply: (game) => game.addGold(15),
+      apply: (game) => game.rewardGoldMultiplier += 0.15,
     ),
     RewardCard(
       name: '공격 속도 +10%',
       description: '전체 유닛 공격 속도가 10% 증가합니다.',
       rarity: 'common',
       icon: '🏹',
-      apply: (game) => game.addGold(10),
+      apply: (game) => game.rewardAtkSpeedMultiplier += 0.10,
     ),
     RewardCard(
       name: '사거리 +15%',
       description: '전체 유닛 사거리가 15% 증가합니다.',
       rarity: 'common',
       icon: '🎯',
-      apply: (game) => game.addGold(10),
+      apply: (game) => game.rewardRangeMultiplier += 0.15,
+    ),
+    RewardCard(
+      name: '보너스 골드',
+      description: '즉시 골드 30을 획득합니다.',
+      rarity: 'common',
+      icon: '🪙',
+      apply: (game) =>
+          game.addGold(30, popupPos: game.wall.position),
     ),
   ];
 
   static final List<RewardCard> _rareRewards = [
     RewardCard(
-      name: '궁수 공속 +30%',
-      description: '궁수 유닛의 공격 속도가 30% 증가합니다.',
+      name: '유닛 비용 -20%',
+      description: '유닛 뽑기 비용이 20% 감소합니다.',
       rarity: 'rare',
-      icon: '🏹',
-      apply: (game) => game.addGold(30),
+      icon: '🎪',
+      apply: (game) => game.rewardUnitCostMultiplier *= 0.80,
     ),
     RewardCard(
       name: '성벽 방어 +20%',
       description: '성벽이 받는 피해가 20% 감소합니다.',
       rarity: 'rare',
       icon: '🏰',
-      apply: (game) => game.addGold(20),
+      apply: (game) => game.rewardWallDefenseMultiplier *= 0.80,
     ),
     RewardCard(
-      name: '골드 +50%',
-      description: '이번 런 골드 획득량이 50% 증가합니다.',
+      name: '골드 +30%',
+      description: '이번 런 골드 획득량이 30% 증가합니다.',
       rarity: 'rare',
       icon: '💎',
-      apply: (game) => game.addGold(50),
+      apply: (game) => game.rewardGoldMultiplier += 0.30,
     ),
     RewardCard(
-      name: '폭발 화살',
-      description: '공격이 10% 확률로 범위 피해를 줍니다.',
+      name: '성벽 대수리',
+      description: '성벽 HP를 25% 회복합니다.',
       rarity: 'rare',
-      icon: '💥',
-      apply: (game) => game.addGold(30),
+      icon: '🔧',
+      apply: (game) =>
+          game.wall.heal(game.wall.maxHp * 0.25),
     ),
   ];
 
@@ -100,38 +110,43 @@ class RewardPool {
       description: '모든 유닛의 공격력이 25% 증가합니다.',
       rarity: 'epic',
       icon: '🔥',
-      apply: (game) => game.addGold(50),
+      apply: (game) => game.rewardAtkMultiplier += 0.25,
     ),
     RewardCard(
       name: '성벽 자동회복',
-      description: '성벽이 매초 1%씩 자동 회복됩니다.',
+      description: '성벽이 매초 자동 회복됩니다.',
       rarity: 'epic',
       icon: '✨',
-      apply: (game) => game.addGold(40),
+      apply: (game) => game.rewardWallRegenBonus += 1.0,
     ),
     RewardCard(
       name: '유닛 비용 -30%',
       description: '유닛 뽑기 비용이 30% 감소합니다.',
       rarity: 'epic',
-      icon: '🎪',
-      apply: (game) => game.addGold(40),
+      icon: '🎁',
+      apply: (game) => game.rewardUnitCostMultiplier *= 0.70,
     ),
   ];
 
   static final List<RewardCard> _legendaryRewards = [
     RewardCard(
-      name: '성벽 무적 10초',
-      description: '10초 동안 성벽이 무적 상태가 됩니다.',
+      name: '성벽 완전회복',
+      description: '성벽 HP를 100% 회복합니다.',
       rarity: 'legendary',
       icon: '🌟',
-      apply: (game) => game.addGold(100),
+      apply: (game) => game.wall.heal(game.wall.maxHp),
     ),
     RewardCard(
-      name: '적 HP 50% 감소',
-      description: '모든 적의 HP가 즉시 50% 감소합니다.',
+      name: '전체 강화',
+      description: '공격력/공속/사거리/골드 모두 15% 증가.',
       rarity: 'legendary',
       icon: '☠️',
-      apply: (game) => game.addGold(100),
+      apply: (game) {
+        game.rewardAtkMultiplier += 0.15;
+        game.rewardAtkSpeedMultiplier += 0.15;
+        game.rewardRangeMultiplier += 0.15;
+        game.rewardGoldMultiplier += 0.15;
+      },
     ),
   ];
 

@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flame/components.dart';
 import '../game/defense_game.dart';
+import '../data/enemy_data.dart';
+import '../data/balance_config.dart';
 
 /// Enemy wave spawning system for castle defense.
 /// Manages wave progression, enemy spawn timing, difficulty scaling,
@@ -21,9 +23,9 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
   bool wallTookDamage = false;
   int consecutivePerfects = 0;
 
-  // Wave duration & spawn interval
-  static const double waveDuration = 20.0;
-  static const double betweenWavePause = 3.0;
+  // Wave duration & spawn interval (from BalanceConfig)
+  double get waveDuration => BalanceConfig.waveDuration;
+  double get betweenWavePause => BalanceConfig.betweenWavePause;
 
   // Spawn boundaries (just outside the 400x420 field area)
   static const double fieldWidth = 400.0;
@@ -32,11 +34,13 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
 
   final Random _rng = Random();
 
-  /// Whether the current wave is a boss wave (every 10 waves).
-  bool get isBossWave => currentWave > 0 && currentWave % 10 == 0;
+  /// Whether the current wave is a boss wave.
+  bool get isBossWave =>
+      currentWave > 0 && currentWave % BalanceConfig.bossInterval == 0;
 
-  /// Whether the current wave triggers a reward card selection (every 5 waves).
-  bool get isRewardWave => currentWave > 0 && currentWave % 5 == 0;
+  /// Whether the current wave triggers a reward card selection.
+  bool get isRewardWave =>
+      currentWave > 0 && currentWave % BalanceConfig.rewardInterval == 0;
 
   /// Start the next wave. Called from game or automatically after between-wave pause.
   void startNextWave() {
@@ -45,10 +49,11 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
 
     final unitCount = game.unitSlots.where((s) => s.isOccupied).length;
     final baseCount = _baseEnemyCount;
-    totalEnemiesInWave =
-        ((baseCount + (currentWave * 0.8).floor()) * (1 + unitCount * 0.04))
-            .round()
-            .clamp(1, 200);
+    totalEnemiesInWave = ((baseCount +
+                (currentWave * BalanceConfig.enemyCountWaveScale).floor()) *
+            (1 + unitCount * BalanceConfig.enemyCountUnitScale))
+        .round()
+        .clamp(1, BalanceConfig.maxEnemiesPerWave);
 
     enemiesRemaining = totalEnemiesInWave;
     enemiesSpawned = 0;
@@ -58,19 +63,19 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     betweenWaves = false;
   }
 
-  /// Base enemy count per wave tier.
+  /// Base enemy count per wave tier (from BalanceConfig).
   int get _baseEnemyCount {
-    if (currentWave <= 5) return 5;
-    if (currentWave <= 10) return 7;
-    if (currentWave <= 20) return 10;
-    if (currentWave <= 30) return 13;
-    return 16;
+    for (final tier in BalanceConfig.baseEnemyCountTiers) {
+      if (currentWave <= tier[0]) return tier[1];
+    }
+    return BalanceConfig.baseEnemyCountDefault;
   }
 
   /// Spawn interval: spread enemies evenly across wave duration.
   double get _spawnInterval {
     if (totalEnemiesInWave <= 0) return 1.0;
-    return (waveDuration / totalEnemiesInWave).clamp(0.15, 3.0);
+    return (waveDuration / totalEnemiesInWave)
+        .clamp(BalanceConfig.minSpawnInterval, BalanceConfig.maxSpawnInterval);
   }
 
   @override
@@ -137,79 +142,30 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     }
   }
 
-  /// Pick enemy type based on current wave tier.
+  /// Pick enemy type based on current wave (data-driven unlock).
   String _pickEnemyType() {
-    final types = _availableEnemyTypes;
-    return types[_rng.nextInt(types.length)];
-  }
-
-  /// Enemy types available at the current wave.
-  List<String> get _availableEnemyTypes {
-    if (currentWave <= 5) return ['slime'];
-    if (currentWave <= 10) return ['slime', 'goblin'];
-    if (currentWave <= 15) return ['slime', 'goblin', 'orc'];
-    if (currentWave <= 20) return ['slime', 'goblin', 'orc', 'bat'];
-    return ['slime', 'goblin', 'orc', 'bat', 'shielded', 'bomber', 'healer'];
-  }
-
-  /// Base HP per enemy type.
-  double _baseHp(String typeId) {
-    switch (typeId) {
-      case 'slime':
-        return 20;
-      case 'goblin':
-        return 35;
-      case 'orc':
-        return 80;
-      case 'bat':
-        return 15;
-      case 'shielded':
-        return 120;
-      case 'bomber':
-        return 40;
-      case 'healer':
-        return 50;
-      default:
-        return 20;
-    }
-  }
-
-  /// Base speed per enemy type.
-  double _baseSpeed(String typeId) {
-    switch (typeId) {
-      case 'slime':
-        return 40;
-      case 'goblin':
-        return 60;
-      case 'orc':
-        return 30;
-      case 'bat':
-        return 70;
-      case 'shielded':
-        return 25;
-      case 'bomber':
-        return 50;
-      case 'healer':
-        return 35;
-      default:
-        return 40;
-    }
+    final available = DefenseEnemyDatabase.availableAt(currentWave);
+    return available[_rng.nextInt(available.length)].id;
   }
 
   /// Scale HP by wave and unit count.
-  /// HP = baseHP * pow(1.08, wave) * (1 + unitCount * 0.12)
   double _scaledHp(String typeId, int unitCount) {
-    return _baseHp(typeId) *
-        pow(1.08, currentWave).toDouble() *
-        (1 + unitCount * 0.12);
+    final data = DefenseEnemyDatabase.get(typeId);
+    final baseHp = data?.baseHp ?? 20;
+    return baseHp *
+        pow(BalanceConfig.enemyHpWaveScale, currentWave).toDouble() *
+        (1 + unitCount * BalanceConfig.enemyHpUnitScale);
   }
 
   /// Scale speed by wave and unit count.
-  /// speed = baseSpeed * (1 + unitCount * 0.02) * (1 + max(0, wave - 30) * 0.005)
   double _scaledSpeed(String typeId, int unitCount) {
-    return _baseSpeed(typeId) *
-        (1 + unitCount * 0.02) *
-        (1 + max(0, currentWave - 30) * 0.005);
+    final data = DefenseEnemyDatabase.get(typeId);
+    final baseSpeed = data?.baseSpeed ?? 40;
+    return baseSpeed *
+        (1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
+        (1 +
+            max(0, currentWave - BalanceConfig.enemySpeedLateWaveStart) *
+                BalanceConfig.enemySpeedLateWaveScale);
   }
 
   /// Generate a spawn position just outside one of the 4 screen edges.
