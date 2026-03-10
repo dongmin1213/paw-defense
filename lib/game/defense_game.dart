@@ -329,8 +329,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final effectiveDt = dt * gameFeel.timeScale;
     super.update(effectiveDt);
 
-    // Apply camera shake offset and zoom punch
-    camera.viewfinder.position = gameFeel.shakeOffset;
+    // Apply zoom punch
     camera.viewfinder.zoom = gameFeel.currentZoom;
 
     // Wall regen from upgrades + reward buffs

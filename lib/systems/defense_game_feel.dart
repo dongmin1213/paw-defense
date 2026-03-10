@@ -3,15 +3,9 @@ import 'package:flame/components.dart';
 import '../game/defense_game.dart';
 
 /// Game feel system for castle defense.
-/// Provides screen shake, hit stop, slow motion, zoom punch,
+/// Provides hit stop, slow motion, zoom punch,
 /// and auto-merge / auto-place systems.
 class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
-  // ── Screen Shake ──
-  double _shakeTimer = 0;
-  double _shakeIntensity = 0;
-  double _shakeFrequency = 40;
-  Vector2 shakeOffset = Vector2.zero();
-
   // ── Hit Stop (frame freeze) ──
   double _hitStopTimer = 0;
   bool get isHitStopped => _hitStopTimer > 0;
@@ -39,50 +33,12 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   /// Auto-place check interval in seconds.
   static const double autoPlaceInterval = 3.0;
 
-  final Random _rng = Random();
-
   @override
   void update(double dt) {
-    _updateShake(dt);
     _updateHitStop(dt);
     _updateSlowMotion(dt);
     _updateZoomPunch(dt);
     _updateAutoSystems(dt);
-  }
-
-  // ══════════════════════════════════════
-  // Screen Shake
-  // ══════════════════════════════════════
-
-  /// Trigger screen shake.
-  /// [intensity]: shake magnitude in px, [duration]: seconds.
-  void shake({
-    double intensity = 4.0,
-    double duration = 0.2,
-    double frequency = 40,
-  }) {
-    // Only override if stronger than current shake
-    if (intensity > _shakeIntensity) {
-      _shakeIntensity = intensity;
-      _shakeTimer = duration;
-      _shakeFrequency = frequency;
-    }
-  }
-
-  void _updateShake(double dt) {
-    if (_shakeTimer > 0) {
-      _shakeTimer -= dt;
-      final decay = _shakeTimer.clamp(0.0, 1.0);
-      final angle = _shakeTimer * _shakeFrequency * 2 * pi;
-      shakeOffset = Vector2(
-        sin(angle) * _shakeIntensity * decay,
-        cos(angle * 1.3) * _shakeIntensity * decay * 0.7,
-      );
-      if (_shakeTimer <= 0) {
-        shakeOffset = Vector2.zero();
-        _shakeIntensity = 0;
-      }
-    }
   }
 
   // ══════════════════════════════════════
@@ -150,18 +106,16 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
 
   /// Feedback when a normal enemy is killed.
   void onEnemyKill() {
-    shake(intensity: 2, duration: 0.1);
+    // No visual feedback for normal kills
   }
 
   /// Feedback when a boss takes a hit.
   void onBossHit() {
-    shake(intensity: 4, duration: 0.12);
     hitStop(duration: 0.04);
   }
 
   /// Dramatic feedback when a boss is killed.
   void onBossKill() {
-    shake(intensity: 15, duration: 0.6, frequency: 25);
     hitStop(duration: 0.25);
     slowMotion(scale: 0.2, duration: 1.0);
     zoomPunch(targetZoom: 1.08, duration: 0.5);
@@ -169,12 +123,11 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
 
   /// Feedback when the wall takes a hit.
   void onWallHit() {
-    shake(intensity: 6, duration: 0.2);
+    // No visual feedback for wall hits
   }
 
   /// Feedback when units are merged. Scales with resulting level.
   void onMerge(int newLevel) {
-    shake(intensity: 2.0 + newLevel, duration: 0.15);
     zoomPunch(
       targetZoom: 1.02 + newLevel * 0.01,
       duration: 0.2,
@@ -186,12 +139,10 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
     hitStop(duration: 0.15);
     slowMotion(scale: 0.3, duration: 0.8);
     zoomPunch(targetZoom: 1.06, duration: 0.4);
-    shake(intensity: 10, duration: 0.4);
   }
 
   /// Feedback for ascension (prestige reset).
   void onAscension() {
-    shake(intensity: 15, duration: 1.0, frequency: 25);
     slowMotion(scale: 0.2, duration: 1.5);
   }
 
