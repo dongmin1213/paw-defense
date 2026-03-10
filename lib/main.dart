@@ -8,6 +8,8 @@ import 'ui/defense_hud.dart';
 import 'ui/wave_reward_screen.dart';
 import 'ui/star_shop_screen.dart';
 import 'ui/run_result_screen.dart';
+import 'ui/defense_pause_screen.dart';
+import 'ui/relic_selection_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -102,6 +104,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               killCount: g.runKills,
             );
           },
+          'Pause': (context, game) =>
+              DefensePauseScreen(game: game as DefenseGame),
+          'RelicSelection': (context, game) =>
+              RelicSelectionScreen(game: game as DefenseGame),
         },
       ),
     );

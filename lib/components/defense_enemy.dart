@@ -9,6 +9,12 @@ import 'wall.dart';
 
 /// An enemy that moves toward the wall from the screen edges.
 /// When reaching the wall, it attacks periodically until killed.
+///
+/// Special enemy types:
+/// - **healer**: Heals nearby allies every 3 seconds for 10% of their maxHp.
+/// - **bomber**: Explodes on reaching the wall, dealing 3x damage but dying immediately.
+/// - **shielded**: Takes 50% reduced damage from the front.
+/// - **boss**: 1.5x size, red glow, 0.5 attack speed.
 class DefenseEnemy extends PositionComponent
     with HasGameReference<DefenseGame>, CollisionCallbacks {
   final String enemyId;
@@ -29,7 +35,16 @@ class DefenseEnemy extends PositionComponent
   bool _reachedWall = false;
   bool _isDead = false;
 
+  // Special behavior timers
+  double _healTimer = 0;
+
   static const double wallProximity = 35.0;
+
+  // Special type detection helpers
+  bool get _isHealer => enemyId.contains('healer');
+  bool get _isBomber => enemyId.contains('bomber');
+  bool get _isShielded => enemyId.contains('shielded') || enemyId.contains('shield');
+  bool get _isBoss => enemyId.contains('boss');
 
   DefenseEnemy({
     required this.enemyId,
@@ -57,12 +72,32 @@ class DefenseEnemy extends PositionComponent
   @override
   Future<void> onLoad() async {
     add(RectangleHitbox());
+
+    // Boss: 1.5x size
+    if (_isBoss) {
+      size = Vector2(30, 30);
+    }
   }
 
   /// Apply damage to this enemy.
-  void takeDamage(double amount) {
+  /// For shielded enemies, checks if damage comes from the front (50% reduction).
+  void takeDamage(double amount, {Vector2? sourcePosition}) {
     if (_isDead) return;
-    hp -= amount;
+
+    double finalAmount = amount;
+
+    // Shielded: 50% reduced damage from the front
+    if (_isShielded && sourcePosition != null) {
+      final toSource = (sourcePosition - position).normalized();
+      // Front = same direction as movement direction
+      // dot > 0 means source is in front of the enemy (enemy facing toward wall)
+      final dot = direction.dot(toSource);
+      if (dot > 0) {
+        finalAmount *= 0.5;
+      }
+    }
+
+    hp -= finalAmount;
     _isHit = true;
     _hitFlashTimer = 0.1;
 
@@ -77,7 +112,7 @@ class DefenseEnemy extends PositionComponent
 
   void _die() {
     _isDead = true;
-    game.addGold(goldDrop);
+    game.addGold(goldDrop, popupPos: position);
     game.onEnemyKilled(this);
     game.particleEffect.spawnEnemyDeath(
       position.x,
@@ -85,6 +120,33 @@ class DefenseEnemy extends PositionComponent
     );
     removeFromParent();
   }
+
+  /// Healer: heal all allies within 50px for 10% of their maxHp.
+  void _healNearbyAllies() {
+    final enemies = game.world.children.whereType<DefenseEnemy>();
+    for (final ally in enemies) {
+      if (ally.isDead || identical(ally, this)) continue;
+      final dist = position.distanceTo(ally.position);
+      if (dist <= 50.0) {
+        final healAmount = ally.maxHp * 0.10;
+        ally.hp = (ally.hp + healAmount).clamp(0.0, ally.maxHp);
+      }
+    }
+  }
+
+  /// Bomber: explode on reaching wall, dealing 3x damage and dying.
+  void _explode() {
+    if (game.wall.isDestroyed) return;
+    game.wall.takeDamage(damage * 3.0);
+    game.particleEffect.spawnEnemyDeath(position.x, position.y);
+    _isDead = true;
+    game.addGold(goldDrop, popupPos: position);
+    game.onEnemyKilled(this);
+    removeFromParent();
+  }
+
+  /// Effective attack speed (boss has fixed 0.5).
+  double get _effectiveAttackSpeed => _isBoss ? 0.5 : attackSpeed;
 
   @override
   void update(double dt) {
@@ -101,6 +163,15 @@ class DefenseEnemy extends PositionComponent
       }
     }
 
+    // Healer: heal allies every 3 seconds
+    if (_isHealer) {
+      _healTimer += dt;
+      if (_healTimer >= 3.0) {
+        _healTimer -= 3.0;
+        _healNearbyAllies();
+      }
+    }
+
     if (!_reachedWall) {
       // Move toward the wall
       final wallPos = game.wall.position;
@@ -109,6 +180,12 @@ class DefenseEnemy extends PositionComponent
       if (dist <= wallProximity) {
         _reachedWall = true;
         _attackTimer = 0;
+
+        // Bomber: explode immediately on reaching wall
+        if (_isBomber) {
+          _explode();
+          return;
+        }
       } else {
         // Recalculate direction in case wall position changes
         direction = (wallPos - position).normalized();
@@ -127,7 +204,7 @@ class DefenseEnemy extends PositionComponent
     } else {
       // Attack the wall periodically
       _attackTimer += dt;
-      final interval = 1.0 / attackSpeed;
+      final interval = 1.0 / _effectiveAttackSpeed;
       if (_attackTimer >= interval) {
         _attackTimer -= interval;
         _attackWall();
@@ -154,11 +231,32 @@ class DefenseEnemy extends PositionComponent
     if (other is Wall && !_reachedWall) {
       _reachedWall = true;
       _attackTimer = 0;
+
+      // Bomber: explode on collision with wall
+      if (_isBomber) {
+        _explode();
+        return;
+      }
     }
   }
 
   @override
   void render(Canvas canvas) {
+    // Boss: red glow effect
+    if (_isBoss) {
+      final glowPaint = Paint()
+        ..color = Color.fromARGB(
+          (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
+          255, 0, 0,
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x * 0.6,
+        glowPaint,
+      );
+    }
+
     DefenseEnemyRenderer.render(
       canvas,
       size.toSize(),

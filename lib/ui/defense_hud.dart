@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flame/game.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
@@ -21,6 +20,8 @@ class _DefenseHudState extends State<DefenseHud>
   late AnimationController _goldRollController;
   int _previousGold = 0;
   bool _isGoldAnimating = false;
+  int? _selectedSlotIndex;
+  bool _sellMode = false;
 
   @override
   void initState() {
@@ -51,7 +52,8 @@ class _DefenseHudState extends State<DefenseHud>
   void _onGoldRoll() {
     final targetGold = widget.game.gold;
     final t = Curves.easeOut.transform(_goldRollController.value);
-    _displayedGold = (_previousGold + (targetGold - _previousGold) * t).round();
+    _displayedGold =
+        (_previousGold + (targetGold - _previousGold) * t).round();
 
     if (_goldRollController.isCompleted) {
       _displayedGold = targetGold;
@@ -81,13 +83,14 @@ class _DefenseHudState extends State<DefenseHud>
       child: SafeArea(
         child: Column(
           children: [
-            // Top bar: wave | gold | pause
             _buildTopBar(),
             const SizedBox(height: 4),
-            // Wall HP bar
             _buildWallHpBar(),
+            // Relic display
+            if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
+            // Wave progress indicator
+            if (widget.game.waveManager.waveActive) _buildWaveProgress(),
             const Spacer(),
-            // Bottom unit shop panel
             _buildBottomPanel(),
           ],
         ),
@@ -114,7 +117,7 @@ class _DefenseHudState extends State<DefenseHud>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.waves, color: GameTheme.accent, size: 14),
+                const Icon(Icons.waves, color: GameTheme.accent, size: 14),
                 const SizedBox(width: 4),
                 Text(
                   'W${widget.game.currentWave}',
@@ -127,6 +130,16 @@ class _DefenseHudState extends State<DefenseHud>
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          // Kill count
+          Text(
+            '${widget.game.runKills}',
+            style: GameTheme.pixel(
+              fontSize: 7,
+              color: GameTheme.accentRed,
+            ),
+          ),
+          const Icon(Icons.dangerous, color: GameTheme.accentRed, size: 10),
           const Spacer(),
           // Gold display with rolling animation
           AnimatedBuilder(
@@ -141,7 +154,10 @@ class _DefenseHudState extends State<DefenseHud>
           const Spacer(),
           // Pause button
           GestureDetector(
-            onTap: () => widget.game.pauseGame(),
+            onTap: () {
+              widget.game.pauseGame();
+              widget.game.overlays.add('Pause');
+            },
             child: Container(
               width: 32,
               height: 32,
@@ -178,7 +194,8 @@ class _DefenseHudState extends State<DefenseHud>
               const SizedBox(width: 4),
               Text(
                 '성벽',
-                style: GameTheme.pixel(fontSize: 6, color: GameTheme.textSecondary),
+                style: GameTheme.pixel(
+                    fontSize: 6, color: GameTheme.textSecondary),
               ),
               const Spacer(),
               Text(
@@ -198,7 +215,96 @@ class _DefenseHudState extends State<DefenseHud>
     );
   }
 
+  Widget _buildRelicBar() {
+    final relics = widget.game.relicManager.ownedRelics;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            '유물',
+            style: GameTheme.pixel(
+                fontSize: 6, color: GameTheme.textMuted),
+          ),
+          const SizedBox(width: 6),
+          ...relics.map((id) {
+            final emoji = _relicEmoji(id);
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: GameTheme.pixelCardDecoration(
+                  fillColor: GameTheme.bgCard,
+                ),
+                child: Text(emoji, style: const TextStyle(fontSize: 12)),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  String _relicEmoji(String relicId) {
+    const map = {
+      'relic_atk_boost': '⚔️',
+      'relic_speed_boost': '⚡',
+      'relic_gold_boost': '💰',
+      'relic_wall_shield': '🛡️',
+      'relic_crit_chance': '💥',
+      'relic_splash': '💫',
+      'relic_slow_aura': '❄️',
+      'relic_lifesteal': '🩸',
+      'relic_double_merge': '📖',
+      'relic_star_magnet': '⭐',
+      'evolve_knight': '🗡️',
+      'evolve_archer': '🏹',
+      'evolve_mage': '🔮',
+      'evolve_healer': '💚',
+      'evolve_assassin': '🗡️',
+    };
+    return map[relicId] ?? '🔮';
+  }
+
+  Widget _buildWaveProgress() {
+    final wm = widget.game.waveManager;
+    final progress = wm.totalEnemiesInWave > 0
+        ? 1.0 - (wm.enemiesRemaining / wm.totalEnemiesInWave)
+        : 0.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            '적',
+            style: GameTheme.pixel(
+                fontSize: 6, color: GameTheme.textMuted),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: GameTheme.pixelProgressBar(
+              value: progress,
+              height: 6,
+              fillColor: GameTheme.accentRed,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${wm.enemiesRemaining}',
+            style: GameTheme.pixel(
+              fontSize: 6,
+              color: GameTheme.accentRed,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomPanel() {
+    final unitCost = widget.game.getUnitCost();
+    final canBuy = widget.game.gold >= unitCost;
+
     return Container(
       margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(10),
@@ -212,15 +318,16 @@ class _DefenseHudState extends State<DefenseHud>
           Row(
             children: [
               Text(
-                '유닛 배치',
+                _sellMode ? '판매할 유닛 선택' : '유닛 배치',
                 style: GameTheme.pixel(
                   fontSize: 8,
-                  color: GameTheme.textSecondary,
+                  color: _sellMode ? GameTheme.accentRed : GameTheme.textSecondary,
                 ),
               ),
               const Spacer(),
+              // Occupied / total slots
               GameTheme.pixelChip(
-                value: '슬롯 ${widget.game.unitSlots.length}',
+                value: '${widget.game.unitSlots.where((s) => s.isOccupied).length}/${widget.game.unitSlots.length}',
                 color: GameTheme.accentGold,
                 fontSize: 6,
               ),
@@ -230,45 +337,88 @@ class _DefenseHudState extends State<DefenseHud>
           // Action buttons row
           Row(
             children: [
-              // Gacha / draw unit button
+              // Gacha / draw unit button with cost
               Expanded(
                 flex: 3,
-                child: GameTheme.pixelButton(
-                  label: '뽑기',
-                  onTap: () => widget.game.buyUnit(),
-                  gradient: GameTheme.gradientPrimary,
-                  fontSize: 9,
-                  verticalPad: 10,
-                  horizontalPad: 8,
-                  icon: Icons.add_circle_outline,
+                child: Column(
+                  children: [
+                    GameTheme.pixelButton(
+                      label: '뽑기',
+                      onTap: canBuy
+                          ? () {
+                              widget.game.buyUnit();
+                              setState(() => _sellMode = false);
+                            }
+                          : null,
+                      gradient:
+                          canBuy ? GameTheme.gradientPrimary : null,
+                      fontSize: 9,
+                      verticalPad: 10,
+                      horizontalPad: 8,
+                      icon: Icons.add_circle_outline,
+                      enabled: canBuy,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${GameTheme.formatInt(unitCost)}G',
+                      style: GameTheme.pixel(
+                        fontSize: 5,
+                        color: canBuy
+                            ? GameTheme.accentGold
+                            : GameTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),
-              // Sell button
+              // Sell button (toggles sell mode)
               Expanded(
                 flex: 2,
                 child: GameTheme.pixelButton(
-                  label: '판매',
-                  onTap: () {},
-                  color: GameTheme.accentRed,
+                  label: _sellMode ? '취소' : '판매',
+                  onTap: () => setState(() => _sellMode = !_sellMode),
+                  color: _sellMode
+                      ? GameTheme.accentOrange
+                      : GameTheme.accentRed,
                   fontSize: 8,
                   verticalPad: 10,
                   horizontalPad: 8,
-                  icon: Icons.sell,
+                  icon: _sellMode ? Icons.close : Icons.sell,
                 ),
               ),
               const SizedBox(width: 8),
               // Reroll button
               Expanded(
                 flex: 2,
-                child: GameTheme.pixelButton(
-                  label: '리롤',
-                  onTap: () {},
-                  color: GameTheme.accentPurple,
-                  fontSize: 8,
-                  verticalPad: 10,
-                  horizontalPad: 8,
-                  icon: Icons.refresh,
+                child: Column(
+                  children: [
+                    GameTheme.pixelButton(
+                      label: '리롤',
+                      onTap: widget.game.gold >= 20
+                          ? () {
+                              widget.game.rerollUnits();
+                              setState(() => _sellMode = false);
+                            }
+                          : null,
+                      color: GameTheme.accentPurple,
+                      fontSize: 8,
+                      verticalPad: 10,
+                      horizontalPad: 8,
+                      icon: Icons.refresh,
+                      enabled: widget.game.gold >= 20,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '20G',
+                      style: GameTheme.pixel(
+                        fontSize: 5,
+                        color: widget.game.gold >= 20
+                            ? GameTheme.accentPurple
+                            : GameTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -276,7 +426,7 @@ class _DefenseHudState extends State<DefenseHud>
           const SizedBox(height: 8),
           // Owned units display row
           SizedBox(
-            height: 48,
+            height: 50,
             child: widget.game.unitSlots.isEmpty
                 ? Center(
                     child: Text(
@@ -304,30 +454,54 @@ class _DefenseHudState extends State<DefenseHud>
 
   Widget _buildUnitSlot(UnitSlot slot, int index) {
     final isOccupied = slot.isOccupied;
+    final isSelected = _selectedSlotIndex == index;
+    final showSellHighlight = _sellMode && isOccupied;
+
     return GestureDetector(
       onTap: () {
-        // Tap to select unit for placement
+        if (_sellMode && isOccupied) {
+          widget.game.sellUnit(index);
+          setState(() {
+            _selectedSlotIndex = null;
+            _sellMode = false;
+          });
+        } else if (isOccupied) {
+          setState(() {
+            _selectedSlotIndex = isSelected ? null : index;
+          });
+        }
       },
       child: Container(
-        width: 44,
-        height: 44,
+        width: 46,
+        height: 46,
         decoration: GameTheme.pixelCardDecoration(
-          fillColor: isOccupied ? GameTheme.bgCard : GameTheme.bgDeep,
-          borderColor: isOccupied
-              ? GameTheme.accent.withValues(alpha: 0.6)
-              : GameTheme.pixelBorder,
-          selected: slot.isSelected,
-          glow: slot.isSelected,
-          glowColor: GameTheme.accentGold,
+          fillColor: showSellHighlight
+              ? GameTheme.accentRed.withValues(alpha: 0.15)
+              : isOccupied
+                  ? GameTheme.bgCard
+                  : GameTheme.bgDeep,
+          borderColor: showSellHighlight
+              ? GameTheme.accentRed
+              : isOccupied
+                  ? GameTheme.accent.withValues(alpha: 0.6)
+                  : GameTheme.pixelBorder,
+          selected: isSelected,
+          glow: isSelected || showSellHighlight,
+          glowColor:
+              showSellHighlight ? GameTheme.accentRed : GameTheme.accentGold,
         ),
         child: Center(
           child: isOccupied
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (showSellHighlight)
+                      const Icon(Icons.sell,
+                          color: GameTheme.accentRed, size: 10),
                     Text(
                       slot.icon,
-                      style: const TextStyle(fontSize: 18),
+                      style: TextStyle(
+                          fontSize: showSellHighlight ? 14 : 18),
                     ),
                     Text(
                       'Lv${slot.level}',
@@ -338,7 +512,7 @@ class _DefenseHudState extends State<DefenseHud>
                     ),
                   ],
                 )
-              : Icon(
+              : const Icon(
                   Icons.add,
                   color: GameTheme.textMuted,
                   size: 16,

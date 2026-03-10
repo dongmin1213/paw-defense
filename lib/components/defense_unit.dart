@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../data/unit_data.dart';
 import '../game/defense_game.dart';
 import '../renderers/unit_renderer.dart';
 import 'defense_enemy.dart';
@@ -21,24 +22,51 @@ class DefenseUnit extends PositionComponent
   double _animTimer = 0;
   DefenseEnemy? _target;
 
-  // Base stats (overridden by unit type data in the future)
+  // Stats from UnitData
   final double baseAtk;
   final double baseAtkSpeed;
   final double baseRange;
+  final bool isSplash;
+  final bool isPiercing;
+  final bool isMelee;
+  final bool canHitAir;
+
+  static final Random _random = Random();
+
+  /// Mapping from string unitTypeId to UnitType enum.
+  static const Map<String, UnitType> _typeMap = {
+    'cat_archer': UnitType.catArcher,
+    'dog_warrior': UnitType.dogWarrior,
+    'rabbit_mage': UnitType.rabbitMage,
+    'bear_tanker': UnitType.bearTanker,
+    'fox_assassin': UnitType.foxAssassin,
+    'bird_scout': UnitType.birdScout,
+  };
 
   DefenseUnit({
     required this.unitTypeId,
     this.level = 1,
     this.isEvolved = false,
     this.slotIndex = -1,
-    this.baseAtk = 10,
-    this.baseAtkSpeed = 1.0,
-    this.baseRange = 80,
-  }) : super(
+  })  : baseAtk = _lookupData(unitTypeId)?.baseAtk ?? 10,
+        baseAtkSpeed = _lookupData(unitTypeId)?.baseAtkSpeed ?? 1.0,
+        baseRange = _lookupData(unitTypeId)?.range ?? 80,
+        isSplash = _lookupData(unitTypeId)?.isSplash ?? false,
+        isPiercing = _lookupData(unitTypeId)?.isPiercing ?? false,
+        isMelee = _lookupData(unitTypeId)?.isMelee ?? false,
+        canHitAir = _lookupData(unitTypeId)?.canHitAir ?? false,
+        super(
           size: Vector2(24, 24),
           anchor: Anchor.center,
           priority: 15,
         );
+
+  /// Look up UnitData by string unitTypeId. Returns null if not found.
+  static UnitData? _lookupData(String typeId) {
+    final unitType = _typeMap[typeId];
+    if (unitType == null) return null;
+    return UnitDatabase.get(unitType);
+  }
 
   /// Attack power scales exponentially with level.
   double get atk => baseAtk * pow(2.0, level - 1);
@@ -80,6 +108,8 @@ class DefenseUnit extends PositionComponent
     final enemies = game.world.children.whereType<DefenseEnemy>();
     for (final enemy in enemies) {
       if (enemy.isDead) continue;
+      // Skip flying enemies if this unit can't hit air
+      if (enemy.isFlying && !canHitAir) continue;
       final dist = position.distanceTo(enemy.position);
       if (dist < closestDist) {
         closestDist = dist;
@@ -88,22 +118,41 @@ class DefenseUnit extends PositionComponent
     }
   }
 
-  /// Fire a projectile at the current target.
+  /// Fire a projectile at the current target, or melee attack directly.
   void _attack() {
     if (_target == null || _target!.isDead) return;
 
-    final direction = (_target!.position - position).normalized();
-    final speed = 200.0;
+    // Calculate damage with fox assassin crit chance
+    double dmg = atk;
+    if (unitTypeId == 'fox_assassin' && _random.nextDouble() < 0.20) {
+      dmg *= 2.0; // 20% chance for 2x crit damage
+    }
 
-    game.world.add(Projectile(
-      spawnPosition: position.clone(),
-      velocity: direction * speed,
-      damage: atk,
-      isPiercing: isEvolved, // evolved units get piercing
-      isSplash: false,
-      splashRadius: 0,
-      ownerTypeId: unitTypeId,
-    ));
+    if (isMelee) {
+      // Melee: directly damage all enemies within range
+      final enemies = game.world.children.whereType<DefenseEnemy>().toList();
+      for (final enemy in enemies) {
+        if (enemy.isDead) continue;
+        final dist = position.distanceTo(enemy.position);
+        if (dist <= range) {
+          enemy.takeDamage(dmg, sourcePosition: position);
+        }
+      }
+    } else {
+      // Ranged: fire a projectile
+      final direction = (_target!.position - position).normalized();
+      final speed = 200.0;
+
+      game.world.add(Projectile(
+        spawnPosition: position.clone(),
+        velocity: direction * speed,
+        damage: dmg,
+        isPiercing: isPiercing || isEvolved, // unit data piercing OR evolved
+        isSplash: isSplash,
+        splashRadius: isSplash ? 40.0 : 0,
+        ownerTypeId: unitTypeId,
+      ));
+    }
   }
 
   @override

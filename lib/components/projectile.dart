@@ -71,7 +71,7 @@ class Projectile extends PositionComponent
       if (_hitEnemies.contains(other)) return;
       _hitEnemies.add(other);
 
-      other.takeDamage(damage);
+      other.takeDamage(damage, sourcePosition: position.clone());
 
       if (isSplash && splashRadius > 0) {
         _applySplashDamage(other.position);
@@ -93,7 +93,7 @@ class Projectile extends PositionComponent
         // Damage falls off with distance
         final falloff = 1.0 - (dist / splashRadius);
         final splashDmg = damage * 0.5 * falloff;
-        enemy.takeDamage(splashDmg);
+        enemy.takeDamage(splashDmg, sourcePosition: impactPos);
         _hitEnemies.add(enemy);
       }
     }

@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flame/components.dart';
 import '../game/defense_game.dart';
-import 'merge_manager.dart';
 
 /// Game feel system for castle defense.
 /// Provides screen shake, hit stop, slow motion, zoom punch,
@@ -225,50 +224,12 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
 
   /// Automatically merge units if 3 of the same type+level exist.
   void _tryAutoMerge() {
-    final slots = game.unitSlots;
-    final merges = MergeManager.findPossibleMerges(slots);
-    if (merges.isEmpty) return;
-
-    // Perform the first available merge
-    final indices = merges.first;
-    if (indices.length < 3) return;
-
-    // All 3 slots should have units of the same type+level
-    final unit = slots[indices[0]].unit;
-    if (unit == null) return;
-
-    final newLevel = unit.level + 1;
-    final mergedUnit = DefenseUnit(
-      unitTypeId: unit.unitTypeId,
-      level: newLevel,
-    );
-
-    // Clear source slots
-    for (final idx in indices) {
-      slots[idx].clear();
-    }
-
-    // Place merged unit in the first cleared slot
-    slots[indices[0]].place(mergedUnit);
-
-    onMerge(newLevel);
+    // Delegate to DefenseGame's internal merge logic
+    game.tryAutoMerge();
   }
 
   /// Automatically buy and place a unit in an empty slot if affordable.
   void _tryAutoPlace() {
-    // Find an empty slot
-    final emptySlot = game.unitSlots.cast<UnitSlot?>().firstWhere(
-          (s) => s != null && s.isEmpty,
-          orElse: () => null,
-        );
-    if (emptySlot == null) return;
-
-    // Try to buy the cheapest available unit type
-    final cost = game.getUnitCost();
-    if (game.gold >= cost) {
-      game.gold -= cost;
-      final unitType = game.getRandomUnitType(_rng);
-      emptySlot.place(DefenseUnit(unitTypeId: unitType, level: 1));
-    }
+    game.buyUnit();
   }
 }

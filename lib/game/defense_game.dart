@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/material.dart' show Colors;
+import 'package:flutter/material.dart' show Color, Colors;
 
 import '../components/wall.dart';
 import '../components/unit_slot.dart' as slot_component;
@@ -17,7 +17,9 @@ import '../systems/defense_game_feel.dart';
 import '../systems/defense_upgrade_manager.dart';
 import '../systems/defense_save_manager.dart';
 import '../data/unit_data.dart';
+import '../components/damage_number.dart';
 import '../ui/defense_hud.dart' as hud;
+import '../ui/relic_selection_screen.dart';
 
 /// Main game class for castle defense mode.
 /// Portrait mode (400x700), fixed resolution viewport.
@@ -303,6 +305,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final effectiveDt = dt * gameFeel.timeScale;
     super.update(effectiveDt);
 
+    // Apply camera shake offset and zoom punch
+    camera.viewfinder.position = gameFeel.shakeOffset;
+    camera.viewfinder.zoom = gameFeel.currentZoom;
+
     // Wall regen from upgrades
     final regen = upgradeManager.wallRegenPerSec;
     if (regen > 0 && wall.currentHp < wall.maxHp && !wall.isDestroyed) {
@@ -427,16 +433,23 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         enemy.position.x,
         enemy.position.y,
       );
+
+      // Show relic selection after boss kill
+      showRelicSelection();
     }
   }
 
-  /// Add gold to the player.
-  void addGold(int amount) {
+  /// Add gold to the player. Optionally show a floating number at [popupPos].
+  void addGold(int amount, {Vector2? popupPos}) {
     final goldMult = upgradeManager.goldGainMultiplier *
         relicManager.goldMultiplier;
     final finalAmount = (amount * goldMult).round();
     gold += finalAmount;
     _runGoldEarned += finalAmount;
+
+    if (popupPos != null) {
+      showDamageNumber(popupPos, '+$finalAmount', const Color(0xFFFFD54F));
+    }
   }
 
   /// Called when the wall is destroyed — end the run.
@@ -478,7 +491,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void onPerfectWave(int consecutiveCount) {
     gameFeel.onPerfectWave();
     // Bonus gold for perfect waves
-    addGold(5 * consecutiveCount);
+    addGold(5 * consecutiveCount, popupPos: wall.position);
   }
 
   // ══════════════════════════════════════
@@ -520,6 +533,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Refresh visual components
     _refreshSlotComponents();
   }
+
+  /// Public entry point for auto-merge (called by DefenseGameFeel).
+  void tryAutoMerge() => _tryAutoMerge();
 
   /// Try to auto-merge if 3 same units exist.
   void _tryAutoMerge() {
@@ -588,6 +604,101 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.remove('RunResult');
     overlays.remove('DefenseHud');
     overlays.add('DefenseMainMenu');
+  }
+
+  // ══════════════════════════════════════
+  // Damage Numbers & Relic Selection
+  // ══════════════════════════════════════
+
+  /// Show a floating damage/gold number at the given position.
+  void showDamageNumber(Vector2 pos, String text, Color color) {
+    world.add(DamageNumber(
+      position: pos,
+      text: text,
+      color: color,
+    ));
+  }
+
+  /// Generate relic choices from relicManager and show the overlay.
+  void showRelicSelection() {
+    if (relicManager.isFull) return;
+
+    final choices = relicManager.generateRelicChoices(_rng, choiceCount: 3);
+    if (choices.isEmpty) return;
+
+    _relicChoices = choices;
+    _isPaused = true;
+    overlays.add('RelicSelection');
+  }
+
+  /// Current relic choices for the overlay to read.
+  List<String> _relicChoices = [];
+  List<String> get relicChoices => _relicChoices;
+
+  /// Called when the player selects a relic from the overlay.
+  void onRelicSelected(String relicId) {
+    relicManager.addRelic(relicId);
+  }
+
+  // ══════════════════════════════════════
+  // Unit Sell & Reroll
+  // ══════════════════════════════════════
+
+  /// Sell a unit from the given slot index.
+  /// Refunds 50% of the current unit cost and shows a gold popup.
+  void sellUnit(int slotIndex) {
+    if (slotIndex < 0 || slotIndex >= _unitSlots.length) return;
+    if (_unitSlots[slotIndex].isEmpty) return;
+
+    _unitSlots[slotIndex].clear();
+
+    // Refund 50% of current unit cost
+    final refund = (getUnitCost() * 0.5).ceil();
+    gold += refund;
+    _runGoldEarned += refund;
+
+    // Show gold popup at wall position
+    showDamageNumber(
+      wall.position,
+      '+$refund',
+      const Color(0xFFFFD54F),
+    );
+
+    _refreshSlotComponents();
+  }
+
+  /// Reroll all units. Costs 20 gold.
+  /// Clears all units and places the same count of random new ones.
+  void rerollUnits() {
+    if (gold < 20) return;
+
+    // Count existing units
+    int unitCount = 0;
+    for (final slot in _unitSlots) {
+      if (!slot.isEmpty) unitCount++;
+    }
+    if (unitCount == 0) return;
+
+    gold -= 20;
+
+    // Clear all units
+    for (final slot in _unitSlots) {
+      slot.clear();
+    }
+
+    // Place same count of random new units
+    for (int i = 0; i < unitCount && i < _unitSlots.length; i++) {
+      final typeId = getRandomUnitType(_rng);
+      _unitSlots[i].place(merge.DefenseUnit(
+        unitTypeId: typeId,
+        level: 1,
+      ));
+    }
+
+    // Check for auto-merge after placing
+    _tryAutoMerge();
+
+    _refreshSlotComponents();
   }
 
   // ══════════════════════════════════════
