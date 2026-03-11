@@ -73,7 +73,7 @@ class _RunResultScreenState extends State<RunResultScreen>
     super.initState();
 
     _rank = RunRank.fromWave(widget.wavesCleared);
-    _isNewRecord = widget.wavesCleared >= widget.game.highestWave &&
+    _isNewRecord = widget.wavesCleared > widget.game.highestWave &&
         widget.wavesCleared > 0;
 
     // Entry animation

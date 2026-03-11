@@ -242,7 +242,7 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           icon: Icons.play_arrow,
           gradient: GameTheme.gradientPrimary,
           onTap: () {
-            if (widget.game.totalRuns <= 1) {
+            if (widget.game.totalRuns < 1) {
               widget.game.overlays.remove('DefenseMainMenu');
               widget.game.overlays.add('Tutorial');
             } else {
