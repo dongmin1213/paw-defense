@@ -68,6 +68,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DefenseParticle particleEffect;
   final List<merge.UnitSlot> _unitSlots = [];
 
+  /// Cached living enemy list, refreshed once per frame in update().
+  List<DefenseEnemy> livingEnemies = [];
+
   // ── Game State ──
   int gold = 0;
   int stars = 0;
@@ -614,6 +617,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final effectiveDt = dt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
 
+    // Refresh cached enemy list once per frame
+    livingEnemies = world.children
+        .whereType<DefenseEnemy>()
+        .where((e) => !e.isDead)
+        .toList();
+
     // Apply zoom punch
     camera.viewfinder.zoom = gameFeel.currentZoom;
 
@@ -626,9 +635,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Relic: living wall — wall deals AoE DPS to nearby enemies
     final livingWallDps = relicManager.livingWallDps;
     if (livingWallDps > 0) {
-      final enemies = world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
+      for (final enemy in livingEnemies) {
         final dist = wall.position.distanceTo(enemy.position);
         if (dist <= 60.0) {
           enemy.takeDamage(livingWallDps * effectiveDt);
@@ -641,9 +648,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     if (turretDps > 0) {
       DefenseEnemy? nearest;
       double nearestDist = 150.0;
-      final enemies = world.children.whereType<DefenseEnemy>();
-      for (final e in enemies) {
-        if (e.isDead) continue;
+      for (final e in livingEnemies) {
         final d = wall.position.distanceTo(e.position);
         if (d < nearestDist) {
           nearestDist = d;
@@ -906,9 +911,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     DefenseEnemy? nearest;
     double nearestDist = 100.0; // max chain range
 
-    final enemies = world.children.whereType<DefenseEnemy>();
-    for (final e in enemies) {
-      if (e.isDead || identical(e, source)) continue;
+    for (final e in livingEnemies) {
+      if (identical(e, source)) continue;
       final dist = source.position.distanceTo(e.position);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -1071,10 +1075,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     switch (effectId) {
       case 'arrow_rain':
         // Damage all enemies for ATK x2
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
         final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        for (final e in livingEnemies) {
           e.takeDamage(avgAtk * 2);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
@@ -1084,13 +1086,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'meteor':
         // Big explosion near wall center
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        final meteorAtk = _getAverageUnitAtk();
+        for (final e in livingEnemies) {
           final dist = e.position.distanceTo(wall.position);
           if (dist < 150) {
-            e.takeDamage(avgAtk * 5);
+            e.takeDamage(meteorAtk * 5);
             particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
           }
         }
@@ -1104,14 +1104,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'storm_call':
         // All flying instant kill + ground ATK x3
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        final stormAtk = _getAverageUnitAtk();
+        for (final e in livingEnemies) {
           if (e.isFlying) {
             e.takeDamage(e.hp * 2); // instant kill
           } else {
-            e.takeDamage(avgAtk * 3);
+            e.takeDamage(stormAtk * 3);
           }
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
@@ -1124,9 +1122,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'mana_burst':
         // All enemies lose 30% HP
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        for (final e in livingEnemies) {
           e.takeDamage(e.hp * 0.3);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
@@ -1339,9 +1335,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Relic: merge bomb — deal AoE damage on merge
     final mergeBombDmg = relicManager.mergeBombDamage;
     if (mergeBombDmg > 0) {
-      final enemies = world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
+      for (final enemy in livingEnemies) {
         final dist = wall.position.distanceTo(enemy.position);
         if (dist <= 120.0) {
           enemy.takeDamage(mergeBombDmg * newLevel);
@@ -1657,9 +1651,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       // Relic: merge bomb
       final mergeBombDmg = relicManager.mergeBombDamage;
       if (mergeBombDmg > 0) {
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        for (final enemy in enemies) {
-          if (enemy.isDead) continue;
+        for (final enemy in livingEnemies) {
           final dist = wall.position.distanceTo(enemy.position);
           if (dist <= 120.0) {
             enemy.takeDamage(mergeBombDmg * newLevel);

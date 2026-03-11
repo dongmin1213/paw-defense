@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 import '../renderers/wall_renderer.dart';
 
@@ -68,7 +69,7 @@ class Wall extends PositionComponent
   void upgrade() {
     level++;
     final oldMax = maxHp;
-    maxHp = 100.0 + (level - 1) * 30.0;
+    maxHp = 100.0 + (level - 1) * BalanceConfig.wallHpPerLevel;
     // Heal proportionally to the HP increase
     currentHp = (currentHp + (maxHp - oldMax)).clamp(0, maxHp);
   }

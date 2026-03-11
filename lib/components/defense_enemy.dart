@@ -200,9 +200,8 @@ class DefenseEnemy extends PositionComponent
 
   /// Healer: heal all allies within 50px for 10% of their maxHp.
   void _healNearbyAllies() {
-    final enemies = game.world.children.whereType<DefenseEnemy>();
-    for (final ally in enemies) {
-      if (ally.isDead || identical(ally, this)) continue;
+    for (final ally in game.livingEnemies) {
+      if (identical(ally, this)) continue;
       final dist = position.distanceTo(ally.position);
       if (dist <= 50.0) {
         final healAmount = ally.maxHp * 0.10;

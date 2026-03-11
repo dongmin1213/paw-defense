@@ -1,3 +1,4 @@
+import 'dart:math' show pi;
 import 'dart:ui';
 
 import 'package:flame/collisions.dart';
@@ -103,7 +104,7 @@ class Projectile extends PositionComponent
   void _spawnSplitProjectiles(Vector2 impactPos) {
     final speed = velocity.length * 0.7;
     final baseAngle = velocity.screenAngle();
-    const splitAngle = 0.785; // 45 degrees in radians
+    const splitAngle = pi / 4; // 45 degrees
 
     for (final angleDelta in [-splitAngle, splitAngle]) {
       final angle = baseAngle + angleDelta;
@@ -138,9 +139,8 @@ class Projectile extends PositionComponent
 
   /// Deal reduced splash damage to enemies near the impact point.
   void _applySplashDamage(Vector2 impactPos) {
-    final enemies = game.world.children.whereType<DefenseEnemy>();
-    for (final enemy in enemies) {
-      if (enemy.isDead || _hitEnemies.contains(enemy)) continue;
+    for (final enemy in game.livingEnemies) {
+      if (_hitEnemies.contains(enemy)) continue;
       final dist = impactPos.distanceTo(enemy.position);
       if (dist <= splashRadius) {
         // Damage falls off with distance

@@ -194,9 +194,7 @@ class DefenseUnit extends PositionComponent
     _target = null;
     double closestDist = range;
 
-    final enemies = game.world.children.whereType<DefenseEnemy>();
-    for (final enemy in enemies) {
-      if (enemy.isDead) continue;
+    for (final enemy in game.livingEnemies) {
       // Skip flying enemies if this unit can't hit air
       if (enemy.isFlying && !canHitAir) continue;
       final dist = position.distanceTo(enemy.position);
@@ -242,9 +240,7 @@ class DefenseUnit extends PositionComponent
 
     if (isMelee) {
       // Melee: directly damage all enemies within range
-      final enemies = game.world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
+      for (final enemy in game.livingEnemies) {
         final dist = position.distanceTo(enemy.position);
         if (dist <= range) {
           enemy.takeDamage(dmg, sourcePosition: position);
