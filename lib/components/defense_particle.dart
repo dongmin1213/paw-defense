@@ -262,6 +262,97 @@ class DefenseParticle extends PositionComponent
     }
   }
 
+  /// Heal sparkle effect — green/white particles rising up.
+  void spawnHealEffect(double wx, double wy) {
+    final rng = Random();
+    for (var i = 0; i < 10; i++) {
+      final angle = -pi / 2 + (rng.nextDouble() - 0.5) * pi * 0.4;
+      final speed = 30 + rng.nextDouble() * 50;
+      const colors = [
+        Color(0xFF4CAF50),
+        Color(0xFF81C784),
+        Color(0xFFFFFFFF),
+        Color(0xFFA5D6A7),
+      ];
+      _particles.add(_FxParticle(
+        x: wx + (rng.nextDouble() - 0.5) * 30,
+        y: wy,
+        vx: cos(angle) * speed * 0.3,
+        vy: sin(angle) * speed,
+        size: 2 + rng.nextDouble() * 2,
+        life: 0.5 + rng.nextDouble() * 0.3,
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Wall damage impact — directional sparks + debris.
+  void spawnWallDamage(double wx, double wy, double fromX, double fromY) {
+    final rng = Random();
+    final hitAngle = atan2(wy - fromY, wx - fromX);
+    for (var i = 0; i < 10; i++) {
+      final angle = hitAngle + pi + (rng.nextDouble() - 0.5) * pi * 0.6;
+      final speed = 40 + rng.nextDouble() * 60;
+      const colors = [
+        Color(0xFF8D6E63),
+        Color(0xFFBCAAA4),
+        Color(0xFFFF8A65),
+        Color(0xFF888888),
+      ];
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 20,
+        size: 2 + rng.nextDouble() * 3,
+        life: 0.3 + rng.nextDouble() * 0.2,
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Evolution transformation — golden spiral burst.
+  void spawnEvolution(double wx, double wy) {
+    final rng = Random();
+    for (var i = 0; i < 30; i++) {
+      final angle = i / 30 * 2 * pi;
+      final speed = 40 + rng.nextDouble() * 80;
+      const colors = [
+        Color(0xFFFFD700),
+        Color(0xFFFFE44D),
+        Color(0xFFFFFFFF),
+        Color(0xFFFFA000),
+      ];
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 30,
+        size: 3 + rng.nextDouble() * 4,
+        life: 0.6 + rng.nextDouble() * 0.4,
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Skill activation — ring burst expanding outward.
+  void spawnSkillRing(double wx, double wy, Color color) {
+    final rng = Random();
+    for (var i = 0; i < 40; i++) {
+      final angle = i / 40 * 2 * pi;
+      final speed = 80 + rng.nextDouble() * 40;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed,
+        size: 3 + rng.nextDouble() * 2,
+        life: 0.4 + rng.nextDouble() * 0.2,
+        color: color,
+      ));
+    }
+  }
+
   /// Scaled enemy death effect — size proportional to combo.
   void spawnEnemyDeathScaled(double wx, double wy, double scale) {
     final rng = Random();

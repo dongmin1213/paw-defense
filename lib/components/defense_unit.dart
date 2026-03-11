@@ -307,17 +307,41 @@ class DefenseUnit extends PositionComponent
   double _recoilTimer = 0;
   static const double _recoilDuration = 0.1;
 
+  /// Sine approximation for idle bob animation.
+  double _sin(double x) {
+    x = x % 6.2832;
+    if (x < 0) x += 6.2832;
+    if (x > 3.1416) {
+      x -= 3.1416;
+      return -(x * (4 - x * 1.2732) * 0.405 + x * (4 - x * 1.2732) * 0.595);
+    }
+    return x * (4 - x * 1.2732) * 0.405 + x * (4 - x * 1.2732) * 0.595;
+  }
+
   @override
   void render(Canvas canvas) {
+    canvas.save();
+
+    // Idle bobbing animation when no target (breathing effect)
+    if (_target == null) {
+      final bob = _sin(_animTimer * 2.5) * 1.5;
+      canvas.translate(0, bob);
+    }
+
     // Apply recoil effect when attacking
     if (_recoilTimer > 0) {
       final recoilT = _recoilTimer / _recoilDuration;
-      final recoilOffset = recoilT * 1.5;
-      canvas.save();
+      final recoilOffset = recoilT * 2.0;
       if (_target != null) {
         final dir = (_target!.position - position).normalized();
         canvas.translate(-dir.x * recoilOffset, -dir.y * recoilOffset);
       }
+      // Attack squash-and-stretch
+      final squash = 1.0 + recoilT * 0.15;
+      final stretch = 1.0 - recoilT * 0.1;
+      canvas.translate(size.x / 2, size.y / 2);
+      canvas.scale(stretch, squash);
+      canvas.translate(-size.x / 2, -size.y / 2);
     }
 
     UnitRenderer.render(
@@ -330,8 +354,32 @@ class DefenseUnit extends PositionComponent
       hasTarget: _target != null,
     );
 
-    if (_recoilTimer > 0) {
-      canvas.restore();
+    canvas.restore();
+
+    // Evolved unit glow aura
+    if (isEvolved) {
+      final glowAlpha = (25 + 15 * _sin(_animTimer * 3).abs()).toInt();
+      final glowPaint = Paint()
+        ..color = Color.fromARGB(glowAlpha, 255, 215, 0)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x * 0.55,
+        glowPaint,
+      );
+    }
+
+    // Hybrid unit purple shimmer
+    if (isHybrid && !isEvolved) {
+      final shimmerAlpha = (18 + 12 * _sin(_animTimer * 4).abs()).toInt();
+      final shimmerPaint = Paint()
+        ..color = Color.fromARGB(shimmerAlpha, 224, 64, 251)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x * 0.5,
+        shimmerPaint,
+      );
     }
 
     // Level indicator dots below unit

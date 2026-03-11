@@ -156,54 +156,134 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           children: [
             const Text('🏰', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
-            // Stats row integrated into castle panel
+            // Stats grid — 4 metrics for progression visibility
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: GameTheme.bgDeep.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(GameTheme.radiusSm),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
                 children: [
-                  _statItem('최고 웨이브', GameTheme.formatInt(widget.game.highestWave)),
-                  Container(
-                    width: 1,
-                    height: 28,
-                    color: GameTheme.pixelBorder.withValues(alpha: 0.4),
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _statItem('최고 웨이브', GameTheme.formatInt(widget.game.highestWave)),
+                      _statDivider(),
+                      _statItem('총 런', GameTheme.formatInt(widget.game.totalRuns)),
+                    ],
                   ),
-                  _statItem('총 런', GameTheme.formatInt(widget.game.totalRuns)),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _statItem('총 처치', GameTheme.formatInt(widget.game.totalKills)),
+                      _statDivider(),
+                      _statItem('보스 처치', GameTheme.formatInt(widget.game.totalBossKills)),
+                    ],
+                  ),
                 ],
               ),
             ),
+            // Progression milestone indicator
+            if (widget.game.highestWave > 0) ...[
+              const SizedBox(height: 8),
+              _buildProgressMilestone(),
+            ],
           ],
         ),
       ),
     );
   }
 
+  Widget _statDivider() {
+    return Container(
+      width: 1,
+      height: 24,
+      color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+    );
+  }
+
   Widget _statItem(String label, String value) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: GameTheme.pixel(
-            fontSize: 14,
-            color: GameTheme.accentGold,
-            fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: 72,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: GameTheme.pixel(
+              fontSize: 11,
+              color: GameTheme.accentGold,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: GameTheme.pixel(
-            fontSize: 6,
-            color: GameTheme.textSecondary,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GameTheme.pixel(
+              fontSize: 6,
+              color: GameTheme.textSecondary,
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Next milestone progress bar — shows progress toward the next major wave.
+  Widget _buildProgressMilestone() {
+    final wave = widget.game.highestWave;
+    // Milestones at 10, 20, 30, 50, 75, 100
+    const milestones = [10, 20, 30, 50, 75, 100];
+    int nextMilestone = milestones.firstWhere(
+      (m) => m > wave,
+      orElse: () => ((wave ~/ 50) + 1) * 50,
+    );
+    int prevMilestone = 0;
+    for (final m in milestones) {
+      if (m <= wave) prevMilestone = m;
+    }
+    final progress =
+        ((wave - prevMilestone) / (nextMilestone - prevMilestone)).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: GameTheme.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+        border: Border.all(
+          color: GameTheme.accent.withValues(alpha: 0.15),
+          width: 1,
         ),
-      ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '다음 목표: 웨이브 $nextMilestone',
+                style: GameTheme.pixel(
+                  fontSize: 6,
+                  color: GameTheme.accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 140,
+            child: GameTheme.pixelProgressBar(
+              value: progress,
+              height: 6,
+              fillColor: GameTheme.accent,
+              bgColor: GameTheme.bgDeep.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

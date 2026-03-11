@@ -1125,6 +1125,121 @@ class _PixelSparkleState extends State<PixelSparkle>
   }
 }
 
+/// Game tooltip — shown on long press with auto-positioning.
+class GameTooltip extends StatefulWidget {
+  final Widget child;
+  final String title;
+  final String description;
+  final Color? accentColor;
+
+  const GameTooltip({
+    super.key,
+    required this.child,
+    required this.title,
+    required this.description,
+    this.accentColor,
+  });
+
+  @override
+  State<GameTooltip> createState() => _GameTooltipState();
+}
+
+class _GameTooltipState extends State<GameTooltip> {
+  OverlayEntry? _overlayEntry;
+
+  void _showTooltip(BuildContext context) {
+    _removeTooltip();
+    final box = context.findRenderObject() as RenderBox;
+    final position = box.localToGlobal(Offset.zero);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final tooltipWidth = 200.0;
+
+    // Auto-position: prefer below, shift left/right to stay on screen
+    double left = position.dx + box.size.width / 2 - tooltipWidth / 2;
+    left = left.clamp(8.0, screenWidth - tooltipWidth - 8);
+    double top = position.dy + box.size.height + 8;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: left,
+        top: top,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: _removeTooltip,
+            child: Container(
+              width: tooltipWidth,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: GameTheme.bgCard,
+                borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                border: Border.all(
+                  color: (widget.accentColor ?? GameTheme.accent)
+                      .withValues(alpha: 0.4),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.title,
+                    style: GameTheme.pixel(
+                      fontSize: 8,
+                      color: widget.accentColor ?? GameTheme.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.description,
+                    style: GameTheme.pixel(
+                      fontSize: 6,
+                      color: GameTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+
+    // Auto-dismiss after 3 seconds
+    Future.delayed(const Duration(seconds: 3), _removeTooltip);
+  }
+
+  void _removeTooltip() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPress: () => _showTooltip(context),
+      child: widget.child,
+    );
+  }
+}
+
 /// Animation utility constants
 class GameAnimations {
   GameAnimations._();
