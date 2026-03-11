@@ -160,7 +160,7 @@ class DefenseSaveManager {
 
   /// Reset all defense save data. Use with caution.
   Future<void> resetAll() async {
-    final keys = _prefs.getKeys().where((k) => k.startsWith(_prefix));
+    final keys = _prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
     for (final key in keys) {
       await _prefs.remove(key);
     }

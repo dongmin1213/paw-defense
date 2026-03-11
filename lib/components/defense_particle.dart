@@ -306,7 +306,7 @@ class DefenseParticle extends PositionComponent
     final paint = Paint()..isAntiAlias = false;
     for (final p in _particles) {
       final alpha = (p.life * 2.5).clamp(0.0, 1.0);
-      paint.color = p.color.withValues(alpha: alpha * (p.color.a / 255.0));
+      paint.color = p.color.withValues(alpha: alpha * p.color.a);
       final s = p.size * alpha;
       // Pixel art style: square particles
       canvas.drawRect(

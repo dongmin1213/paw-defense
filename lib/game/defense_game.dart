@@ -1304,7 +1304,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Try to auto-merge if enough same units exist (3, or 2 with double merge relic).
   void _tryAutoMerge() {
     final needed = relicManager.hasDoubleMerge ? 2 : BalanceConfig.mergeCount;
-    final merges = merge.MergeManager.findPossibleMerges(_unitSlots, mergeCount: needed);
+    final merges = merge.MergeManager.findPossibleMerges(_unitSlots, mergeCount: needed, dynamicMaxLevel: relicManager.maxUnitLevel);
     if (merges.isEmpty) return;
 
     final indices = merges.first;
@@ -1644,7 +1644,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Case 2: Same type + same level → manual merge (only 2 needed for drag!)
     if (unitA.unitTypeId == unitB.unitTypeId &&
         unitA.level == unitB.level &&
-        unitA.level < merge.MergeManager.maxLevel &&
+        unitA.level < relicManager.maxUnitLevel &&
         !unitA.isEvolved) {
       final newLevel = unitA.level + 1;
       _unitSlots[fromSlot].clear();
