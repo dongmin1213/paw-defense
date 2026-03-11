@@ -799,7 +799,7 @@ class _DefenseHudState extends State<DefenseHud>
                     ),
                     const SizedBox(height: 2),
                     GameTheme.pixelProgressBar(
-                      value: hasEffect ? (sm.effectTimer / 5.0).clamp(0.0, 1.0) : sm.chargePercent,
+                      value: hasEffect ? (sm.effectTimer / sm.effectMaxDuration).clamp(0.0, 1.0) : sm.chargePercent,
                       height: 5,
                       fillColor: barColor,
                     ),

@@ -71,9 +71,9 @@ class _DailyScreenState extends State<DailyScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(7, (i) {
                   final dayNum = i + 1;
-                  final isCurrent = (streak % 7 == dayNum) ||
-                      (streak % 7 == 0 && dayNum == 7);
-                  final isPast = dayNum < (streak % 7 == 0 ? 8 : streak % 7);
+                  final dayInCycle = streak > 0 ? ((streak - 1) % 7) + 1 : 0;
+                  final isCurrent = streak > 0 && dayNum == dayInCycle;
+                  final isPast = streak > 0 && dayNum < dayInCycle;
                   return Container(
                     width: 36,
                     height: 36,

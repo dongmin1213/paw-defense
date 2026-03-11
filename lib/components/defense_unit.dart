@@ -194,9 +194,7 @@ class DefenseUnit extends PositionComponent
     _target = null;
     double closestDist = range;
 
-    final enemies = game.world.children.whereType<DefenseEnemy>();
-    for (final enemy in enemies) {
-      if (enemy.isDead) continue;
+    for (final enemy in game.livingEnemies) {
       // Skip flying enemies if this unit can't hit air
       if (enemy.isFlying && !canHitAir) continue;
       final dist = position.distanceTo(enemy.position);
@@ -242,9 +240,7 @@ class DefenseUnit extends PositionComponent
 
     if (isMelee) {
       // Melee: directly damage all enemies within range
-      final enemies = game.world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
+      for (final enemy in game.livingEnemies) {
         final dist = position.distanceTo(enemy.position);
         if (dist <= range) {
           enemy.takeDamage(dmg, sourcePosition: position);
@@ -286,6 +282,7 @@ class DefenseUnit extends PositionComponent
     super.update(dt);
     _animTimer += dt;
     _attackTimer += dt;
+    if (_recoilTimer > 0) _recoilTimer -= dt;
 
     // Re-acquire target periodically or if target is dead/gone
     if (_target == null || _target!.isDead || !_target!.isMounted) {
@@ -301,12 +298,28 @@ class DefenseUnit extends PositionComponent
     // Attack when cooldown elapsed and target exists
     if (_attackTimer >= attackInterval && _target != null) {
       _attackTimer = 0;
+      _recoilTimer = _recoilDuration;
       _attack();
     }
   }
 
+  // Attack recoil animation
+  double _recoilTimer = 0;
+  static const double _recoilDuration = 0.1;
+
   @override
   void render(Canvas canvas) {
+    // Apply recoil effect when attacking
+    if (_recoilTimer > 0) {
+      final recoilT = _recoilTimer / _recoilDuration;
+      final recoilOffset = recoilT * 1.5;
+      canvas.save();
+      if (_target != null) {
+        final dir = (_target!.position - position).normalized();
+        canvas.translate(-dir.x * recoilOffset, -dir.y * recoilOffset);
+      }
+    }
+
     UnitRenderer.render(
       canvas,
       size.toSize(),
@@ -317,7 +330,28 @@ class DefenseUnit extends PositionComponent
       hasTarget: _target != null,
     );
 
-    // Draw range circle when highlighted (e.g., during placement)
-    // This is a debug/UX aid
+    if (_recoilTimer > 0) {
+      canvas.restore();
+    }
+
+    // Level indicator dots below unit
+    if (level > 1) {
+      final dotY = size.y + 2;
+      final totalWidth = (level - 1) * 3.0;
+      final startX = (size.x - totalWidth) / 2;
+      final dotPaint = Paint()
+        ..isAntiAlias = false
+        ..color = isEvolved
+            ? const Color(0xFFFFD700) // gold for evolved
+            : isHybrid
+                ? const Color(0xFFE040FB) // purple for hybrid
+                : const Color(0xFFFFFFFF); // white for normal
+      for (int i = 0; i < level - 1; i++) {
+        canvas.drawRect(
+          Rect.fromLTWH(startX + i * 3.0, dotY, 2, 2),
+          dotPaint,
+        );
+      }
+    }
   }
 }

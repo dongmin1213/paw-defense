@@ -5,26 +5,29 @@ import '../data/hybrid_unit_data.dart';
 /// Max unit level is 5. Level 5 units can evolve with a matching relic.
 /// Cross-breed merge: 2 different types at same level (Lv3+) = hybrid unit.
 class MergeManager {
-  /// Maximum unit level before evolution.
+  /// Default maximum unit level before evolution.
   static const int maxLevel = 5;
 
   /// Check if two units can be merged (same type, same level, under max).
-  static bool canMerge(DefenseUnit a, DefenseUnit b) {
+  /// [dynamicMaxLevel] overrides the static max (e.g., for relic_infinite_merge).
+  static bool canMerge(DefenseUnit a, DefenseUnit b, {int? dynamicMaxLevel}) {
+    final cap = dynamicMaxLevel ?? maxLevel;
     return a.unitTypeId == b.unitTypeId &&
         a.level == b.level &&
-        a.level < maxLevel;
+        a.level < cap;
   }
 
   /// Attempt to find and perform a merge from a list of units.
   /// Looks for 3 units of the same type and level.
   /// Returns the merged (leveled-up) unit, or null if no merge is possible.
   /// The 3 source units are removed from the list and replaced by the result.
-  static DefenseUnit? tryMerge(List<DefenseUnit> units) {
+  static DefenseUnit? tryMerge(List<DefenseUnit> units, {int? dynamicMaxLevel}) {
+    final cap = dynamicMaxLevel ?? maxLevel;
     // Group units by (typeId, level)
     final groups = <String, List<int>>{};
     for (int i = 0; i < units.length; i++) {
       final unit = units[i];
-      if (unit.level >= maxLevel) continue;
+      if (unit.level >= cap) continue;
       final key = '${unit.unitTypeId}_${unit.level}';
       groups.putIfAbsent(key, () => []);
       groups[key]!.add(i);
@@ -58,7 +61,8 @@ class MergeManager {
   /// Find all possible merges in the given slot list.
   /// Returns a list of index groups (each with [mergeCount] slot indices).
   /// Use mergeCount=2 for double merge relic.
-  static List<List<int>> findPossibleMerges(List<UnitSlot> slots, {int mergeCount = 3}) {
+  static List<List<int>> findPossibleMerges(List<UnitSlot> slots, {int mergeCount = 3, int? dynamicMaxLevel}) {
+    final cap = dynamicMaxLevel ?? maxLevel;
     final result = <List<int>>[];
     final groups = <String, List<int>>{};
 
@@ -66,7 +70,7 @@ class MergeManager {
       final slot = slots[i];
       if (slot.unit == null) continue;
       final unit = slot.unit!;
-      if (unit.level >= maxLevel) continue;
+      if (unit.level >= cap) continue;
       final key = '${unit.unitTypeId}_${unit.level}';
       groups.putIfAbsent(key, () => []);
       groups[key]!.add(i);

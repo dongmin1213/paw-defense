@@ -68,6 +68,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DefenseParticle particleEffect;
   final List<merge.UnitSlot> _unitSlots = [];
 
+  /// Cached living enemy list, refreshed once per frame in update().
+  List<DefenseEnemy> livingEnemies = [];
+
   // ── Game State ──
   int gold = 0;
   int stars = 0;
@@ -611,8 +614,16 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       return;
     }
 
-    final effectiveDt = dt * gameFeel.timeScale * gameSpeed;
+    // Cap dt to prevent physics glitches on lag spikes (max ~20fps equivalent)
+    final cappedDt = dt.clamp(0.0, 0.05);
+    final effectiveDt = cappedDt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
+
+    // Refresh cached enemy list once per frame
+    livingEnemies = world.children
+        .whereType<DefenseEnemy>()
+        .where((e) => !e.isDead)
+        .toList();
 
     // Apply zoom punch
     camera.viewfinder.zoom = gameFeel.currentZoom;
@@ -626,9 +637,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Relic: living wall — wall deals AoE DPS to nearby enemies
     final livingWallDps = relicManager.livingWallDps;
     if (livingWallDps > 0) {
-      final enemies = world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
+      for (final enemy in livingEnemies) {
         final dist = wall.position.distanceTo(enemy.position);
         if (dist <= 60.0) {
           enemy.takeDamage(livingWallDps * effectiveDt);
@@ -641,9 +650,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     if (turretDps > 0) {
       DefenseEnemy? nearest;
       double nearestDist = 150.0;
-      final enemies = world.children.whereType<DefenseEnemy>();
-      for (final e in enemies) {
-        if (e.isDead) continue;
+      for (final e in livingEnemies) {
         final d = wall.position.distanceTo(e.position);
         if (d < nearestDist) {
           nearestDist = d;
@@ -655,9 +662,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       }
     }
 
-    // Wave clear banner timer
+    // Wave clear banner timer (uses real dt so it doesn't speed up at 2x)
     if (showWaveClearBanner) {
-      _waveClearTimer -= effectiveDt;
+      _waveClearTimer -= dt;
       if (_waveClearTimer <= 0) {
         showWaveClearBanner = false;
       }
@@ -808,6 +815,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     totalKills++;
     waveManager.onEnemyKilled();
     gameFeel.onEnemyKill();
+    soundManager.playHit();
 
     // Skill gauge: charge on kill
     skillManager.onEnemyKilled();
@@ -868,6 +876,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       waveManager.onBossKilled();
       totalBossKills++;
       gameFeel.onBossKill();
+      soundManager.playBossKill();
       particleEffect.spawnBossExplosion(
         enemy.position.x,
         enemy.position.y,
@@ -904,9 +913,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     DefenseEnemy? nearest;
     double nearestDist = 100.0; // max chain range
 
-    final enemies = world.children.whereType<DefenseEnemy>();
-    for (final e in enemies) {
-      if (e.isDead || identical(e, source)) continue;
+    for (final e in livingEnemies) {
+      if (identical(e, source)) continue;
       final dist = source.position.distanceTo(e.position);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -915,11 +923,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
 
     if (nearest != null) {
-      // Deal 50% of a base unit's damage (use 30 as baseline)
-      nearest.takeDamage(30.0, sourcePosition: source.position);
-      particleEffect.spawnEnemyDeath(
-        nearest.position.x,
-        nearest.position.y,
+      // Deal 50% of average unit ATK
+      final chainDmg = _getAverageUnitAtk() * 0.5;
+      nearest.takeDamage(chainDmg, sourcePosition: source.position);
+      particleEffect.spawnChainKill(
+        source.position.x, source.position.y,
+        nearest.position.x, nearest.position.y,
       );
     }
   }
@@ -943,6 +952,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Called when the wall is destroyed — end the run.
   void onWallDestroyed() {
     isPlaying = false;
+    soundManager.playGameOver();
 
     // Calculate star reward
     final baseStars = waveManager.currentWave;
@@ -1067,10 +1077,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     switch (effectId) {
       case 'arrow_rain':
         // Damage all enemies for ATK x2
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
         final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        for (final e in livingEnemies) {
           e.takeDamage(avgAtk * 2);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
@@ -1080,13 +1088,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'meteor':
         // Big explosion near wall center
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        final meteorAtk = _getAverageUnitAtk();
+        for (final e in livingEnemies) {
           final dist = e.position.distanceTo(wall.position);
           if (dist < 150) {
-            e.takeDamage(avgAtk * 5);
+            e.takeDamage(meteorAtk * 5);
             particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
           }
         }
@@ -1100,14 +1106,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'storm_call':
         // All flying instant kill + ground ATK x3
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        final avgAtk = _getAverageUnitAtk();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        final stormAtk = _getAverageUnitAtk();
+        for (final e in livingEnemies) {
           if (e.isFlying) {
             e.takeDamage(e.hp * 2); // instant kill
           } else {
-            e.takeDamage(avgAtk * 3);
+            e.takeDamage(stormAtk * 3);
           }
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
@@ -1120,19 +1124,35 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'mana_burst':
         // All enemies lose 30% HP
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        for (final e in enemies) {
-          if (e.isDead) continue;
+        for (final e in livingEnemies) {
           e.takeDamage(e.hp * 0.3);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
         }
         break;
     }
 
-    // Game feel
+    // Skill activation visual + game feel
+    final skillColor = _getSkillColor(effectId);
+    particleEffect.spawnSkillActivation(
+      wall.position.x, wall.position.y, skillColor);
     gameFeel.slowMotion(scale: 0.3, duration: 0.3);
     gameFeel.zoomPunch(targetZoom: 1.05, duration: 0.3);
     soundManager.playMerge(); // Reuse existing sound
+  }
+
+  /// Skill color per effect type.
+  static Color _getSkillColor(String effectId) {
+    switch (effectId) {
+      case 'arrow_rain': return const Color(0xFFFFD54F);
+      case 'war_cry': return const Color(0xFFFF6D00);
+      case 'meteor': return const Color(0xFFFF3D00);
+      case 'ice_wall': return const Color(0xFF42A5F5);
+      case 'assassin_mark': return const Color(0xFFE040FB);
+      case 'storm_call': return const Color(0xFF00BCD4);
+      case 'wall_heal': return const Color(0xFF66BB6A);
+      case 'mana_burst': return const Color(0xFF7C4DFF);
+      default: return const Color(0xFFFFFFFF);
+    }
   }
 
   /// Average ATK of all placed units, for skill damage calculations.
@@ -1143,7 +1163,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       final u = s.unit;
       if (u != null) {
         final baseAtk = _lookupBaseAtk(u.unitTypeId);
-        total += baseAtk * pow(BalanceConfig.unitAtkLevelBase, u.level - 1);
+        double atk = baseAtk * pow(BalanceConfig.unitAtkLevelBase, u.level - 1);
+        // Apply the same multipliers that DefenseUnit.atk getter uses
+        atk *= relicManager.atkMultiplier *
+            upgradeManager.unitAtkMultiplier *
+            rewardAtkMultiplier *
+            synergyManager.atkMultiplier;
+        if (skillManager.isEffectActive('war_cry')) atk *= 1.5;
+        total += atk;
         count++;
       }
     }
@@ -1222,6 +1249,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     gold -= cost;
     _unitsBought++;
+    soundManager.playBuy();
 
     // Relic: doppelganger — buy the most common unit type
     final typeId = relicManager.hasDoppelganger
@@ -1276,7 +1304,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Try to auto-merge if enough same units exist (3, or 2 with double merge relic).
   void _tryAutoMerge() {
     final needed = relicManager.hasDoubleMerge ? 2 : BalanceConfig.mergeCount;
-    final merges = merge.MergeManager.findPossibleMerges(_unitSlots, mergeCount: needed);
+    final merges = merge.MergeManager.findPossibleMerges(_unitSlots, mergeCount: needed, dynamicMaxLevel: relicManager.maxUnitLevel);
     if (merges.isEmpty) return;
 
     final indices = merges.first;
@@ -1303,25 +1331,24 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _updateAchievement(AchievementType.merges, _totalMerges);
 
     gameFeel.onMerge(newLevel);
+    soundManager.playMerge();
     particleEffect.spawnMerge(
       wall.position.x,
       wall.position.y,
     );
 
-    // Relic: merge bomb — deal AoE damage on merge
-    final mergeBombDmg = relicManager.mergeBombDamage;
-    if (mergeBombDmg > 0) {
-      final enemies = world.children.whereType<DefenseEnemy>().toList();
-      for (final enemy in enemies) {
-        if (enemy.isDead) continue;
-        final dist = wall.position.distanceTo(enemy.position);
-        if (dist <= 120.0) {
-          enemy.takeDamage(mergeBombDmg * newLevel);
-        }
     // Update skill type and synergies after unit composition change
     _updateSkillType();
     _updateSynergies();
 
+    // Relic: merge bomb — deal AoE damage on merge
+    final mergeBombDmg = relicManager.mergeBombDamage;
+    if (mergeBombDmg > 0) {
+      for (final enemy in livingEnemies) {
+        final dist = wall.position.distanceTo(enemy.position);
+        if (dist <= 120.0) {
+          enemy.takeDamage(mergeBombDmg * newLevel);
+        }
       }
     }
 
@@ -1434,11 +1461,13 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ══════════════════════════════════════
 
   /// Show a floating damage/gold number at the given position.
-  void showDamageNumber(Vector2 pos, String text, Color color) {
+  void showDamageNumber(Vector2 pos, String text, Color color,
+      {bool isCritical = false}) {
     world.add(DamageNumber(
       position: pos,
       text: text,
       color: color,
+      isCritical: isCritical,
     ));
   }
 
@@ -1615,7 +1644,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Case 2: Same type + same level → manual merge (only 2 needed for drag!)
     if (unitA.unitTypeId == unitB.unitTypeId &&
         unitA.level == unitB.level &&
-        unitA.level < merge.MergeManager.maxLevel &&
+        unitA.level < relicManager.maxUnitLevel &&
         !unitA.isEvolved) {
       final newLevel = unitA.level + 1;
       _unitSlots[fromSlot].clear();
@@ -1631,9 +1660,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       // Relic: merge bomb
       final mergeBombDmg = relicManager.mergeBombDamage;
       if (mergeBombDmg > 0) {
-        final enemies = world.children.whereType<DefenseEnemy>().toList();
-        for (final enemy in enemies) {
-          if (enemy.isDead) continue;
+        for (final enemy in livingEnemies) {
           final dist = wall.position.distanceTo(enemy.position);
           if (dist <= 120.0) {
             enemy.takeDamage(mergeBombDmg * newLevel);

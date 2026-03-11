@@ -37,8 +37,18 @@ class _DefensePauseScreenState extends State<DefensePauseScreen>
   }
 
   @override
+  void _resume() {
+    widget.game.resumeGame();
+    widget.game.overlays.remove('Pause');
+  }
+
   Widget build(BuildContext context) {
-    return Material(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _resume();
+      },
+      child: Material(
       color: Colors.transparent,
       child: AnimatedBuilder(
         animation: _entryController,
@@ -181,6 +191,7 @@ class _DefensePauseScreenState extends State<DefensePauseScreen>
           ),
         ),
       ),
+    ),
     );
   }
 

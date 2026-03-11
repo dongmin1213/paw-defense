@@ -40,7 +40,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     final sound = widget.game.soundManager;
 
-    return Material(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) widget.game.overlays.remove('Settings');
+      },
+      child: Material(
       color: Colors.transparent,
       child: AnimatedBuilder(
         animation: _entryController,
@@ -196,6 +201,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
       ),
+    ),
     );
   }
 

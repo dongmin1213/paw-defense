@@ -199,7 +199,7 @@ class RelicManager {
   double get lifestealPercent {
     double l = 0.0;
     if (hasRelic('relic_lifesteal')) l += BalanceConfig.relicLifestealPercent;
-    if (hasRelic('relic_lifesteal_up')) l = 0.05; // upgraded
+    if (hasRelic('relic_lifesteal_up')) l += 0.05; // upgraded
     return l;
   }
 

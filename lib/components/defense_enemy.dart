@@ -36,6 +36,11 @@ class DefenseEnemy extends PositionComponent
   bool _reachedWall = false;
   bool _isDead = false;
 
+  // Death animation
+  double _deathTimer = 0;
+  static const double _deathDuration = 0.3;
+  bool _deathAnimating = false;
+
   // Special behavior timers
   double _healTimer = 0;
 
@@ -112,6 +117,15 @@ class DefenseEnemy extends PositionComponent
     _isHit = true;
     _hitFlashTimer = 0.1;
 
+    // Show damage number on enemy
+    final isBigHit = finalAmount > maxHp * 0.15;
+    game.showDamageNumber(
+      position,
+      finalAmount.toInt().toString(),
+      isBigHit ? const Color(0xFFFF4444) : const Color(0xFFFFFFFF),
+      isCritical: isBigHit,
+    );
+
     // Lifesteal: heal wall for a percentage of damage dealt
     final lifesteal = game.relicManager.lifestealPercent;
     if (lifesteal > 0 && !game.wall.isDestroyed) {
@@ -128,14 +142,16 @@ class DefenseEnemy extends PositionComponent
   }
 
   void _die() {
+    if (_deathAnimating) return;
     _isDead = true;
+    _deathAnimating = true;
+    _deathTimer = _deathDuration;
     game.addGold(goldDrop, popupPos: position);
     game.onEnemyKilled(this);
     game.particleEffect.spawnEnemyDeath(
       position.x,
       position.y,
     );
-    removeFromParent();
   }
 
   /// Apply a slow debuff to this enemy.
@@ -184,9 +200,8 @@ class DefenseEnemy extends PositionComponent
 
   /// Healer: heal all allies within 50px for 10% of their maxHp.
   void _healNearbyAllies() {
-    final enemies = game.world.children.whereType<DefenseEnemy>();
-    for (final ally in enemies) {
-      if (ally.isDead || identical(ally, this)) continue;
+    for (final ally in game.livingEnemies) {
+      if (identical(ally, this)) continue;
       final dist = position.distanceTo(ally.position);
       if (dist <= 50.0) {
         final healAmount = ally.maxHp * 0.10;
@@ -203,11 +218,12 @@ class DefenseEnemy extends PositionComponent
         game.upgradeManager.wallDefenseMultiplier;
     game.wall.takeDamage(damage * BalanceConfig.bomberExplosionMultiplier * wallDefense);
     game.waveManager.onWallDamaged();
-    game.particleEffect.spawnEnemyDeath(position.x, position.y);
+    game.particleEffect.spawnBossExplosion(position.x, position.y);
     _isDead = true;
+    _deathAnimating = true;
+    _deathTimer = _deathDuration;
     game.addGold(goldDrop, popupPos: position);
     game.onEnemyKilled(this);
-    removeFromParent();
   }
 
   /// Effective attack speed (boss has fixed 0.5).
@@ -216,6 +232,19 @@ class DefenseEnemy extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Death animation: shrink and fade out
+    if (_deathAnimating) {
+      _deathTimer -= dt;
+      if (_deathTimer <= 0) {
+        removeFromParent();
+        return;
+      }
+      final t = (_deathTimer / _deathDuration).clamp(0.0, 1.0);
+      scale = Vector2.all(t);
+      return;
+    }
+
     if (_isDead) return;
 
     _animTimer += dt;
@@ -376,6 +405,27 @@ class DefenseEnemy extends PositionComponent
       hpPercent: hpPercent,
     );
 
+    // DoT visual feedback — colored overlay
+    if (_dotDuration > 0 && _dotType.isNotEmpty) {
+      final dotPaint = Paint()..isAntiAlias = false;
+      if (_dotType == 'fire') {
+        final pulse = 0.15 + 0.1 * _sin(_animTimer * 8).abs();
+        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 255, 100, 0);
+      } else if (_dotType == 'poison') {
+        final pulse = 0.12 + 0.08 * _sin(_animTimer * 6).abs();
+        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 0, 200, 50);
+      }
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), dotPaint);
+    }
+
+    // Slow visual feedback — blue tint
+    if (_slowTimer > 0) {
+      final slowPaint = Paint()
+        ..isAntiAlias = false
+        ..color = const Color(0x2040A0FF);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), slowPaint);
+    }
+
     // HP bar above enemy
     if (hp < maxHp && !_isDead) {
       _renderHpBar(canvas);
@@ -383,17 +433,17 @@ class DefenseEnemy extends PositionComponent
   }
 
   void _renderHpBar(Canvas canvas) {
-    const barWidth = 18.0;
-    const barHeight = 3.0;
+    final barWidth = _isBoss ? 28.0 : 18.0;
+    final barHeight = _isBoss ? 4.0 : 3.0;
     final barX = (size.x - barWidth) / 2;
-    const barY = -5.0;
+    final barY = _isBoss ? -7.0 : -5.0;
 
     // Background
     final bgPaint = Paint()
       ..color = const Color(0xFF333333)
       ..isAntiAlias = false;
     canvas.drawRect(
-      Rect.fromLTWH(barX, barY, barWidth, barHeight),
+      Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
       bgPaint,
     );
 
@@ -410,6 +460,19 @@ class DefenseEnemy extends PositionComponent
       Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight),
       fillPaint,
     );
+
+    // Boss: white border for visibility
+    if (_isBoss) {
+      final borderPaint = Paint()
+        ..color = const Color(0x88FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..isAntiAlias = false;
+      canvas.drawRect(
+        Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
+        borderPaint,
+      );
+    }
   }
 
   double _sin(double x) {

@@ -13,9 +13,11 @@ class DamageNumber extends PositionComponent
   final String text;
   final Color color;
   final double fontSize;
+  final bool isCritical;
 
   double _alpha = 1.0;
   double _elapsed = 0.0;
+  double _scale = 1.0;
 
   static const double _lifetime = 0.8;
   static const double _floatSpeed = 40.0;
@@ -27,9 +29,12 @@ class DamageNumber extends PositionComponent
     required this.text,
     required this.color,
     this.fontSize = 8,
+    this.isCritical = false,
   }) : super(position: position.clone()) {
     // Slight random X offset for visual variety
     this.position.x += _rng.nextDouble() * 10 - 5;
+    // Critical hits start bigger for a pop-in effect
+    _scale = isCritical ? 1.8 : 1.3;
   }
 
   @override
@@ -37,8 +42,17 @@ class DamageNumber extends PositionComponent
     super.update(dt);
     _elapsed += dt;
 
-    // Float upward
-    position.y -= _floatSpeed * dt;
+    // Float upward — crits float faster
+    final speed = isCritical ? _floatSpeed * 1.3 : _floatSpeed;
+    position.y -= speed * dt;
+
+    // Scale pop: quickly shrink to 1.0 in the first 0.15s
+    if (_elapsed < 0.15) {
+      final t = _elapsed / 0.15;
+      _scale = 1.0 + (isCritical ? 0.8 : 0.3) * (1.0 - t);
+    } else {
+      _scale = 1.0;
+    }
 
     // Fade out over lifetime
     _alpha = (1.0 - _elapsed / _lifetime).clamp(0.0, 1.0);
@@ -50,20 +64,35 @@ class DamageNumber extends PositionComponent
 
   @override
   void render(ui.Canvas canvas) {
+    canvas.save();
+    canvas.scale(_scale, _scale);
+
+    final actualFontSize = isCritical ? fontSize * 1.3 : fontSize;
+
     final paragraphStyle = ui.ParagraphStyle(
       textAlign: ui.TextAlign.center,
       maxLines: 1,
     );
 
+    // Critical hits get an outline effect via shadow
     final textStyle = ui.TextStyle(
       color: color.withValues(alpha: _alpha),
-      fontSize: fontSize,
-      fontWeight: ui.FontWeight.w700,
+      fontSize: actualFontSize,
+      fontWeight: ui.FontWeight.w900,
+      shadows: isCritical
+          ? [
+              ui.Shadow(
+                color: const Color(0xFF000000).withValues(alpha: _alpha * 0.8),
+                offset: const ui.Offset(1, 1),
+                blurRadius: 0,
+              ),
+            ]
+          : null,
     );
 
     final builder = ui.ParagraphBuilder(paragraphStyle)
       ..pushStyle(textStyle)
-      ..addText(text);
+      ..addText(isCritical ? '$text!' : text);
 
     final paragraph = builder.build();
     paragraph.layout(const ui.ParagraphConstraints(width: 100));
@@ -71,7 +100,9 @@ class DamageNumber extends PositionComponent
     // Center the text horizontally
     canvas.drawParagraph(
       paragraph,
-      ui.Offset(-50, -fontSize / 2),
+      ui.Offset(-50, -actualFontSize / 2),
     );
+
+    canvas.restore();
   }
 }

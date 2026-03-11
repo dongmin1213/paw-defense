@@ -22,6 +22,7 @@ class SkillManager extends Component {
   bool _isReady = false;
   double _cooldownTimer = 0;
   double _effectTimer = 0;
+  double _effectMaxDuration = 5.0;
   String? _activeEffect; // currently active effect ID
 
   // Getters for HUD
@@ -34,6 +35,7 @@ class SkillManager extends Component {
   double get chargePercent =>
       _maxCharge > 0 ? (_currentCharge / _maxCharge).clamp(0.0, 1.0) : 0.0;
   double get effectTimer => _effectTimer;
+  double get effectMaxDuration => _effectMaxDuration;
 
   /// Update dominant unit type based on current unit composition.
   /// The skill that's available = the type of unit the player has the most of.
@@ -73,6 +75,7 @@ class SkillManager extends Component {
     _cooldownTimer = 1.0; // 1 second cooldown after use
     _activeEffect = skill.effectId;
     _effectTimer = 5.0; // Most effects last 5 seconds
+    _effectMaxDuration = 5.0;
 
     return skill.effectId;
   }
@@ -80,6 +83,7 @@ class SkillManager extends Component {
   /// Public setter for effect duration (used by specific skills that override default).
   void setEffectDuration(double duration) {
     _effectTimer = duration;
+    _effectMaxDuration = duration;
   }
 
   /// Reset for new run.
