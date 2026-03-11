@@ -52,49 +52,59 @@ class _DefenseHudState extends State<DefenseHud>
     );
     _goldRollController.addListener(_onGoldRoll);
 
-    _refreshTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (mounted) {
-        final currentGold = widget.game.gold;
-        if (currentGold != _previousGold && !_isGoldAnimating) {
-          _previousGold = _displayedGold;
-          _isGoldAnimating = true;
-          _goldRollController.forward(from: 0.0);
-        }
-        if (_achievementText != null) {
-          _achievementTimer -= 0.1;
-          if (_achievementTimer <= 0) _achievementText = null;
-        } else {
-          final notif = widget.game.popAchievementNotification();
-          if (notif != null) {
-            _achievementText = notif;
-            _achievementTimer = 2.5;
-          }
-        }
-        if (_tierFlashTimer > 0) {
-          _tierFlashTimer -= 0.1;
-          if (_tierFlashTimer <= 0) _tierFlashColor = null;
-        }
-        if (widget.game.comboManager.tierJustChanged) {
-          _tierFlashColor = Color(widget.game.comboManager.currentTier.color);
-          _tierFlashTimer = 0.5;
-        }
-        final currentMod = widget.game.waveManager.waveModifier.currentModifier;
-        if (currentMod != null && currentMod.id != _lastModifierId) {
-          _lastModifierId = currentMod.id;
-          _modifierIcon = currentMod.icon;
-          _modifierText = '${currentMod.name} — ${currentMod.description}';
-          _modifierTimer = 3.0;
-        }
-        if (_modifierTimer > 0) {
-          _modifierTimer -= 0.1;
-          if (_modifierTimer <= 0) {
-            _modifierText = null;
-            _modifierIcon = null;
-          }
-        }
-        if (currentMod == null) _lastModifierId = null;
-        setState(() {});
+    _refreshTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted) return;
+      bool needsRebuild = false;
+
+      final currentGold = widget.game.gold;
+      if (currentGold != _previousGold && !_isGoldAnimating) {
+        _previousGold = _displayedGold;
+        _isGoldAnimating = true;
+        _goldRollController.forward(from: 0.0);
+        needsRebuild = true;
       }
+      if (_achievementText != null) {
+        _achievementTimer -= 0.25;
+        if (_achievementTimer <= 0) { _achievementText = null; needsRebuild = true; }
+      } else {
+        final notif = widget.game.popAchievementNotification();
+        if (notif != null) {
+          _achievementText = notif;
+          _achievementTimer = 2.5;
+          needsRebuild = true;
+        }
+      }
+      if (_tierFlashTimer > 0) {
+        _tierFlashTimer -= 0.25;
+        if (_tierFlashTimer <= 0) { _tierFlashColor = null; needsRebuild = true; }
+      }
+      if (widget.game.comboManager.tierJustChanged) {
+        _tierFlashColor = Color(widget.game.comboManager.currentTier.color);
+        _tierFlashTimer = 0.5;
+        needsRebuild = true;
+      }
+      final currentMod = widget.game.waveManager.waveModifier.currentModifier;
+      if (currentMod != null && currentMod.id != _lastModifierId) {
+        _lastModifierId = currentMod.id;
+        _modifierIcon = currentMod.icon;
+        _modifierText = '${currentMod.name} — ${currentMod.description}';
+        _modifierTimer = 3.0;
+        needsRebuild = true;
+      }
+      if (_modifierTimer > 0) {
+        _modifierTimer -= 0.25;
+        if (_modifierTimer <= 0) {
+          _modifierText = null;
+          _modifierIcon = null;
+          needsRebuild = true;
+        }
+      }
+      if (currentMod == null && _lastModifierId != null) {
+        _lastModifierId = null;
+        needsRebuild = true;
+      }
+      // Always rebuild when game state may have changed (gold, HP, wave, etc.)
+      setState(() {});
     });
   }
 
@@ -142,6 +152,33 @@ class _DefenseHudState extends State<DefenseHud>
                 ),
               ),
             ),
+          // Wave clear banner & rush panel — floating overlays (no layout shift)
+          if (widget.game.showWaveClearBanner)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: widget.game.showWaveClearBanner ? 1.0 : 0.0,
+                  child: _buildWaveClearBanner(),
+                ),
+              ),
+            ),
+          if (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 90,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: 1.0,
+                  child: _buildWaveRushPanel(),
+                ),
+              ),
+            ),
           SafeArea(
             child: Column(
               children: [
@@ -176,20 +213,8 @@ class _DefenseHudState extends State<DefenseHud>
                 AnimatedSize(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
-                  child: widget.game.showWaveClearBanner
-                      ? _buildWaveClearBanner() : const SizedBox.shrink(),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
                   child: _achievementText != null
                       ? _buildAchievementBanner() : const SizedBox.shrink(),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  child: (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
-                      ? _buildWaveRushPanel() : const SizedBox.shrink(),
                 ),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 200),

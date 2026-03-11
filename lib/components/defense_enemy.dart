@@ -117,13 +117,14 @@ class DefenseEnemy extends PositionComponent
     _isHit = true;
     _hitFlashTimer = 0.1;
 
-    // Show damage number on enemy
+    // Show damage number on enemy (scales fontSize with damage amount)
     final isBigHit = finalAmount > maxHp * 0.15;
     game.showDamageNumber(
       position,
       finalAmount.toInt().toString(),
       isBigHit ? const Color(0xFFFF4444) : const Color(0xFFFFFFFF),
       isCritical: isBigHit,
+      damageAmount: finalAmount,
     );
 
     // Lifesteal: heal wall for a percentage of damage dealt
@@ -387,7 +388,7 @@ class DefenseEnemy extends PositionComponent
           (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
           255, 0, 0,
         )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        ;
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.6,

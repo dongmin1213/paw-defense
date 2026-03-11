@@ -94,8 +94,7 @@ class Wall extends PositionComponent
       final pulse = ((_animTimer * 4) % 6.28);
       final alpha = 50 + (30 * (pulse < 3.14 ? pulse / 3.14 : 2.0 - pulse / 3.14)).toInt();
       final shieldPaint = Paint()
-        ..color = Color.fromARGB(alpha.clamp(30, 90), 100, 220, 100)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+        ..color = Color.fromARGB(alpha.clamp(30, 90), 100, 220, 100);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.55,
@@ -108,8 +107,7 @@ class Wall extends PositionComponent
       final pulse = ((_animTimer * 5) % 6.28);
       final alpha = (20 + 25 * (pulse < 3.14 ? pulse / 3.14 : 2.0 - pulse / 3.14)).toInt();
       final warnPaint = Paint()
-        ..color = Color.fromARGB(alpha.clamp(15, 50), 255, 50, 50)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+        ..color = Color.fromARGB(alpha.clamp(15, 50), 255, 50, 50);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.5,

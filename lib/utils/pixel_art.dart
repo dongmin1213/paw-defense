@@ -78,7 +78,6 @@ class PixelArt {
   ) {
     final paint = Paint()
       ..color = color
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
       ..isAntiAlias = false;
     canvas.drawCircle(Offset(size.width / 2, size.height / 2), radius, paint);
   }

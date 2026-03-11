@@ -77,7 +77,7 @@ class DefenseParticle extends PositionComponent
     final rng = Random();
     final colors = _deathColorsForEnemy(enemyId);
     final isBomber = enemyId.contains('bomber');
-    final count = isBomber ? 22 : 15; // Bombers get extra particles
+    final count = isBomber ? 22 : 15;
 
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -90,6 +90,20 @@ class DefenseParticle extends PositionComponent
         size: (isBomber ? 3 : 2) + rng.nextDouble() * (isBomber ? 4 : 3),
         life: 0.3 + rng.nextDouble() * (isBomber ? 0.5 : 0.3),
         color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+
+    // White core flash — fast expanding, short lived
+    for (var i = 0; i < 2; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * 180,
+        vy: sin(angle) * 180,
+        size: 4,
+        life: 0.12,
+        color: const Color(0xFFFFFFFF),
       ));
     }
   }
@@ -429,6 +443,21 @@ class DefenseParticle extends PositionComponent
         color: colors[rng.nextInt(colors.length)],
       ));
     }
+
+    // White core flash — scales with combo
+    final coreCount = (2 * scale).clamp(2, 6).toInt();
+    for (var i = 0; i < coreCount; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * 200 * scale,
+        vy: sin(angle) * 200 * scale,
+        size: 4 * scale.clamp(1.0, 2.0),
+        life: 0.15,
+        color: const Color(0xFFFFFFFF),
+      ));
+    }
   }
 
   /// Shockwave ring — expanding ring of particles (boss kill, big combos).
@@ -468,11 +497,24 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Gold scatter on kill — homing particles that fly toward the wall.
+  /// Gold scatter on kill — homing gem particles that fly toward the wall.
+  /// Enhanced: more particles, initial white flash, bigger size.
   void spawnGoldScatter(double wx, double wy, int amount,
       double wallX, double wallY) {
     final rng = Random();
-    final count = amount.clamp(1, 5);
+    final count = (amount + 1).clamp(2, 8);
+
+    // Initial white flash at death position (brief, eye-catching)
+    _particles.add(_FxParticle(
+      x: wx,
+      y: wy,
+      vx: 0,
+      vy: 0,
+      size: 8,
+      life: 0.1,
+      color: const Color(0xFFFFFFFF),
+    ));
+
     for (int i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 40 + rng.nextDouble() * 60;
@@ -481,7 +523,7 @@ class DefenseParticle extends PositionComponent
         y: wy,
         vx: cos(angle) * speed,
         vy: sin(angle) * speed - 30,
-        size: 3 + rng.nextDouble() * 2,
+        size: 4 + rng.nextDouble() * 2,
         life: 0.8 + rng.nextDouble() * 0.4,
         color: const Color(0xFFFFD700),
         isHoming: true,
@@ -516,7 +558,7 @@ class DefenseParticle extends PositionComponent
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Adaptive cap: 600 base, reduced when too many
+    // Hard cap
     if (_particles.length > 600) {
       _particles.removeRange(0, _particles.length - 600);
     }
@@ -531,11 +573,24 @@ class DefenseParticle extends PositionComponent
       if (alpha < 0.05) continue; // Skip nearly-invisible particles
       paint.color = p.color.withValues(alpha: alpha * p.color.a);
       final s = p.size * alpha;
-      // Pixel art style: square particles
-      canvas.drawRect(
-        Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: s),
-        paint,
-      );
+      if (p.isHoming) {
+        // Gold gem: cross (+) shape for visual distinction
+        final hs = s / 3; // cross arm thickness
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: hs),
+          paint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(p.x, p.y), width: hs, height: s),
+          paint,
+        );
+      } else {
+        // Pixel art style: square particles
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: s),
+          paint,
+        );
+      }
     }
   }
 }

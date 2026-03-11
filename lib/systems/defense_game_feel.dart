@@ -84,11 +84,9 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   // Zoom Punch
   // ══════════════════════════════════════
 
-  /// Zoom in briefly then spring back (juicy feedback).
+  /// Zoom punch disabled — causes distracting screen shake.
   void zoomPunch({double targetZoom = 1.05, double duration = 0.3}) {
-    _zoomPunchTarget = targetZoom;
-    _zoomPunchDuration = duration;
-    _zoomPunchTimer = duration;
+    // Intentionally disabled: zoom punch felt like unwanted screen shake.
   }
 
   void _updateZoomPunch(double dt) {
@@ -130,7 +128,16 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   // ══════════════════════════════════════
 
   /// Feedback when a normal enemy is killed.
-  void onEnemyKill() {}
+  /// [comboTier] is the current combo tier index (0=none, 3=amazing, 5=godlike).
+  void onEnemyKill({int comboTier = 0}) {
+    // Every kill: micro hit stop (1 frame ≈ 0.015s)
+    hitStop(duration: 0.015);
+
+    // Amazing (25+ combo) and above: subtle screen flash
+    if (comboTier >= 3) {
+      screenFlash(color: 0x44FFFFFF, duration: 0.08);
+    }
+  }
 
 
   /// Feedback when a boss takes a hit.
@@ -204,6 +211,7 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   /// Feedback for combo tier change.
   void onComboTierChange(int tierColor) {
     screenFlash(color: tierColor, duration: 0.3);
+    hitStop(duration: 0.06);
   }
 
   /// Feedback for relic acquisition.

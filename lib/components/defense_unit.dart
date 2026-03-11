@@ -410,8 +410,7 @@ class DefenseUnit extends PositionComponent
     if (isEvolved) {
       final glowAlpha = (25 + 15 * _sin(_animTimer * 3).abs()).toInt();
       final glowPaint = Paint()
-        ..color = Color.fromARGB(glowAlpha, 255, 215, 0)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+        ..color = Color.fromARGB(glowAlpha, 255, 215, 0);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.55,
@@ -423,8 +422,7 @@ class DefenseUnit extends PositionComponent
     if (isHybrid && !isEvolved) {
       final shimmerAlpha = (18 + 12 * _sin(_animTimer * 4).abs()).toInt();
       final shimmerPaint = Paint()
-        ..color = Color.fromARGB(shimmerAlpha, 224, 64, 251)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+        ..color = Color.fromARGB(shimmerAlpha, 224, 64, 251);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.5,

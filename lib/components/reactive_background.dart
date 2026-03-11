@@ -48,8 +48,9 @@ class ReactiveBackground extends PositionComponent
     final enemyCount = game.livingEnemies.length;
     final comboScale = game.comboManager.effectSizeMultiplier - 1.0;
     final waveProgress = game.currentWave / 50.0;
-    return ((enemyCount / 50.0) * 0.4 +
-            (comboScale / 2.0) * 0.3 +
+    // Enemy density is most intuitive — weighted higher, saturates faster
+    return ((enemyCount / 30.0) * 0.5 +
+            (comboScale / 2.0) * 0.2 +
             waveProgress * 0.3)
         .clamp(0.0, 1.0);
   }
@@ -65,9 +66,10 @@ class ReactiveBackground extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    // Drift stars downward
+    // Drift stars downward — accelerate with intensity
+    final intensity = _intensity;
     for (final star in _stars) {
-      star.y += star.speed * dt;
+      star.y += star.speed * (1.0 + intensity * 2.0) * dt;
       if (star.y > BalanceConfig.gameHeight + 2) {
         star.y = -2;
         star.x = _rng.nextDouble() * BalanceConfig.gameWidth;
@@ -86,10 +88,10 @@ class ReactiveBackground extends PositionComponent
     final intensity = _intensity;
 
     // ── Background color shift ──
-    // Calm: dark navy (0xFF1A1A2E) → Intense: dark crimson (0xFF2E1A1A)
-    final r = (0x1A + (0x14 * intensity)).toInt().clamp(0, 255);
-    final g = (0x1A - (0x0A * intensity)).toInt().clamp(0, 255);
-    final b = (0x2E - (0x14 * intensity)).toInt().clamp(0, 255);
+    // Calm: deep navy (18,18,48) → Intense: deep crimson (65,12,12)
+    final r = (18 + (47 * intensity)).toInt().clamp(0, 255);
+    final g = (18 - (6 * intensity)).toInt().clamp(0, 255);
+    final b = (48 - (36 * intensity)).toInt().clamp(0, 255);
     final bgPaint = Paint()..color = Color.fromARGB(255, r, g, b);
     canvas.drawRect(
       Rect.fromLTWH(0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight),
@@ -99,8 +101,8 @@ class ReactiveBackground extends PositionComponent
     // ── Ambient stars ──
     final starPaint = Paint()..isAntiAlias = false;
     for (final star in _stars) {
-      // Stars get slightly brighter with intensity
-      final a = (star.alpha + intensity * 0.15).clamp(0.0, 0.6);
+      // Stars get noticeably brighter with intensity
+      final a = (star.alpha + intensity * 0.35).clamp(0.0, 0.8);
       starPaint.color = Color.fromARGB(
         (a * 255).toInt(), 255, 255, 255,
       );

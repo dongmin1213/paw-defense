@@ -88,6 +88,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     return _livingEnemiesCache;
   }
 
+  /// Call when enemies are spawned or killed to refresh cache.
+  void markEnemiesDirty() {
+    _livingEnemiesDirty = true;
+  }
+
   // ── Game State ──
   int gold = 0;
   int stars = 0;
@@ -632,9 +637,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   @override
   void update(double dt) {
-    if (!isPlaying || _isPaused) {
-      super.update(dt);
+    if (!isPlaying) {
+      super.update(dt); // Menu: keep background/particles alive
       return;
+    }
+    if (_isPaused) {
+      return; // Full freeze during reward/relic selection
     }
 
     // Apply game feel effects
@@ -649,14 +657,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final effectiveDt = cappedDt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
 
-    // Mark cached enemy list for lazy rebuild
-    _livingEnemiesDirty = true;
-
     // Advance unit orbit angle
     orbitAngle += orbitSpeed * effectiveDt;
-
-    // Apply zoom punch
-    camera.viewfinder.zoom = gameFeel.currentZoom;
 
     // Wall regen from upgrades + reward buffs
     final regen = upgradeManager.wallRegenPerSec + rewardWallRegenBonus;
@@ -815,6 +817,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       isFlying: isFlying,
     );
     world.add(enemy);
+    markEnemiesDirty();
 
     // Codex: discover this enemy type
     codexManager.discoverEnemy(typeId);
@@ -855,10 +858,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Called when an enemy is killed.
   void onEnemyKilled(DefenseEnemy enemy) {
+    markEnemiesDirty();
     _runKills++;
     totalKills++;
     waveManager.onEnemyKilled();
-    gameFeel.onEnemyKill();
+    gameFeel.onEnemyKill(comboTier: comboManager.currentTier.index);
     soundManager.playHit();
 
     // Skill gauge: charge on kill
@@ -876,12 +880,29 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         enemyId: enemy.enemyId);
     }
 
-    // Combo tier-up flash
+    // Combo tier-up flash + dramatic effects
     if (comboManager.currentTier != prevTier && comboManager.currentTier.threshold > 0) {
       particleEffect.spawnComboFlash(
         wall.position.x, wall.position.y,
         comboManager.currentTier.color,
       );
+
+      // Amazing (25+) and above: shockwave ring at kill position
+      if (comboManager.currentTier.index >= 3) {
+        particleEffect.spawnShockwaveRing(
+          enemy.position.x, enemy.position.y,
+          Color(comboManager.currentTier.color),
+        );
+      }
+
+      // Background pulse with tier color
+      reactiveBackground.pulse(
+        Color(comboManager.currentTier.color),
+        duration: 0.5,
+      );
+
+      // Game feel: tier-up hit stop + screen flash
+      gameFeel.onComboTierChange(comboManager.currentTier.color);
     }
 
     // Gold scatter visual (VS-style XP gems flying to wall)
@@ -1005,7 +1026,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _runGoldEarned += finalAmount;
 
     if (popupPos != null) {
-      showDamageNumber(popupPos, '+$finalAmount', const Color(0xFFFFD54F));
+      showDamageNumber(popupPos, '+$finalAmount', const Color(0xFFFFD54F),
+          damageAmount: finalAmount.toDouble());
     }
   }
 
@@ -1530,12 +1552,28 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ══════════════════════════════════════
 
   /// Show a floating damage/gold number at the given position.
+  /// [damageAmount] scales the font size — bigger hits get bigger numbers.
   void showDamageNumber(Vector2 pos, String text, Color color,
-      {bool isCritical = false}) {
+      {bool isCritical = false, double damageAmount = 0}) {
+    // Cap visible damage numbers to prevent GPU overload
+    final existing = world.children.whereType<DamageNumber>();
+    if (existing.length > 25) return; // Skip when too many on screen
+
+    // Scale fontSize by damage amount
+    double fontSize = 8;
+    if (damageAmount >= 1000) {
+      fontSize = 12;
+    } else if (damageAmount >= 500) {
+      fontSize = 10;
+    } else if (damageAmount >= 100) {
+      fontSize = 9;
+    }
+
     world.add(DamageNumber(
       position: pos,
       text: text,
       color: color,
+      fontSize: fontSize,
       isCritical: isCritical,
     ));
   }
@@ -1610,12 +1648,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void rerollUnits() {
     if (gold < BalanceConfig.rerollCost) return;
 
-    // Count existing units
-    int unitCount = 0;
+    // Collect existing unit levels (preserve on reroll)
+    final existingLevels = <int>[];
     for (final slot in _unitSlots) {
-      if (!slot.isEmpty) unitCount++;
+      if (!slot.isEmpty) existingLevels.add(slot.unit!.level);
     }
-    if (unitCount == 0) return;
+    if (existingLevels.isEmpty) return;
 
     gold -= BalanceConfig.rerollCost;
 
@@ -1624,12 +1662,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       slot.clear();
     }
 
-    // Place same count of random new units
-    for (int i = 0; i < unitCount && i < _unitSlots.length; i++) {
+    // Place same count of random new units, preserving original levels
+    for (int i = 0; i < existingLevels.length && i < _unitSlots.length; i++) {
       final typeId = getRandomUnitType(_rng);
       _unitSlots[i].place(merge.DefenseUnit(
         unitTypeId: typeId,
-        level: 1,
+        level: existingLevels[i],
       ));
     }
 
