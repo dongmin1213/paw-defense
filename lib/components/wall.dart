@@ -88,6 +88,21 @@ class Wall extends PositionComponent
 
   @override
   void render(Canvas canvas) {
+    // Invincibility shield glow
+    if (game.skillManager.isEffectActive('wall_heal')) {
+      final shieldPaint = Paint()
+        ..color = Color.fromARGB(
+          (60 + 30 * ((_animTimer * 4) % 6.28 < 3.14 ? 1.0 : -1.0).abs()).toInt(),
+          100, 220, 100,
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x * 0.55,
+        shieldPaint,
+      );
+    }
+
     WallRenderer.render(
       canvas,
       size.toSize(),

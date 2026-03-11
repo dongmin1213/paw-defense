@@ -75,6 +75,10 @@ class Projectile extends PositionComponent
 
       other.takeDamage(damage, sourcePosition: position.clone());
 
+      // Hit impact particle
+      game.particleEffect.spawnProjectileHit(
+        other.position.x, other.position.y, _projectileColor);
+
       if (isSplash && splashRadius > 0) {
         _applySplashDamage(other.position);
       }

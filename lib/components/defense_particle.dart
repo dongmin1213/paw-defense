@@ -226,6 +226,42 @@ class DefenseParticle extends PositionComponent
     }
   }
 
+  /// Projectile hit impact — small burst at hit point.
+  void spawnProjectileHit(double wx, double wy, Color color) {
+    final rng = Random();
+    for (var i = 0; i < 4; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 20 + rng.nextDouble() * 30;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 10,
+        size: 1.5 + rng.nextDouble() * 1.5,
+        life: 0.15 + rng.nextDouble() * 0.1,
+        color: color,
+      ));
+    }
+  }
+
+  /// Skill activation — large radial burst with skill color.
+  void spawnSkillActivation(double wx, double wy, Color color) {
+    final rng = Random();
+    for (var i = 0; i < 35; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 60 + rng.nextDouble() * 120;
+      _particles.add(_FxParticle(
+        x: wx + (rng.nextDouble() - 0.5) * 60,
+        y: wy + (rng.nextDouble() - 0.5) * 30,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 30,
+        size: 3 + rng.nextDouble() * 4,
+        life: 0.4 + rng.nextDouble() * 0.4,
+        color: color,
+      ));
+    }
+  }
+
   /// Scaled enemy death effect — size proportional to combo.
   void spawnEnemyDeathScaled(double wx, double wy, double scale) {
     final rng = Random();

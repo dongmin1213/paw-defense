@@ -808,6 +808,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     totalKills++;
     waveManager.onEnemyKilled();
     gameFeel.onEnemyKill();
+    soundManager.playHit();
 
     // Skill gauge: charge on kill
     skillManager.onEnemyKilled();
@@ -868,6 +869,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       waveManager.onBossKilled();
       totalBossKills++;
       gameFeel.onBossKill();
+      soundManager.playBossKill();
       particleEffect.spawnBossExplosion(
         enemy.position.x,
         enemy.position.y,
@@ -915,11 +917,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
 
     if (nearest != null) {
-      // Deal 50% of a base unit's damage (use 30 as baseline)
-      nearest.takeDamage(30.0, sourcePosition: source.position);
-      particleEffect.spawnEnemyDeath(
-        nearest.position.x,
-        nearest.position.y,
+      // Deal 50% of average unit ATK
+      final chainDmg = _getAverageUnitAtk() * 0.5;
+      nearest.takeDamage(chainDmg, sourcePosition: source.position);
+      particleEffect.spawnChainKill(
+        source.position.x, source.position.y,
+        nearest.position.x, nearest.position.y,
       );
     }
   }
@@ -943,6 +946,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Called when the wall is destroyed — end the run.
   void onWallDestroyed() {
     isPlaying = false;
+    soundManager.playGameOver();
 
     // Calculate star reward
     final baseStars = waveManager.currentWave;
@@ -1129,10 +1133,28 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
     }
 
-    // Game feel
+    // Skill activation visual + game feel
+    final skillColor = _getSkillColor(effectId);
+    particleEffect.spawnSkillActivation(
+      wall.position.x, wall.position.y, skillColor);
     gameFeel.slowMotion(scale: 0.3, duration: 0.3);
     gameFeel.zoomPunch(targetZoom: 1.05, duration: 0.3);
     soundManager.playMerge(); // Reuse existing sound
+  }
+
+  /// Skill color per effect type.
+  static Color _getSkillColor(String effectId) {
+    switch (effectId) {
+      case 'arrow_rain': return const Color(0xFFFFD54F);
+      case 'war_cry': return const Color(0xFFFF6D00);
+      case 'meteor': return const Color(0xFFFF3D00);
+      case 'ice_wall': return const Color(0xFF42A5F5);
+      case 'assassin_mark': return const Color(0xFFE040FB);
+      case 'storm_call': return const Color(0xFF00BCD4);
+      case 'wall_heal': return const Color(0xFF66BB6A);
+      case 'mana_burst': return const Color(0xFF7C4DFF);
+      default: return const Color(0xFFFFFFFF);
+    }
   }
 
   /// Average ATK of all placed units, for skill damage calculations.
@@ -1222,6 +1244,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     gold -= cost;
     _unitsBought++;
+    soundManager.playBuy();
 
     // Relic: doppelganger — buy the most common unit type
     final typeId = relicManager.hasDoppelganger
@@ -1303,10 +1326,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _updateAchievement(AchievementType.merges, _totalMerges);
 
     gameFeel.onMerge(newLevel);
+    soundManager.playMerge();
     particleEffect.spawnMerge(
       wall.position.x,
       wall.position.y,
     );
+
+    // Update skill type and synergies after unit composition change
+    _updateSkillType();
+    _updateSynergies();
 
     // Relic: merge bomb — deal AoE damage on merge
     final mergeBombDmg = relicManager.mergeBombDamage;
@@ -1318,10 +1346,6 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         if (dist <= 120.0) {
           enemy.takeDamage(mergeBombDmg * newLevel);
         }
-    // Update skill type and synergies after unit composition change
-    _updateSkillType();
-    _updateSynergies();
-
       }
     }
 
@@ -1434,11 +1458,13 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ══════════════════════════════════════
 
   /// Show a floating damage/gold number at the given position.
-  void showDamageNumber(Vector2 pos, String text, Color color) {
+  void showDamageNumber(Vector2 pos, String text, Color color,
+      {bool isCritical = false}) {
     world.add(DamageNumber(
       position: pos,
       text: text,
       color: color,
+      isCritical: isCritical,
     ));
   }
 
