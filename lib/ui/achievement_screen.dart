@@ -15,7 +15,7 @@ class AchievementScreen extends StatelessWidget {
     final completedCount = mgr.completedAchievements.length;
 
     return Material(
-      color: Colors.black.withValues(alpha: 0.85),
+      color: GameTheme.bgDeep,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

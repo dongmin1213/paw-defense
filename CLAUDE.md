@@ -7,9 +7,9 @@
 - **Framework**: Flutter 3.27.4 / Dart 3.6.2
 - **Game Engine**: Flame 1.14.0 (flame_audio 2.1.0)
 - **저장**: shared_preferences 2.2.0
-- **폰트**: google_fonts (Press Start 2P, Silkscreen)
+- **폰트**: 로컬 번들 (PressStart2P, Silkscreen — assets/fonts/)
 - **Target**: Android (portrait 400x700, immersive mode)
-- **테스트**: `flutter test` (10개 파일, 100+ 케이스)
+- **테스트**: `flutter test` (16개 파일, 274+ 케이스)
 - **빌드**: `flutter pub get && flutter build apk --release` (CI로만 검증)
 
 ## 문서 구조
@@ -48,7 +48,7 @@ lib/
 │   ├── combo_manager.dart             # 콤보 5단계 티어, 골드 보너스
 │   ├── skill_manager.dart             # 액티브 스킬 8종 (킬 기반 게이지)
 │   ├── synergy_manager.dart           # 종족/다양성 시너지
-│   ├── defense_game_feel.dart         # 히트스탑, 슬로모션, 줌펀치
+│   ├── defense_game_feel.dart         # 히트스탑, 슬로모션, 줌펀치, 스크린플래시
 │   ├── defense_upgrade_manager.dart   # 영구 업그레이드 16종
 │   ├── defense_save_manager.dart      # 세이브/로드 (영구 + 중간저장 + 해금)
 │   ├── codex_manager.dart             # 도감 발견 상태 관리
@@ -80,7 +80,13 @@ test/
 │   ├── relic_manager_test.dart        # 인벤토리, 멀티플라이어, 이벤트
 │   ├── synergy_manager_test.dart      # 종족/다양성 시너지, 하이브리드 카운팅
 │   ├── upgrade_manager_test.dart      # 비용 스케일링, 멀티플라이어, 저장/로드
-│   └── achievement_manager_test.dart  # 진행도 추적, 보상 누적
+│   ├── achievement_manager_test.dart  # 진행도 추적, 보상 누적
+│   ├── game_feel_test.dart            # 플래시/히트스탑/줌펀치 프리셋 검증
+│   ├── combo_manager_test.dart        # 콤보 5단계 티어, 골드 보너스
+│   ├── skill_manager_test.dart        # 액티브 스킬 게이지/발동
+│   ├── sound_manager_test.dart        # BGM/SFX 재생/일시정지
+│   ├── codex_manager_test.dart        # 도감 발견/완성도
+│   └── wave_modifier_test.dart        # 웨이브 변형 10종 멀티플라이어
 ```
 
 ## UI 디자인 시스템 (GameTheme)
@@ -167,6 +173,8 @@ Pause, RelicSelection, Tutorial, Settings, Achievement, Daily, Codex
 - 머지 힌트: 동종 3개(합성의서 2개) 시 초록 글로우
 - 하이브리드 힌트: 이종 머지 가능 시 보라 글로우 + 🧬 표시
 - 콤보 티어 변경 시 화면 전체 플래시 (티어별 색상, 0.5초 페이드)
+- 유물 탭 툴팁: HUD 유물바에서 탭 → 이름/희귀도/설명 표시
+- AnimatedSize 래핑: HUD 조건부 위젯 9개 부드러운 전환
 
 ### 액티브 스킬 시스템 (8종)
 - 킬 기반 게이지 충전 → 지배적 유닛 타입의 스킬 자동 판별

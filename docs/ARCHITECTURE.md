@@ -115,12 +115,14 @@ game.soundManager.onAppResumed();        // 앱 복귀 시 재개
 ### 게임필 (DefenseGameFeel)
 ```dart
 game.gameFeel.onEnemyKill();     // 히트스탑
-game.gameFeel.onBossKill();      // 히트스탑 + 슬로모션 + 줌펀치
-game.gameFeel.onWallHit();       // 벽 피격 반응
+game.gameFeel.onBossKill();      // 히트스탑 + 슬로모션 + 줌펀치 + 스크린플래시
+game.gameFeel.onWallHit();       // 벽 피격 반응 (heavy 시 플래시)
+game.gameFeel.onEvolve();        // 히트스탑 + 플래시(골드)
 ```
 - 히트스탑 중 update(dt) 스킵
 - 슬로모션: dt * gameFeel.timeScale
-- 스크린 쉐이크: 제거됨 (defense_game_feel.dart에서 삭제)
+- 스크린 플래시: 7종 (보스처치/벽위기/진화/하이브리드/퍼펙트웨이브/스킬/콤보티어)
+- 스크린 쉐이크: 완전 제거됨 (배터리/발열 최적화)
 
 ### 텍스트 렌더링 주의
 - Flame render(Canvas)에서는 `dart:ui`의 TextStyle만 사용
@@ -137,16 +139,19 @@ main.dart → DefenseGame.onLoad()
   → startGame()
     → wall/slots/waveManager 초기화
     → relicManager.reset(), comboManager.resetAll()
+    → _clearAllUnits/Enemies/Projectiles/DamageNumbers/Particles()
     → gold = 50 + startUnits * 10 + startGoldBonus
     → saveManager.clearRunState()
     → overlays.add('DefenseHud')
   → resumeRun() (이어하기)
     → 저장된 상태 복원 (gold, relics, slots, wave, wall HP)
+    → _clearAllProjectiles/DamageNumbers/Particles() 잔여 오브젝트 정리
     → waveManager.resumeAtWave(savedWave)
   → update(dt)
     → gameFeel 적용 (히트스탑/슬로모션)
-    → camera shake/zoom
-    → livingWall/wallTurret DPS (유물)
+    → camera zoom punch
+    → livingEnemies dirty-flag 캐싱 (매 프레임 lazy rebuild)
+    → livingWall/wallTurret DPS (유물, 3프레임 쓰로틀링)
   → onEnemyKilled()
     → comboManager.onEnemyKilled()
     → 유물 효과 (bonus gold, kill heal, chain lightning, boss gold, convert)
@@ -315,6 +320,40 @@ synergy_manager.dart
   → 다양성 시너지 (다른 종 N개 → 전체 ATK 보너스)
   → 하이브리드 유닛의 양쪽 부모 종 카운팅
 ```
+
+## 성능 최적화 패턴
+
+### livingEnemies Dirty-Flag 캐싱
+```dart
+bool _livingEnemiesDirty = true;
+List<DefenseEnemy> _livingEnemiesCache = [];
+List<DefenseEnemy> get livingEnemies {
+  if (_livingEnemiesDirty) {
+    _livingEnemiesCache = world.children.whereType<DefenseEnemy>()
+        .where((e) => !e.isDead).toList();
+    _livingEnemiesDirty = false;
+  }
+  return _livingEnemiesCache;
+}
+// update()에서 _livingEnemiesDirty = true로 매 프레임 마킹
+// 같은 프레임 내 다중 접근 시 캐시 재사용
+```
+
+### 유물 효과 쓰로틀링
+```dart
+int _relicEffectFrame = 0;
+// livingWall AoE, wallTurret 등 비싼 유물 효과를 3프레임마다 실행
+if (_relicEffectFrame % 3 == 0) {
+  final compensatedDt = effectiveDt * 3; // DPS 보정
+  // 유물 효과 적용
+}
+_relicEffectFrame++;
+```
+
+### 파티클 최적화
+- 파티클 캡: 300개 (초과 시 자동 제거)
+- 알파 < 0.05 파티클 렌더 스킵
+- `clear()` 메서드로 게임 시작/재시작 시 일괄 정리
 
 ## 새 컨텐츠 추가 가이드
 

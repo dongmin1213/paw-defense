@@ -10,6 +10,7 @@ import '../components/unit_slot.dart' as slot_component;
 import '../components/defense_unit.dart' as unit_component;
 import '../components/defense_enemy.dart';
 import '../components/defense_particle.dart';
+import '../components/projectile.dart';
 import '../systems/wave_manager.dart';
 import '../systems/merge_manager.dart' as merge;
 import '../systems/relic_manager.dart';
@@ -68,8 +69,20 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DefenseParticle particleEffect;
   final List<merge.UnitSlot> _unitSlots = [];
 
-  /// Cached living enemy list, refreshed once per frame in update().
-  List<DefenseEnemy> livingEnemies = [];
+  /// Cached living enemy list, lazily rebuilt when dirty.
+  bool _livingEnemiesDirty = true;
+  List<DefenseEnemy> _livingEnemiesCache = [];
+  int _relicEffectFrame = 0;
+  List<DefenseEnemy> get livingEnemies {
+    if (_livingEnemiesDirty) {
+      _livingEnemiesCache = world.children
+          .whereType<DefenseEnemy>()
+          .where((e) => !e.isDead)
+          .toList();
+      _livingEnemiesDirty = false;
+    }
+    return _livingEnemiesCache;
+  }
 
   // ── Game State ──
   int gold = 0;
@@ -350,9 +363,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     skillManager.reset();
     synergyManager.reset();
 
-    // Clear existing slots and enemies
+    // Clear existing slots, enemies, projectiles, damage numbers, particles
     _clearAllUnits();
     _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
 
     // Reinit slots
     _initSlots();
@@ -461,6 +477,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Clear existing and restore slots/units
     _clearAllUnits();
     _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
     _initSlots();
 
     final slotsData = state['slots'] as List<dynamic>?;
@@ -619,11 +638,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final effectiveDt = cappedDt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
 
-    // Refresh cached enemy list once per frame
-    livingEnemies = world.children
-        .whereType<DefenseEnemy>()
-        .where((e) => !e.isDead)
-        .toList();
+    // Mark cached enemy list for lazy rebuild
+    _livingEnemiesDirty = true;
 
     // Apply zoom punch
     camera.viewfinder.zoom = gameFeel.currentZoom;
@@ -634,31 +650,37 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wall.heal(regen * effectiveDt);
     }
 
-    // Relic: living wall — wall deals AoE DPS to nearby enemies
-    final livingWallDps = relicManager.livingWallDps;
-    if (livingWallDps > 0) {
-      for (final enemy in livingEnemies) {
-        final dist = wall.position.distanceTo(enemy.position);
-        if (dist <= 60.0) {
-          enemy.takeDamage(livingWallDps * effectiveDt);
-        }
-      }
-    }
+    // Relic: living wall & wall turret — throttled to every 3 frames
+    _relicEffectFrame++;
+    if (_relicEffectFrame % 3 == 0) {
+      final compensatedDt = effectiveDt * 3;
 
-    // Relic: wall turret — auto-attack nearest enemy
-    final turretDps = relicManager.wallTurretDps;
-    if (turretDps > 0) {
-      DefenseEnemy? nearest;
-      double nearestDist = 150.0;
-      for (final e in livingEnemies) {
-        final d = wall.position.distanceTo(e.position);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearest = e;
+      // Living wall — wall deals AoE DPS to nearby enemies
+      final livingWallDps = relicManager.livingWallDps;
+      if (livingWallDps > 0) {
+        for (final enemy in livingEnemies) {
+          final dist = wall.position.distanceTo(enemy.position);
+          if (dist <= 60.0) {
+            enemy.takeDamage(livingWallDps * compensatedDt);
+          }
         }
       }
-      if (nearest != null) {
-        nearest.takeDamage(turretDps * effectiveDt);
+
+      // Wall turret — auto-attack nearest enemy
+      final turretDps = relicManager.wallTurretDps;
+      if (turretDps > 0) {
+        DefenseEnemy? nearest;
+        double nearestDist = 150.0;
+        for (final e in livingEnemies) {
+          final d = wall.position.distanceTo(e.position);
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearest = e;
+          }
+        }
+        if (nearest != null) {
+          nearest.takeDamage(turretDps * compensatedDt);
+        }
       }
     }
 
@@ -1589,6 +1611,24 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         .whereType<DefenseEnemy>()
         .toList()
         .forEach((c) => c.removeFromParent());
+  }
+
+  void _clearAllProjectiles() {
+    world.children
+        .whereType<Projectile>()
+        .toList()
+        .forEach((c) => c.removeFromParent());
+  }
+
+  void _clearAllDamageNumbers() {
+    world.children
+        .whereType<DamageNumber>()
+        .toList()
+        .forEach((c) => c.removeFromParent());
+  }
+
+  void _clearParticles() {
+    particleEffect.clear();
   }
 
   @override

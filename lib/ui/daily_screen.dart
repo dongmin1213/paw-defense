@@ -18,7 +18,7 @@ class _DailyScreenState extends State<DailyScreen> {
     final streak = daily.streak;
 
     return Material(
-      color: Colors.black.withValues(alpha: 0.6),
+      color: Colors.black.withValues(alpha: 0.92),
       child: Center(
         child: Container(
           width: 340,

@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+// Fonts bundled locally: assets/fonts/PressStart2P, Silkscreen
 
 /// Paw Defense — Professional Game UI Theme System
 /// Unified design language with consistent hierarchy, spacing, and color.
@@ -126,7 +126,8 @@ class GameTheme {
     double? height,
     List<Shadow>? shadows,
   }) {
-    return GoogleFonts.pressStart2p(
+    return TextStyle(
+      fontFamily: 'PressStart2P',
       fontSize: fontSize,
       color: color,
       fontWeight: fontWeight,
@@ -145,7 +146,8 @@ class GameTheme {
     double? height,
     List<Shadow>? shadows,
   }) {
-    return GoogleFonts.silkscreen(
+    return TextStyle(
+      fontFamily: 'Silkscreen',
       fontSize: fontSize,
       color: color,
       fontWeight: fontWeight,

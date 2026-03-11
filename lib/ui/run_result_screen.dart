@@ -168,10 +168,10 @@ class _RunResultScreenState extends State<RunResultScreen>
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                const Color(0xFF0A0A18).withValues(alpha: 0.95),
-                const Color(0xFF1A0A0A).withValues(alpha: 0.95),
-                const Color(0xFF0A0A18).withValues(alpha: 0.95),
+              colors: const [
+                Color(0xFF0A0A18),
+                Color(0xFF1A0A0A),
+                Color(0xFF0A0A18),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

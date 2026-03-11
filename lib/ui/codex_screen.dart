@@ -32,7 +32,7 @@ class _CodexScreenState extends State<CodexScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: GameTheme.bgDeep.withValues(alpha: 0.95),
+      color: GameTheme.bgDeep,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

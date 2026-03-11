@@ -15,6 +15,11 @@ class DefenseParticle extends PositionComponent
 
   DefenseParticle() : super(priority: 60);
 
+  /// Remove all active particles.
+  void clear() {
+    _particles.clear();
+  }
+
   /// Gold coin collect burst at a world position.
   void spawnGoldCollect(double wx, double wy) {
     final rng = Random();
@@ -385,9 +390,9 @@ class DefenseParticle extends PositionComponent
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Cap particle count (increased for late-game spectacle)
-    if (_particles.length > 500) {
-      _particles.removeRange(0, _particles.length - 500);
+    // Cap particle count for performance
+    if (_particles.length > 300) {
+      _particles.removeRange(0, _particles.length - 300);
     }
   }
 
@@ -397,6 +402,7 @@ class DefenseParticle extends PositionComponent
     final paint = Paint()..isAntiAlias = false;
     for (final p in _particles) {
       final alpha = (p.life * 2.5).clamp(0.0, 1.0);
+      if (alpha < 0.05) continue; // Skip nearly-invisible particles
       paint.color = p.color.withValues(alpha: alpha * p.color.a);
       final s = p.size * alpha;
       // Pixel art style: square particles

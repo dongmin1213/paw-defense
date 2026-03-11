@@ -38,6 +38,7 @@ class _DefenseHudState extends State<DefenseHud>
   String? _modifierIcon;
   double _modifierTimer = 0;
   String? _lastModifierId;
+  String? _expandedRelicId;
 
   @override
   void initState() {
@@ -147,18 +148,61 @@ class _DefenseHudState extends State<DefenseHud>
                 _buildTopBar(),
                 const SizedBox(height: 2),
                 _buildWallHpBar(),
-                if (widget.game.relicManager.relicCount > 0) _buildRelicBar(),
-                if (widget.game.waveManager.waveActive) _buildWaveProgress(),
-                if (_modifierText != null) _buildModifierBanner(),
-                if (widget.game.comboManager.isActive &&
-                    widget.game.isSystemUnlocked(DefenseGame.unlockCombo))
-                  _buildComboCounter(),
-                if (widget.game.showWaveClearBanner) _buildWaveClearBanner(),
-                if (_achievementText != null) _buildAchievementBanner(),
-                if (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
-                  _buildWaveRushPanel(),
-                if (widget.game.healCooldown > 0) _buildHealCooldown(),
-                if (widget.game.synergyManager.hasAnySynergy) _buildSynergyBar(),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: widget.game.relicManager.relicCount > 0
+                      ? _buildRelicBar() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: widget.game.waveManager.waveActive
+                      ? _buildWaveProgress() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: _modifierText != null
+                      ? _buildModifierBanner() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: (widget.game.comboManager.isActive &&
+                      widget.game.isSystemUnlocked(DefenseGame.unlockCombo))
+                      ? _buildComboCounter() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: widget.game.showWaveClearBanner
+                      ? _buildWaveClearBanner() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: _achievementText != null
+                      ? _buildAchievementBanner() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: (widget.game.waveManager.betweenWaves && !widget.game.showWaveClearBanner)
+                      ? _buildWaveRushPanel() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: widget.game.healCooldown > 0
+                      ? _buildHealCooldown() : const SizedBox.shrink(),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: widget.game.synergyManager.hasAnySynergy
+                      ? _buildSynergyBar() : const SizedBox.shrink(),
+                ),
                 const Spacer(),
                 _buildSkillGauge(),
                 _buildBottomPanel(),
@@ -347,28 +391,93 @@ class _DefenseHudState extends State<DefenseHud>
     final relics = widget.game.relicManager.ownedRelics;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Text('유물', style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted)),
+              const SizedBox(width: 6),
+              ...relics.map((id) {
+                final def = RelicDatabase.get(id);
+                final emoji = def?.icon ?? '🔮';
+                final isExpanded = _expandedRelicId == id;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _expandedRelicId = isExpanded ? null : id;
+                  }),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: isExpanded
+                            ? GameTheme.accent.withValues(alpha: 0.15)
+                            : GameTheme.bgCard.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: isExpanded
+                              ? GameTheme.accent.withValues(alpha: 0.5)
+                              : GameTheme.pixelBorder.withValues(alpha: 0.3),
+                          width: isExpanded ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Text(emoji, style: const TextStyle(fontSize: 13)),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: _expandedRelicId != null
+                ? _buildRelicTooltip(_expandedRelicId!)
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelicTooltip(String relicId) {
+    final def = RelicDatabase.get(relicId);
+    if (def == null) return const SizedBox.shrink();
+
+    final rarityColor = GameTheme.rarityToColor(def.rarity.labelEn);
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+        border: Border.all(
+          color: rarityColor.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
       child: Row(
         children: [
-          Text('유물', style: GameTheme.pixel(fontSize: 5, color: GameTheme.textMuted)),
+          Text(def.icon, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 6),
-          ...relics.map((id) {
-            final emoji = _relicEmoji(id);
-            return Padding(
-              padding: const EdgeInsets.only(right: 3),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: GameTheme.bgCard.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: GameTheme.pixelBorder.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  def.name,
+                  style: GameTheme.pixel(fontSize: 7, color: rarityColor),
                 ),
-                child: Text(emoji, style: const TextStyle(fontSize: 11)),
-              ),
-            );
-          }),
+                Text(
+                  def.description,
+                  style: GameTheme.pixel(fontSize: 5, color: GameTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

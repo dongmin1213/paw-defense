@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         animation: _entryController,
         builder: (context, child) {
           return Container(
-            color: Colors.black.withValues(alpha: 0.7 * _entryAnim.value),
+            color: Colors.black.withValues(alpha: 0.95 * _entryAnim.value),
             child: Opacity(
               opacity: _entryAnim.value.clamp(0.0, 1.0),
               child: child,

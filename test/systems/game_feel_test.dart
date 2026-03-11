@@ -31,22 +31,6 @@ void main() {
     });
   });
 
-  group('Screen Shake', () {
-    test('is not shaking initially', () {
-      expect(gameFeel.isShaking, isFalse);
-    });
-
-    test('shake offsets are 0 initially', () {
-      expect(gameFeel.shakeOffsetX, 0.0);
-      expect(gameFeel.shakeOffsetY, 0.0);
-    });
-
-    test('screenShake enables shaking', () {
-      gameFeel.screenShake(intensity: 4.0, duration: 0.3);
-      expect(gameFeel.isShaking, isTrue);
-    });
-  });
-
   group('Screen Flash', () {
     test('flash alpha is 0 initially', () {
       expect(gameFeel.flashAlpha, 0.0);
@@ -80,24 +64,16 @@ void main() {
     test('onBossKill activates multiple effects', () {
       gameFeel.onBossKill();
       expect(gameFeel.isHitStopped, isTrue);
-      expect(gameFeel.isShaking, isTrue);
     });
 
-    test('onWallHit heavy triggers shake and flash', () {
+    test('onWallHit heavy triggers flash', () {
       gameFeel.onWallHit(isHeavy: true);
-      expect(gameFeel.isShaking, isTrue);
       expect(gameFeel.flashAlpha, greaterThan(0.0));
     });
 
-    test('onWallHit normal triggers only shake', () {
-      gameFeel.onWallHit(isHeavy: false);
-      expect(gameFeel.isShaking, isTrue);
-    });
-
-    test('onEvolve activates hit stop, shake, and flash', () {
+    test('onEvolve activates hit stop and flash', () {
       gameFeel.onEvolve();
       expect(gameFeel.isHitStopped, isTrue);
-      expect(gameFeel.isShaking, isTrue);
       expect(gameFeel.flashAlpha, greaterThan(0.0));
     });
 
