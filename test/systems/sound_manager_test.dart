@@ -1,10 +1,16 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:paw_defense/systems/sound_manager.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late SoundManager manager;
 
   setUp(() {
+    // Mock SharedPreferences
+    SharedPreferences.setMockInitialValues({});
     manager = SoundManager();
   });
 

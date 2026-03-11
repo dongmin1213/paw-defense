@@ -24,8 +24,8 @@ void main() {
     });
 
     test('all enemies are discoverable', () {
-      expect(EnemyDatabase.all.length, greaterThanOrEqualTo(10));
-      for (final e in EnemyDatabase.all) {
+      expect(DefenseEnemyDatabase.all.length, greaterThanOrEqualTo(10));
+      for (final e in DefenseEnemyDatabase.all) {
         expect(e.id, isNotEmpty);
       }
     });
@@ -49,7 +49,7 @@ void main() {
     test('codex total items exceed 100', () {
       final total = UnitDatabase.all.length +
           HybridDatabase.all.length +
-          EnemyDatabase.all.length +
+          DefenseEnemyDatabase.all.length +
           RelicDatabase.all.length;
       expect(total, greaterThan(100));
     });
@@ -57,12 +57,12 @@ void main() {
 
   group('Hybrid recipes completeness', () {
     test('all C(8,2)=28 combinations exist', () {
-      final recipes = HybridDatabase.allRecipes;
-      expect(recipes.length, 28);
+      final allRecipes = HybridDatabase.recipes;
+      expect(allRecipes.length, 28);
     });
 
     test('every recipe has valid parent types', () {
-      for (final r in HybridDatabase.allRecipes) {
+      for (final r in HybridDatabase.recipes) {
         expect(r.parentA, isNotEmpty);
         expect(r.parentB, isNotEmpty);
         expect(r.parentA, isNot(r.parentB),
@@ -71,14 +71,14 @@ void main() {
     });
 
     test('hybrid lookup is bidirectional', () {
-      for (final r in HybridDatabase.allRecipes) {
-        final ab = HybridDatabase.findHybrid(r.parentA, r.parentB);
-        final ba = HybridDatabase.findHybrid(r.parentB, r.parentA);
+      for (final r in HybridDatabase.recipes) {
+        final ab = HybridDatabase.findRecipe(r.parentA, r.parentB);
+        final ba = HybridDatabase.findRecipe(r.parentB, r.parentA);
         expect(ab, isNotNull,
             reason: '${r.parentA}+${r.parentB} should find hybrid');
         expect(ba, isNotNull,
             reason: '${r.parentB}+${r.parentA} should find hybrid (reverse)');
-        expect(ab!.id, ba!.id,
+        expect(ab!.hybridId, ba!.hybridId,
             reason: 'Bidirectional lookup should return same hybrid');
       }
     });

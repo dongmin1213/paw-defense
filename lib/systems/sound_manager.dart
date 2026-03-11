@@ -216,6 +216,10 @@ class SoundManager {
   }
 
   void stopBgm() {
+    if (!_bgmPlaying) {
+      _bgmPlaying = false;
+      return;
+    }
     try {
       FlameAudio.bgm.stop();
     } catch (_) {}
@@ -250,7 +254,9 @@ class SoundManager {
   /// Dispose audio resources.
   void dispose() {
     stopBgm();
-    FlameAudio.bgm.dispose();
+    try {
+      FlameAudio.bgm.dispose();
+    } catch (_) {}
   }
 
   // === Persistence ===
