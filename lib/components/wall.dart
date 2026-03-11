@@ -89,18 +89,31 @@ class Wall extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    // Invincibility shield glow
+    // Invincibility shield glow (pulsing green)
     if (game.skillManager.isEffectActive('wall_heal')) {
+      final pulse = ((_animTimer * 4) % 6.28);
+      final alpha = 50 + (30 * (pulse < 3.14 ? pulse / 3.14 : 2.0 - pulse / 3.14)).toInt();
       final shieldPaint = Paint()
-        ..color = Color.fromARGB(
-          (60 + 30 * ((_animTimer * 4) % 6.28 < 3.14 ? 1.0 : -1.0).abs()).toInt(),
-          100, 220, 100,
-        )
+        ..color = Color.fromARGB(alpha.clamp(30, 90), 100, 220, 100)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.55,
         shieldPaint,
+      );
+    }
+
+    // Low HP warning glow (pulsing red when below 25%)
+    if (hpPercent < 0.25 && hpPercent > 0) {
+      final pulse = ((_animTimer * 5) % 6.28);
+      final alpha = (20 + 25 * (pulse < 3.14 ? pulse / 3.14 : 2.0 - pulse / 3.14)).toInt();
+      final warnPaint = Paint()
+        ..color = Color.fromARGB(alpha.clamp(15, 50), 255, 50, 50)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x * 0.5,
+        warnPaint,
       );
     }
 

@@ -433,17 +433,17 @@ class DefenseEnemy extends PositionComponent
   }
 
   void _renderHpBar(Canvas canvas) {
-    const barWidth = 18.0;
-    const barHeight = 3.0;
+    final barWidth = _isBoss ? 28.0 : 18.0;
+    final barHeight = _isBoss ? 4.0 : 3.0;
     final barX = (size.x - barWidth) / 2;
-    const barY = -5.0;
+    final barY = _isBoss ? -7.0 : -5.0;
 
     // Background
     final bgPaint = Paint()
       ..color = const Color(0xFF333333)
       ..isAntiAlias = false;
     canvas.drawRect(
-      Rect.fromLTWH(barX, barY, barWidth, barHeight),
+      Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
       bgPaint,
     );
 
@@ -460,6 +460,19 @@ class DefenseEnemy extends PositionComponent
       Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight),
       fillPaint,
     );
+
+    // Boss: white border for visibility
+    if (_isBoss) {
+      final borderPaint = Paint()
+        ..color = const Color(0x88FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..isAntiAlias = false;
+      canvas.drawRect(
+        Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
+        borderPaint,
+      );
+    }
   }
 
   double _sin(double x) {
