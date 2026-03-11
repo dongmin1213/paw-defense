@@ -872,7 +872,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Combo-scaled death effect
     if (comboScale > 1.0) {
       particleEffect.spawnEnemyDeathScaled(
-        enemy.position.x, enemy.position.y, comboScale);
+        enemy.position.x, enemy.position.y, comboScale,
+        enemyId: enemy.enemyId);
     }
 
     // Combo tier-up flash
@@ -1141,7 +1142,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         final avgAtk = _getAverageUnitAtk();
         for (final e in livingEnemies) {
           e.takeDamage(avgAtk * 2);
-          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
+              enemyId: e.enemyId);
         }
         break;
       case 'war_cry':
@@ -1154,7 +1156,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
           final dist = e.position.distanceTo(wall.position);
           if (dist < 150) {
             e.takeDamage(meteorAtk * 5);
-            particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+            particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
+                enemyId: e.enemyId);
           }
         }
         break;
@@ -1174,7 +1177,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
           } else {
             e.takeDamage(stormAtk * 3);
           }
-          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
+              enemyId: e.enemyId);
         }
         break;
       case 'wall_heal':
@@ -1187,7 +1191,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         // All enemies lose 30% HP
         for (final e in livingEnemies) {
           e.takeDamage(e.hp * 0.3);
-          particleEffect.spawnEnemyDeath(e.position.x, e.position.y);
+          particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
+              enemyId: e.enemyId);
         }
         break;
     }
@@ -1398,6 +1403,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     particleEffect.spawnMerge(
       wall.position.x,
       wall.position.y,
+      level: newLevel,
     );
 
     // Update skill type and synergies after unit composition change
@@ -1736,7 +1742,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       _totalMerges++;
       _updateAchievement(AchievementType.merges, _totalMerges);
       gameFeel.onMerge(newLevel);
-      particleEffect.spawnMerge(wall.position.x, wall.position.y);
+      particleEffect.spawnMerge(wall.position.x, wall.position.y,
+          level: newLevel);
 
       // Relic: merge bomb
       final mergeBombDmg = relicManager.mergeBombDamage;

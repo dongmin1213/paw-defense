@@ -5,6 +5,7 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
 import '../game/defense_game.dart';
+import '../data/hybrid_unit_data.dart';
 import 'defense_enemy.dart';
 
 /// Visual profile for each unit type's projectile.
@@ -31,6 +32,9 @@ class Projectile extends PositionComponent
   final bool isSplash;
   final double splashRadius;
   final String ownerTypeId;
+  final int level;
+  final bool isEvolved;
+  final bool isHybrid;
   final bool _isSplit; // true if this is a child split projectile (prevents recursion)
 
   double _lifeTime = 0;
@@ -39,10 +43,13 @@ class Projectile extends PositionComponent
   /// Track already-hit enemies to avoid double damage on piercing projectiles.
   final Set<DefenseEnemy> _hitEnemies = {};
 
-  // ── Trail system ──
-  static const int _trailLength = 8;
+  // ── Trail system (length scales with level) ──
+  late final int _trailLength;
   final List<double> _trailX = [];
   final List<double> _trailY = [];
+
+  /// Visual scale factor based on level/evolved/hybrid status.
+  late final double _visualScale;
 
   Projectile({
     required Vector2 spawnPosition,
@@ -52,6 +59,9 @@ class Projectile extends PositionComponent
     this.isSplash = false,
     this.splashRadius = 0,
     this.ownerTypeId = '',
+    this.level = 1,
+    this.isEvolved = false,
+    this.isHybrid = false,
     bool isSplit = false,
   })  : _isSplit = isSplit,
         super(
@@ -59,7 +69,17 @@ class Projectile extends PositionComponent
           size: Vector2(6, 6),
           anchor: Anchor.center,
           priority: 14,
-        );
+        ) {
+    // Scale visuals by level: Lv1=1.0, Lv3=1.3, Lv5=1.6, evolved=+0.3
+    _visualScale = 1.0 +
+        (level - 1) * 0.15 +
+        (isEvolved ? 0.3 : 0.0) +
+        (isHybrid ? 0.15 : 0.0);
+    // Trail length: 6 at Lv1, up to 12 at Lv5+evolved
+    _trailLength = (6 + level + (isEvolved ? 2 : 0)).clamp(6, 12);
+    // Update component size for hitbox
+    size = Vector2(6 * _visualScale, 6 * _visualScale);
+  }
 
   @override
   Future<void> onLoad() async {
@@ -143,6 +163,9 @@ class Projectile extends PositionComponent
         isPiercing: false,
         isSplash: false,
         ownerTypeId: ownerTypeId,
+        level: level,
+        isEvolved: isEvolved,
+        isHybrid: isHybrid,
         isSplit: true,
       ));
     }
@@ -206,16 +229,55 @@ class Projectile extends PositionComponent
 
   _ProjProfile get _profile {
     // Piercing/splash override color but keep trail
-    if (isPiercing) {
-      return _ProjProfile(
-          color: const Color(0xFFE040FB),
-          trailColor: const Color(0xFFEA80FC));
+    if (isPiercing && !isHybrid && !isEvolved) {
+      return const _ProjProfile(
+          color: Color(0xFFE040FB),
+          trailColor: Color(0xFFEA80FC));
     }
-    if (isSplash) {
-      return _ProjProfile(
-          color: const Color(0xFFFF6600),
-          trailColor: const Color(0xFFFF9800));
+    if (isSplash && !isHybrid && !isEvolved) {
+      return const _ProjProfile(
+          color: Color(0xFFFF6600),
+          trailColor: Color(0xFFFF9800));
     }
+
+    // Hybrid: blend both parent colors
+    if (isHybrid) {
+      final hybrid = HybridDatabase.get(ownerTypeId);
+      if (hybrid != null) {
+        final pA = _profiles[hybrid.parentA];
+        final pB = _profiles[hybrid.parentB];
+        if (pA != null && pB != null) {
+          // Blend parent colors
+          final r = ((pA.color.red + pB.color.red) ~/ 2).clamp(0, 255);
+          final g = ((pA.color.green + pB.color.green) ~/ 2).clamp(0, 255);
+          final b = ((pA.color.blue + pB.color.blue) ~/ 2).clamp(0, 255);
+          final tr = ((pA.trailColor.red + pB.trailColor.red) ~/ 2).clamp(0, 255);
+          final tg = ((pA.trailColor.green + pB.trailColor.green) ~/ 2).clamp(0, 255);
+          final tb = ((pA.trailColor.blue + pB.trailColor.blue) ~/ 2).clamp(0, 255);
+          return _ProjProfile(
+            color: Color.fromARGB(255, r, g, b),
+            trailColor: Color.fromARGB(255, tr, tg, tb),
+            trailAlpha: 0.7,
+          );
+        }
+      }
+    }
+
+    // Evolved: brighten the base color
+    if (isEvolved) {
+      final base = _profiles[ownerTypeId];
+      if (base != null) {
+        final r = (base.color.red + 40).clamp(0, 255);
+        final g = (base.color.green + 40).clamp(0, 255);
+        final b = (base.color.blue + 40).clamp(0, 255);
+        return _ProjProfile(
+          color: Color.fromARGB(255, r, g, b),
+          trailColor: const Color(0xFFFFD700), // gold trail for evolved
+          trailAlpha: 0.8,
+        );
+      }
+    }
+
     return _profiles[ownerTypeId] ??
         const _ProjProfile(
             color: Color(0xFFFFD700), trailColor: Color(0xFFFFD700));
@@ -224,15 +286,16 @@ class Projectile extends PositionComponent
   @override
   void render(Canvas canvas) {
     final profile = _profile;
+    final s = _visualScale;
 
-    // ── Draw trail ──
+    // ── Draw trail (scaled by level) ──
     if (_trailX.isNotEmpty) {
       final trailPaint = Paint()..isAntiAlias = false;
       final len = _trailX.length;
       for (int i = 0; i < len; i++) {
         final t = i / len; // 0.0 = oldest, ~1.0 = newest
         final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
-        final trailSize = 1.5 + t * 2.5;
+        final trailSize = (1.5 + t * 2.5) * s;
         final dx = _trailX[i] - position.x;
         final dy = _trailY[i] - position.y;
         trailPaint.color = profile.trailColor.withValues(alpha: alpha);
@@ -247,15 +310,57 @@ class Projectile extends PositionComponent
       }
     }
 
-    // ── Draw projectile shape per unit type ──
+    // ── Evolved glow outline ──
+    if (isEvolved) {
+      final glowPaint = Paint()
+        ..isAntiAlias = false
+        ..color = const Color(0x44FFD700); // gold glow
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(size.x / 2, size.y / 2),
+          width: size.x + 3,
+          height: size.y + 3,
+        ),
+        glowPaint,
+      );
+    }
+
+    // ── Draw projectile shape per unit type (scaled) ──
+    canvas.save();
+    canvas.translate(size.x / 2, size.y / 2);
+    canvas.scale(s, s);
+    canvas.translate(-3, -3); // center of original 6x6
+
     final paint = Paint()
       ..isAntiAlias = false
       ..color = profile.color;
+    // Lv3+ brighter core, Lv5 pure white core
+    final coreColor = level >= 5
+        ? const Color(0xFFFFFFFF)
+        : level >= 3
+            ? const Color(0xFFFFFFCC)
+            : const Color(0xFFFFFFFF);
     final corePaint = Paint()
       ..isAntiAlias = false
-      ..color = const Color(0xFFFFFFFF);
+      ..color = coreColor;
 
     _renderShape(canvas, paint, corePaint);
+    canvas.restore();
+
+    // ── Hybrid center dot ──
+    if (isHybrid) {
+      final hybridDot = Paint()
+        ..isAntiAlias = false
+        ..color = const Color(0xAAE040FB); // purple
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(size.x / 2, size.y / 2),
+          width: 2 * s,
+          height: 2 * s,
+        ),
+        hybridDot,
+      );
+    }
   }
 
   void _renderShape(Canvas canvas, Paint paint, Paint corePaint) {

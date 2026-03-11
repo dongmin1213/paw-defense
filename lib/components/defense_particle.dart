@@ -43,25 +43,52 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Enemy death burst — enhanced with more particles.
-  void spawnEnemyDeath(double wx, double wy) {
+  /// Get type-specific death colors for an enemy.
+  static List<Color> _deathColorsForEnemy(String enemyId) {
+    // Extract base type (e.g., 'boss_goblin' → 'goblin', 'slime_boss' → 'slime')
+    final id = enemyId.toLowerCase();
+    if (id.contains('slime')) {
+      return const [Color(0xFF4CAF50), Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF81C784)];
+    } else if (id.contains('goblin')) {
+      return const [Color(0xFF8D6E63), Color(0xFFA1887F), Color(0xFF6D4C41), Color(0xFFBCAAA4)];
+    } else if (id.contains('bat') || id.contains('ghost')) {
+      return const [Color(0xFF9C27B0), Color(0xFFBA68C8), Color(0xFF7B1FA2), Color(0xFFCE93D8)];
+    } else if (id.contains('orc')) {
+      return const [Color(0xFF2E7D32), Color(0xFF388E3C), Color(0xFF1B5E20), Color(0xFF4CAF50)];
+    } else if (id.contains('skeleton')) {
+      return const [Color(0xFFEEEEEE), Color(0xFFBDBDBD), Color(0xFFE0E0E0), Color(0xFFFFFFFF)];
+    } else if (id.contains('bomber')) {
+      return const [Color(0xFFFF6600), Color(0xFFFF8800), Color(0xFFFF4400), Color(0xFFFFAA00)];
+    } else if (id.contains('healer')) {
+      return const [Color(0xFF66BB6A), Color(0xFF81C784), Color(0xFF4CAF50), Color(0xFFA5D6A7)];
+    } else if (id.contains('shield')) {
+      return const [Color(0xFF42A5F5), Color(0xFF64B5F6), Color(0xFF1E88E5), Color(0xFF90CAF9)];
+    } else if (id.contains('mushroom')) {
+      return const [Color(0xFF7B1FA2), Color(0xFF4CAF50), Color(0xFF9C27B0), Color(0xFF66BB6A)];
+    } else if (id.contains('golem')) {
+      return const [Color(0xFF888888), Color(0xFF6D4C41), Color(0xFFAAAAAA), Color(0xFF8D6E63)];
+    }
+    // Default: red/orange
+    return const [Color(0xFFFF4444), Color(0xFFFF6666), Color(0xFFCC3333), Color(0xFFFFAA44)];
+  }
+
+  /// Enemy death burst — type-specific colors with enhanced particles.
+  void spawnEnemyDeath(double wx, double wy, {String enemyId = ''}) {
     final rng = Random();
-    for (var i = 0; i < 15; i++) {
+    final colors = _deathColorsForEnemy(enemyId);
+    final isBomber = enemyId.contains('bomber');
+    final count = isBomber ? 22 : 15; // Bombers get extra particles
+
+    for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
-      final speed = 40 + rng.nextDouble() * 80;
-      const colors = [
-        Color(0xFFFF4444),
-        Color(0xFFFF6666),
-        Color(0xFFCC3333),
-        Color(0xFFFFAA44),
-      ];
+      final speed = (isBomber ? 60 : 40) + rng.nextDouble() * (isBomber ? 120 : 80);
       _particles.add(_FxParticle(
-        x: wx + (rng.nextDouble() - 0.5) * 6,
-        y: wy + (rng.nextDouble() - 0.5) * 6,
+        x: wx + (rng.nextDouble() - 0.5) * (isBomber ? 10 : 6),
+        y: wy + (rng.nextDouble() - 0.5) * (isBomber ? 10 : 6),
         vx: cos(angle) * speed,
         vy: sin(angle) * speed - 25,
-        size: 2 + rng.nextDouble() * 3,
-        life: 0.3 + rng.nextDouble() * 0.3,
+        size: (isBomber ? 3 : 2) + rng.nextDouble() * (isBomber ? 4 : 3),
+        life: 0.3 + rng.nextDouble() * (isBomber ? 0.5 : 0.3),
         color: colors[rng.nextInt(colors.length)],
       ));
     }
@@ -91,22 +118,41 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Unit merge effect — rainbow sparkle burst.
-  void spawnMerge(double wx, double wy) {
+  /// Unit merge effect — rainbow sparkle burst, scales with resulting level.
+  void spawnMerge(double wx, double wy, {int level = 1}) {
     final rng = Random();
-    for (var i = 0; i < 15; i++) {
+    final count = 10 + level * 5; // Lv2=15, Lv3=20, Lv4=25, Lv5=30
+    final sizeScale = 1.0 + (level - 1) * 0.2;
+    final speedScale = 1.0 + (level - 1) * 0.15;
+    for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
-      final speed = 30 + rng.nextDouble() * 50;
-      final hue = (i / 15 * 360).toDouble();
+      final speed = (30 + rng.nextDouble() * 50) * speedScale;
+      final hue = (i / count * 360).toDouble();
       _particles.add(_FxParticle(
-        x: wx,
-        y: wy,
+        x: wx + (rng.nextDouble() - 0.5) * level * 4,
+        y: wy + (rng.nextDouble() - 0.5) * level * 4,
         vx: cos(angle) * speed,
         vy: sin(angle) * speed - 20,
-        size: 2 + rng.nextDouble() * 3,
-        life: 0.5 + rng.nextDouble() * 0.3,
+        size: (2 + rng.nextDouble() * 3) * sizeScale,
+        life: 0.5 + rng.nextDouble() * 0.3 + level * 0.05,
         color: HSVColor.fromAHSV(1.0, hue, 0.8, 1.0).toColor(),
       ));
+    }
+    // Lv5 (evolution): extra gold burst
+    if (level >= 5) {
+      for (var i = 0; i < 12; i++) {
+        final angle = rng.nextDouble() * 2 * pi;
+        final speed = 50 + rng.nextDouble() * 80;
+        _particles.add(_FxParticle(
+          x: wx,
+          y: wy,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed - 30,
+          size: 3 + rng.nextDouble() * 3,
+          life: 0.6 + rng.nextDouble() * 0.3,
+          color: const Color(0xFFFFD700),
+        ));
+      }
     }
   }
 
@@ -364,19 +410,15 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Scaled enemy death effect — size proportional to combo.
-  void spawnEnemyDeathScaled(double wx, double wy, double scale) {
+  /// Scaled enemy death effect — size proportional to combo, type-specific colors.
+  void spawnEnemyDeathScaled(double wx, double wy, double scale,
+      {String enemyId = ''}) {
     final rng = Random();
     final count = (15 * scale).clamp(8, 40).toInt();
+    final colors = _deathColorsForEnemy(enemyId);
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = (50 + rng.nextDouble() * 90) * scale;
-      const colors = [
-        Color(0xFFFF4444),
-        Color(0xFFFF6666),
-        Color(0xFFFFAA44),
-        Color(0xFFFFDD44),
-      ];
       _particles.add(_FxParticle(
         x: wx + (rng.nextDouble() - 0.5) * 8 * scale,
         y: wy + (rng.nextDouble() - 0.5) * 8 * scale,
@@ -401,6 +443,27 @@ class DefenseParticle extends PositionComponent
         size: 3,
         life: 0.35,
         color: color,
+      ));
+    }
+  }
+
+  /// Muzzle flash on attack — small burst of color at unit position.
+  /// Scales with level: Lv1=2 particles, Lv5=6 particles.
+  void spawnMuzzleFlash(double wx, double wy, Color color, {int level = 1}) {
+    final rng = Random();
+    final count = 1 + level; // Lv1=2, Lv3=4, Lv5=6
+    final isEvolved = level >= 5;
+    for (var i = 0; i < count; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 25 + rng.nextDouble() * 40;
+      _particles.add(_FxParticle(
+        x: wx + (rng.nextDouble() - 0.5) * 4,
+        y: wy + (rng.nextDouble() - 0.5) * 4,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 15,
+        size: 1.5 + rng.nextDouble() * (isEvolved ? 2.5 : 1.5),
+        life: 0.12 + rng.nextDouble() * 0.1,
+        color: isEvolved ? const Color(0xFFFFD700) : color,
       ));
     }
   }

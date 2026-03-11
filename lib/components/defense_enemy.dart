@@ -151,6 +151,7 @@ class DefenseEnemy extends PositionComponent
     game.particleEffect.spawnEnemyDeath(
       position.x,
       position.y,
+      enemyId: enemyId,
     );
   }
 

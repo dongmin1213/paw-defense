@@ -365,19 +365,26 @@ Phase 1: 유닛 궤도 회전 (unit_slot.dart, defense_unit.dart)
   → orbitSpeed = base × (1 + wave × waveScale) × (1 + unitCount × unitScale)
   → 슬롯/유닛 각각 sin/cos 궤도 계산 + 스프라이트 좌우반전
 
-Phase 2: 투사체 트레일 + 타입별 모양 (projectile.dart)
+Phase 2: 투사체 트레일 + 타입별 모양 + 레벨 스케일링 (projectile.dart)
   → 8프레임 링버퍼 (trailX, trailY) → 알파/크기 감쇠 렌더
   → _ProjProfile: 8종 유닛별 고유 색상+트레일 프로필
   → _renderShape(): 8종 픽셀 모양 (화살/검기/마법구/바위/수리검/깃털/힐볼트/아케인)
+  → _visualScale: 1.0 + (level-1)*0.15 + evolved(0.3) + hybrid(0.15)
+  → _trailLength: 6 + level + evolved(2), 6~12 clamped
+  → 하이브리드: 부모A+B 색상 블렌딩 + 보라 코어
+  → 진화: 밝은 색상(+40 RGB) + 골드 트레일 + 골드 글로우 아웃라인
 
 Phase 3: 적 스웜 밀도 (balance_config.dart, wave_manager.dart)
   → baseEnemyCount 2배 + swarmHpMultiplier 0.55 (총 웨이브 HP 동일)
   → ±15% 속도 편차 (_scaledSpeed에 0.85~1.15 랜덤)
 
-Phase 4: 사망이펙트 + 골드비산 (defense_particle.dart)
+Phase 4: 사망이펙트 + 골드비산 + 타입별 색상 (defense_particle.dart)
   → 15~40파티클 사망 (콤보 스케일링)
+  → 10종 적 타입별 고유 사망 색상 (슬라임=초록, 스켈레톤=흰, 폭탄병=주황+추가 파티클)
   → spawnShockwaveRing: 24개 방사형 확산
   → spawnGoldScatter: 호밍 파티클 (비산→성벽 수렴)
+  → spawnMuzzleFlash: 공격 시 유닛 위치 파티클 (레벨 비례 2~6개, 유닛별 색상)
+  → spawnMerge: 레벨 스케일링 (count=10+level*5, Lv5 골드 폭발 +12파티클)
 
 Phase 5: 반응형 배경 (reactive_background.dart)
   → intensity = enemyCount/50 × 0.4 + comboScale × 0.3 + wave/50 × 0.3

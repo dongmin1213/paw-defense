@@ -170,6 +170,24 @@ class DefenseUnit extends PositionComponent
   /// Interval between attacks in seconds.
   double get attackInterval => 1.0 / atkSpeed;
 
+  /// Muzzle flash color per unit type.
+  static const Map<String, Color> _muzzleColors = {
+    'cat_archer': Color(0xFFFFD700),    // gold
+    'dog_warrior': Color(0xFFB0BEC5),   // silver
+    'rabbit_mage': Color(0xFF9C27B0),   // purple
+    'bear_tanker': Color(0xFF8D6E63),   // brown
+    'fox_assassin': Color(0xFFFF3D00),  // red
+    'bird_scout': Color(0xFF42A5F5),    // blue
+    'turtle_healer': Color(0xFF66BB6A), // green
+    'owl_wizard': Color(0xFF651FFF),    // indigo
+  };
+
+  Color get _muzzleColor {
+    if (isEvolved) return const Color(0xFFFFD700); // gold for evolved
+    if (isHybrid) return const Color(0xFFE040FB);  // purple for hybrid
+    return _muzzleColors[unitTypeId] ?? const Color(0xFFFFD700);
+  }
+
   /// Whether this unit can merge with another (same type, same level, below max).
   bool canMergeWith(DefenseUnit other) =>
       unitTypeId == other.unitTypeId &&
@@ -186,7 +204,7 @@ class DefenseUnit extends PositionComponent
     if (level >= 5) {
       isEvolved = true;
     }
-    game.particleEffect.spawnMerge(position.x, position.y);
+    game.particleEffect.spawnMerge(position.x, position.y, level: level);
     return true;
   }
 
@@ -239,6 +257,10 @@ class DefenseUnit extends PositionComponent
       game.wall.heal(dmg * healFrac);
     }
 
+    // Muzzle flash effect on attack
+    game.particleEffect.spawnMuzzleFlash(
+      position.x, position.y, _muzzleColor, level: level);
+
     if (isMelee) {
       // Melee: directly damage all enemies within range
       for (final enemy in game.livingEnemies) {
@@ -274,6 +296,9 @@ class DefenseUnit extends PositionComponent
             ? BalanceConfig.splashRadius
             : 0,
         ownerTypeId: unitTypeId,
+        level: level,
+        isEvolved: isEvolved,
+        isHybrid: isHybrid,
       ));
     }
   }
