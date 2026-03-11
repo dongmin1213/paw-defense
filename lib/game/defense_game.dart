@@ -614,7 +614,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       return;
     }
 
-    final effectiveDt = dt * gameFeel.timeScale * gameSpeed;
+    // Cap dt to prevent physics glitches on lag spikes (max ~20fps equivalent)
+    final cappedDt = dt.clamp(0.0, 0.05);
+    final effectiveDt = cappedDt * gameFeel.timeScale * gameSpeed;
     super.update(effectiveDt);
 
     // Refresh cached enemy list once per frame
@@ -660,9 +662,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       }
     }
 
-    // Wave clear banner timer
+    // Wave clear banner timer (uses real dt so it doesn't speed up at 2x)
     if (showWaveClearBanner) {
-      _waveClearTimer -= effectiveDt;
+      _waveClearTimer -= dt;
       if (_waveClearTimer <= 0) {
         showWaveClearBanner = false;
       }
@@ -1161,7 +1163,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       final u = s.unit;
       if (u != null) {
         final baseAtk = _lookupBaseAtk(u.unitTypeId);
-        total += baseAtk * pow(BalanceConfig.unitAtkLevelBase, u.level - 1);
+        double atk = baseAtk * pow(BalanceConfig.unitAtkLevelBase, u.level - 1);
+        // Apply the same multipliers that DefenseUnit.atk getter uses
+        atk *= relicManager.atkMultiplier *
+            upgradeManager.unitAtkMultiplier *
+            rewardAtkMultiplier *
+            synergyManager.atkMultiplier;
+        if (skillManager.isEffectActive('war_cry')) atk *= 1.5;
+        total += atk;
         count++;
       }
     }

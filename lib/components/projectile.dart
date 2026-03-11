@@ -1,4 +1,4 @@
-import 'dart:math' show pi;
+import 'dart:math' show Random, pi;
 import 'dart:ui';
 
 import 'package:flame/collisions.dart';
@@ -121,9 +121,11 @@ class Projectile extends PositionComponent
     }
   }
 
+  static final Random _rng = Random();
+
   /// Elemental: apply random fire/ice/poison effect.
   void _applyElementalEffect(DefenseEnemy enemy) {
-    final roll = DateTime.now().microsecond % 3;
+    final roll = _rng.nextInt(3);
     switch (roll) {
       case 0: // Fire: 30% DoT for 3 seconds
         enemy.applyDot(damage * 0.30, 3.0, 'fire');
