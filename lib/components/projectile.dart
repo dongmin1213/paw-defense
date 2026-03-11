@@ -1,4 +1,4 @@
-import 'dart:math' show Random, pi;
+import 'dart:math' show Random, pi, cos, sin;
 import 'dart:ui';
 
 import 'package:flame/collisions.dart';
@@ -6,6 +6,19 @@ import 'package:flame/components.dart';
 
 import '../game/defense_game.dart';
 import 'defense_enemy.dart';
+
+/// Visual profile for each unit type's projectile.
+class _ProjProfile {
+  final Color color;
+  final Color trailColor;
+  final double trailAlpha;
+
+  const _ProjProfile({
+    required this.color,
+    required this.trailColor,
+    this.trailAlpha = 0.6,
+  });
+}
 
 /// A projectile fired by a [DefenseUnit] toward an enemy.
 /// Moves in a straight line, deals damage on collision, then is removed
@@ -26,6 +39,11 @@ class Projectile extends PositionComponent
   /// Track already-hit enemies to avoid double damage on piercing projectiles.
   final Set<DefenseEnemy> _hitEnemies = {};
 
+  // ── Trail system ──
+  static const int _trailLength = 8;
+  final List<double> _trailX = [];
+  final List<double> _trailY = [];
+
   Projectile({
     required Vector2 spawnPosition,
     required this.velocity,
@@ -35,7 +53,8 @@ class Projectile extends PositionComponent
     this.splashRadius = 0,
     this.ownerTypeId = '',
     bool isSplit = false,
-  }) : _isSplit = isSplit, super(
+  })  : _isSplit = isSplit,
+        super(
           position: spawnPosition,
           size: Vector2(6, 6),
           anchor: Anchor.center,
@@ -50,6 +69,14 @@ class Projectile extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Record trail position before moving
+    _trailX.add(position.x);
+    _trailY.add(position.y);
+    if (_trailX.length > _trailLength) {
+      _trailX.removeAt(0);
+      _trailY.removeAt(0);
+    }
 
     // Move along velocity
     position.add(velocity * dt);
@@ -77,8 +104,8 @@ class Projectile extends PositionComponent
       other.takeDamage(damage, sourcePosition: position.clone());
 
       // Hit impact particle
-      game.particleEffect.spawnProjectileHit(
-        other.position.x, other.position.y, _projectileColor);
+      game.particleEffect
+          .spawnProjectileHit(other.position.x, other.position.y, _profile.color);
 
       if (isSplash && splashRadius > 0) {
         _applySplashDamage(other.position);
@@ -154,31 +181,144 @@ class Projectile extends PositionComponent
     }
   }
 
+  // ══════════════════════════════════════
+  // Visual Profile Per Unit Type
+  // ══════════════════════════════════════
+
+  static const Map<String, _ProjProfile> _profiles = {
+    'cat_archer': _ProjProfile(
+        color: Color(0xFFFFD700), trailColor: Color(0xFFFFD700)),
+    'dog_warrior': _ProjProfile(
+        color: Color(0xFFB0BEC5), trailColor: Color(0xFF90A4AE)),
+    'rabbit_mage': _ProjProfile(
+        color: Color(0xFF9C27B0), trailColor: Color(0xFFCE93D8)),
+    'bear_tanker': _ProjProfile(
+        color: Color(0xFF8D6E63), trailColor: Color(0xFFA1887F)),
+    'fox_assassin': _ProjProfile(
+        color: Color(0xFFFF3D00), trailColor: Color(0xFFFF6E40)),
+    'bird_scout': _ProjProfile(
+        color: Color(0xFF42A5F5), trailColor: Color(0xFF90CAF9)),
+    'turtle_healer': _ProjProfile(
+        color: Color(0xFF66BB6A), trailColor: Color(0xFFA5D6A7)),
+    'owl_wizard': _ProjProfile(
+        color: Color(0xFF651FFF), trailColor: Color(0xFFB388FF)),
+  };
+
+  _ProjProfile get _profile {
+    // Piercing/splash override color but keep trail
+    if (isPiercing) {
+      return _ProjProfile(
+          color: const Color(0xFFE040FB),
+          trailColor: const Color(0xFFEA80FC));
+    }
+    if (isSplash) {
+      return _ProjProfile(
+          color: const Color(0xFFFF6600),
+          trailColor: const Color(0xFFFF9800));
+    }
+    return _profiles[ownerTypeId] ??
+        const _ProjProfile(
+            color: Color(0xFFFFD700), trailColor: Color(0xFFFFD700));
+  }
+
   @override
   void render(Canvas canvas) {
+    final profile = _profile;
+
+    // ── Draw trail ──
+    if (_trailX.isNotEmpty) {
+      final trailPaint = Paint()..isAntiAlias = false;
+      final len = _trailX.length;
+      for (int i = 0; i < len; i++) {
+        final t = i / len; // 0.0 = oldest, ~1.0 = newest
+        final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
+        final trailSize = 1.5 + t * 2.5;
+        final dx = _trailX[i] - position.x;
+        final dy = _trailY[i] - position.y;
+        trailPaint.color = profile.trailColor.withValues(alpha: alpha);
+        canvas.drawRect(
+          Rect.fromCenter(
+            center: Offset(dx + size.x / 2, dy + size.y / 2),
+            width: trailSize,
+            height: trailSize,
+          ),
+          trailPaint,
+        );
+      }
+    }
+
+    // ── Draw projectile shape per unit type ──
     final paint = Paint()
       ..isAntiAlias = false
-      ..color = _projectileColor;
-
-    // Simple pixel-art projectile: a small square with a bright core
-    canvas.drawRect(
-      Rect.fromLTWH(1, 1, size.x - 2, size.y - 2),
-      paint,
-    );
-
-    // Bright core pixel
+      ..color = profile.color;
     final corePaint = Paint()
       ..isAntiAlias = false
       ..color = const Color(0xFFFFFFFF);
-    canvas.drawRect(
-      Rect.fromLTWH(2, 2, 2, 2),
-      corePaint,
-    );
+
+    _renderShape(canvas, paint, corePaint);
   }
 
-  Color get _projectileColor {
-    if (isPiercing) return const Color(0xFFE040FB); // purple for piercing
-    if (isSplash) return const Color(0xFFFF6600); // orange for splash
-    return const Color(0xFFFFD700); // gold default
+  void _renderShape(Canvas canvas, Paint paint, Paint corePaint) {
+    switch (ownerTypeId) {
+      case 'cat_archer':
+        // Arrow: elongated vertical
+        canvas.drawRect(Rect.fromLTWH(2, 0, 2, 6), paint);
+        canvas.drawRect(Rect.fromLTWH(1, 0, 4, 2), corePaint);
+        break;
+      case 'dog_warrior':
+        // Sword slash: wide horizontal
+        canvas.drawRect(Rect.fromLTWH(0, 2, 6, 2), paint);
+        canvas.drawRect(Rect.fromLTWH(4, 2, 2, 2), corePaint);
+        break;
+      case 'rabbit_mage':
+        // Magic orb: rounded glow
+        canvas.drawRect(Rect.fromLTWH(1, 1, 4, 4), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
+        // Side sparkle pixels
+        final sparkPaint = Paint()
+          ..isAntiAlias = false
+          ..color = const Color(0x88FFFFFF);
+        canvas.drawRect(Rect.fromLTWH(0, 3, 1, 1), sparkPaint);
+        canvas.drawRect(Rect.fromLTWH(5, 2, 1, 1), sparkPaint);
+        break;
+      case 'bear_tanker':
+        // Rock: big square
+        canvas.drawRect(Rect.fromLTWH(0, 0, 6, 6), paint);
+        canvas.drawRect(Rect.fromLTWH(1, 1, 2, 2), corePaint);
+        break;
+      case 'fox_assassin':
+        // Shuriken: X shape
+        canvas.drawRect(Rect.fromLTWH(0, 2, 6, 2), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 0, 2, 6), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
+        break;
+      case 'bird_scout':
+        // Feather: diagonal slant
+        canvas.drawRect(Rect.fromLTWH(1, 0, 2, 5), paint);
+        canvas.drawRect(Rect.fromLTWH(3, 1, 2, 3), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 1, 2, 2), corePaint);
+        break;
+      case 'turtle_healer':
+        // Heal bolt: + shape
+        canvas.drawRect(Rect.fromLTWH(2, 0, 2, 6), paint);
+        canvas.drawRect(Rect.fromLTWH(0, 2, 6, 2), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
+        break;
+      case 'owl_wizard':
+        // Arcane star: cross + X
+        canvas.drawRect(Rect.fromLTWH(2, 0, 2, 6), paint);
+        canvas.drawRect(Rect.fromLTWH(0, 2, 6, 2), paint);
+        canvas.drawRect(Rect.fromLTWH(1, 1, 1, 1), paint);
+        canvas.drawRect(Rect.fromLTWH(4, 1, 1, 1), paint);
+        canvas.drawRect(Rect.fromLTWH(1, 4, 1, 1), paint);
+        canvas.drawRect(Rect.fromLTWH(4, 4, 1, 1), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
+        break;
+      default:
+        // Default: simple square with bright core
+        canvas.drawRect(Rect.fromLTWH(1, 1, 4, 4), paint);
+        canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
+        break;
+    }
   }
 }

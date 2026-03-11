@@ -31,6 +31,8 @@ lib/
 │   ├── wall.dart, unit_slot.dart, defense_unit.dart
 │   ├── defense_enemy.dart, projectile.dart
 │   ├── defense_particle.dart, damage_number.dart
+│   ├── reactive_background.dart          # 강도 반응형 동적 배경
+│   ├── skill_effect_overlay.dart         # 스킬별 풀스크린 시각 이펙트
 ├── data/                              # 데이터 정의 (수치 변경은 여기만)
 │   ├── unit_data.dart                 # 유닛 8종 + 진화 8종
 │   ├── hybrid_unit_data.dart          # 하이브리드 유닛 28종 (이종 머지)
@@ -179,7 +181,17 @@ Pause, RelicSelection, Tutorial, Settings, Achievement, Daily, Codex
 ### 액티브 스킬 시스템 (8종)
 - 킬 기반 게이지 충전 → 지배적 유닛 타입의 스킬 자동 판별
 - 화살비/전투의함성/메테오/얼음벽/암살표식/폭풍소환/성벽회복/마력폭발
+- 스킬별 풀스크린 시각 이펙트 오버레이 (`skill_effect_overlay.dart`)
 - `systems/skill_manager.dart`
+
+### 시각적 스펙터클 시스템 (6 Phase)
+- **유닛 궤도 회전**: 성벽 주위 공전, 웨이브/유닛수에 따라 가속, 스프라이트 좌우반전
+- **투사체 트레일+타입별 모양**: 8종 유닛별 고유 픽셀 모양+색상, 8프레임 잔상 링버퍼
+- **적 스웜 밀도**: 적 수 2배 + HP 0.55배 (총 웨이브 HP 유지), ±15% 속도 편차
+- **사망이펙트+골드비산**: 15~40파티클 사망, 충격파 링(24개), 호밍 골드 파티클
+- **반응형 배경**: 전투 강도 연동 색상 시프트 (네이비→크림슨), 40개 별 파티클, 방사형 펄스
+- **스킬 시각 이펙트**: 8종 스킬별 화면 가득 오버레이 (화살비/메테오/서리/번개 등)
+- 관련 파일: `balance_config.dart` (궤도/스웜 파라미터), `reactive_background.dart`, `skill_effect_overlay.dart`
 
 ### 웨이브 변형 시스템 (10종)
 - 웨이브 10부터 5웨이브마다 랜덤 적용 (보스 웨이브 제외)

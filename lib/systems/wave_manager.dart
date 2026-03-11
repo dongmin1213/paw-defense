@@ -74,13 +74,13 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     game.onWaveStart(currentWave);
   }
 
-  /// Base enemy count per wave tier with late-game scaling.
+  /// Base enemy count per wave tier with late-game scaling (swarm density).
   int get _baseEnemyCount {
-    // Late-game scaling: massive enemy counts for spectacle
-    if (currentWave > 30) return 60;
-    if (currentWave > 24) return 40;
-    if (currentWave > 20) return 30;
-    if (currentWave > 15) return 20;
+    // Late-game scaling: massive enemy counts for visual spectacle
+    if (currentWave > 30) return 100;
+    if (currentWave > 24) return 75;
+    if (currentWave > 20) return 55;
+    if (currentWave > 15) return 40;
 
     for (final tier in BalanceConfig.baseEnemyCountTiers) {
       if (currentWave <= tier[0]) return tier[1];
@@ -177,26 +177,29 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     return available[_rng.nextInt(available.length)].id;
   }
 
-  /// Scale HP by wave and unit count, with wave modifier multiplier.
+  /// Scale HP by wave and unit count, with wave modifier and swarm multiplier.
   double _scaledHp(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseHp = data?.baseHp ?? 20;
     return baseHp *
+        BalanceConfig.swarmHpMultiplier *
         pow(BalanceConfig.enemyHpWaveScale, currentWave).toDouble() *
         (1 + unitCount * BalanceConfig.enemyHpUnitScale) *
         waveModifier.enemyHpMultiplier;
   }
 
-  /// Scale speed by wave and unit count, with wave modifier multiplier.
+  /// Scale speed by wave and unit count, with ±15% random variation.
   double _scaledSpeed(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseSpeed = data?.baseSpeed ?? 40;
+    final variation = 0.85 + _rng.nextDouble() * 0.3; // 0.85~1.15
     return baseSpeed *
         (1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
         (1 +
             max(0, currentWave - BalanceConfig.enemySpeedLateWaveStart) *
                 BalanceConfig.enemySpeedLateWaveScale) *
-        waveModifier.enemySpeedMultiplier;
+        waveModifier.enemySpeedMultiplier *
+        variation;
   }
 
   /// Generate a spawn position just outside one of the 4 screen edges.

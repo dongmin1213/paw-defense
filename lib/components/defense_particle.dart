@@ -43,20 +43,26 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Enemy death burst.
+  /// Enemy death burst — enhanced with more particles.
   void spawnEnemyDeath(double wx, double wy) {
     final rng = Random();
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < 15; i++) {
       final angle = rng.nextDouble() * 2 * pi;
-      final speed = 40 + rng.nextDouble() * 70;
+      final speed = 40 + rng.nextDouble() * 80;
+      const colors = [
+        Color(0xFFFF4444),
+        Color(0xFFFF6666),
+        Color(0xFFCC3333),
+        Color(0xFFFFAA44),
+      ];
       _particles.add(_FxParticle(
-        x: wx,
-        y: wy,
+        x: wx + (rng.nextDouble() - 0.5) * 6,
+        y: wy + (rng.nextDouble() - 0.5) * 6,
         vx: cos(angle) * speed,
-        vy: sin(angle) * speed - 20,
+        vy: sin(angle) * speed - 25,
         size: 2 + rng.nextDouble() * 3,
         life: 0.3 + rng.nextDouble() * 0.3,
-        color: const Color(0xFFFF4444),
+        color: colors[rng.nextInt(colors.length)],
       ));
     }
   }
@@ -361,18 +367,63 @@ class DefenseParticle extends PositionComponent
   /// Scaled enemy death effect — size proportional to combo.
   void spawnEnemyDeathScaled(double wx, double wy, double scale) {
     final rng = Random();
-    final count = (8 * scale).clamp(4, 20).toInt();
+    final count = (15 * scale).clamp(8, 40).toInt();
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
-      final speed = (40 + rng.nextDouble() * 70) * scale;
+      final speed = (50 + rng.nextDouble() * 90) * scale;
+      const colors = [
+        Color(0xFFFF4444),
+        Color(0xFFFF6666),
+        Color(0xFFFFAA44),
+        Color(0xFFFFDD44),
+      ];
+      _particles.add(_FxParticle(
+        x: wx + (rng.nextDouble() - 0.5) * 8 * scale,
+        y: wy + (rng.nextDouble() - 0.5) * 8 * scale,
+        vx: cos(angle) * speed,
+        vy: sin(angle) * speed - 30 * scale,
+        size: (2.5 + rng.nextDouble() * 3) * scale,
+        life: (0.4 + rng.nextDouble() * 0.3) * scale.clamp(1.0, 2.0),
+        color: colors[rng.nextInt(colors.length)],
+      ));
+    }
+  }
+
+  /// Shockwave ring — expanding ring of particles (boss kill, big combos).
+  void spawnShockwaveRing(double wx, double wy, Color color) {
+    for (int i = 0; i < 24; i++) {
+      final angle = i / 24 * 2 * pi;
+      _particles.add(_FxParticle(
+        x: wx,
+        y: wy,
+        vx: cos(angle) * 200,
+        vy: sin(angle) * 200,
+        size: 3,
+        life: 0.35,
+        color: color,
+      ));
+    }
+  }
+
+  /// Gold scatter on kill — homing particles that fly toward the wall.
+  void spawnGoldScatter(double wx, double wy, int amount,
+      double wallX, double wallY) {
+    final rng = Random();
+    final count = amount.clamp(1, 5);
+    for (int i = 0; i < count; i++) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 40 + rng.nextDouble() * 60;
       _particles.add(_FxParticle(
         x: wx,
         y: wy,
         vx: cos(angle) * speed,
-        vy: sin(angle) * speed - 20,
-        size: (2 + rng.nextDouble() * 3) * scale,
-        life: (0.3 + rng.nextDouble() * 0.3) * scale,
-        color: const Color(0xFFFF4444),
+        vy: sin(angle) * speed - 30,
+        size: 3 + rng.nextDouble() * 2,
+        life: 0.8 + rng.nextDouble() * 0.4,
+        color: const Color(0xFFFFD700),
+        isHoming: true,
+        homeX: wallX,
+        homeY: wallY,
       ));
     }
   }
@@ -382,17 +433,29 @@ class DefenseParticle extends PositionComponent
     super.update(dt);
 
     for (final p in _particles) {
+      if (p.isHoming && p.life < p.maxLife * 0.5) {
+        // Homing: accelerate toward wall after initial burst
+        final dx = p.homeX - p.x;
+        final dy = p.homeY - p.y;
+        final dist = sqrt(dx * dx + dy * dy);
+        if (dist > 1) {
+          const accel = 400.0;
+          p.vx += (dx / dist) * accel * dt;
+          p.vy += (dy / dist) * accel * dt;
+        }
+      } else {
+        p.vy += 50 * dt; // light gravity for non-homing
+      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 50 * dt; // light gravity
       p.life -= dt;
     }
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Cap particle count for performance
-    if (_particles.length > 300) {
-      _particles.removeRange(0, _particles.length - 300);
+    // Adaptive cap: 600 base, reduced when too many
+    if (_particles.length > 600) {
+      _particles.removeRange(0, _particles.length - 600);
     }
   }
 
@@ -416,7 +479,11 @@ class DefenseParticle extends PositionComponent
 
 class _FxParticle {
   double x, y, vx, vy, size, life;
+  final double maxLife;
   final Color color;
+  final bool isHoming;
+  final double homeX;
+  final double homeY;
 
   _FxParticle({
     required this.x,
@@ -424,7 +491,11 @@ class _FxParticle {
     required this.vx,
     required this.vy,
     required this.size,
-    required this.life,
+    required double life,
     required this.color,
-  });
+    this.isHoming = false,
+    this.homeX = 0,
+    this.homeY = 0,
+  })  : life = life,
+        maxLife = life;
 }

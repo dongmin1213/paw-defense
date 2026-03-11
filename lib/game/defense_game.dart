@@ -31,6 +31,8 @@ import '../data/balance_config.dart';
 import '../data/hybrid_unit_data.dart';
 import '../data/relic_data.dart';
 import '../components/damage_number.dart';
+import '../components/reactive_background.dart';
+import '../components/skill_effect_overlay.dart';
 import '../ui/defense_hud.dart' as hud;
 
 /// Main game class for castle defense mode.
@@ -67,6 +69,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   // ── Core Components ──
   late Wall wall;
   late DefenseParticle particleEffect;
+  late ReactiveBackground reactiveBackground;
+  late SkillEffectOverlay skillEffectOverlay;
   final List<merge.UnitSlot> _unitSlots = [];
 
   /// Cached living enemy list, lazily rebuilt when dirty.
@@ -99,6 +103,18 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   bool isPlaying = false;
   bool _isPaused = false;
   double gameSpeed = 1.0; // 1x or 2x speed toggle
+
+  // ── Unit Orbit ──
+  double orbitAngle = 0;
+
+  /// Orbit speed in rad/s — scales with wave & unit count for visual snowball.
+  double get orbitSpeed {
+    final unitCount =
+        _unitSlots.where((s) => s.isOccupied).length;
+    return BalanceConfig.orbitBaseSpeed *
+        (1.0 + currentWave * BalanceConfig.orbitWaveScale) *
+        (1.0 + unitCount * BalanceConfig.orbitUnitScale);
+  }
 
   // ── Merge/Achievement tracking ──
   int _totalMerges = 0;
@@ -202,12 +218,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   @override
   Future<void> onLoad() async {
-    // Background color
+    // Dynamic reactive background (replaces static navy)
     camera.viewfinder.anchor = Anchor.topLeft;
-    camera.backdrop.add(RectangleComponent(
-      size: Vector2(gameWidth, gameHeight),
-      paint: _bgPaint,
-    ));
+    reactiveBackground = ReactiveBackground();
+    camera.backdrop.add(reactiveBackground);
 
     // Initialize managers
     upgradeManager = DefenseUpgradeManager();
@@ -250,6 +264,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     skillManager = SkillManager();
     world.add(skillManager);
 
+    skillEffectOverlay = SkillEffectOverlay();
+    world.add(skillEffectOverlay);
+
     achievementManager = AchievementManager();
     await achievementManager.load();
 
@@ -269,12 +286,6 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Show main menu
     overlays.add('DefenseMainMenu');
   }
-
-  static final _bgPaint = () {
-    final paint = basicPaint();
-    paint.color = const Color(0xFF1A1A2E);
-    return paint;
-  }();
 
   static Paint basicPaint() => Paint()..isAntiAlias = false;
 
@@ -641,6 +652,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Mark cached enemy list for lazy rebuild
     _livingEnemiesDirty = true;
 
+    // Advance unit orbit angle
+    orbitAngle += orbitSpeed * effectiveDt;
+
     // Apply zoom punch
     camera.viewfinder.zoom = gameFeel.currentZoom;
 
@@ -701,6 +715,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Called by WaveManager at the start of each wave.
   void onWaveStart(int waveNumber) {
+    // Reactive background pulse on wave start (blue → crimson on boss waves)
+    reactiveBackground.pulse(
+      waveManager.isBossWave
+          ? const Color(0xFFFF3D00) // crimson for boss wave
+          : const Color(0xFF42A5F5), // blue for normal wave
+      duration: waveManager.isBossWave ? 1.2 : 0.6,
+    );
+
     // Relic: wave gold bonus
     final bonusGold = relicManager.onWaveStart(waveNumber, _rng);
     if (bonusGold > 0) {
@@ -861,6 +883,13 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       );
     }
 
+    // Gold scatter visual (VS-style XP gems flying to wall)
+    particleEffect.spawnGoldScatter(
+      enemy.position.x, enemy.position.y,
+      (1 + (comboScale - 1.0) * 2).toInt(),
+      wall.position.x, wall.position.y,
+    );
+
     // Relic: bonus gold on kill
     final bonusGold = relicManager.onEnemyKilled(_rng);
     if (bonusGold > 0) {
@@ -903,6 +932,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         enemy.position.x,
         enemy.position.y,
       );
+      particleEffect.spawnShockwaveRing(
+        enemy.position.x,
+        enemy.position.y,
+        const Color(0xFFFF6600),
+      );
+
+      // Boss kill: intense pulse on reactive background
+      reactiveBackground.pulse(const Color(0xFFFF6600), duration: 1.0);
 
       // Boss gold bonus from relics
       if (relicManager.bossGoldMultiplier > 1.0) {
@@ -1081,6 +1118,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Called when a perfect wave is achieved.
   void onPerfectWave(int consecutiveCount) {
     gameFeel.onPerfectWave();
+    // Golden pulse for perfect wave
+    reactiveBackground.pulse(const Color(0xFFFFD700), duration: 0.8);
     // Bonus gold for perfect waves
     addGold(BalanceConfig.perfectWaveGoldPerStreak * consecutiveCount,
         popupPos: wall.position);
@@ -1157,6 +1196,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final skillColor = _getSkillColor(effectId);
     particleEffect.spawnSkillActivation(
       wall.position.x, wall.position.y, skillColor);
+    skillEffectOverlay.activate(effectId, skillManager.effectMaxDuration);
+    reactiveBackground.pulse(skillColor, duration: 0.8);
     gameFeel.slowMotion(scale: 0.3, duration: 0.3);
     gameFeel.zoomPunch(targetZoom: 1.05, duration: 0.3);
     soundManager.playMerge(); // Reuse existing sound

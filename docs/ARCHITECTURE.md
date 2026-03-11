@@ -188,6 +188,8 @@ save_manager.dart       ← defense_game, main.dart (앱 라이프사이클), de
 sound_manager.dart      ← defense_game, main.dart (앱 라이프사이클)
 achievement_manager.dart ← defense_game, achievement_screen, settings_screen
 skill_manager.dart      ← defense_game, defense_hud (스킬 게이지/발동)
+reactive_background.dart ← defense_game (강도 연동, 펄스 트리거)
+skill_effect_overlay.dart ← defense_game (스킬 발동 시 activate())
 wave_modifier.dart      ← wave_manager, defense_hud (변형 배너)
 synergy_manager.dart    ← defense_game, defense_unit
 codex_manager.dart      ← defense_game, codex_screen
@@ -351,9 +353,43 @@ _relicEffectFrame++;
 ```
 
 ### 파티클 최적화
-- 파티클 캡: 300개 (초과 시 자동 제거)
+- 파티클 캡: 600개 (초과 시 자동 제거)
 - 알파 < 0.05 파티클 렌더 스킵
 - `clear()` 메서드로 게임 시작/재시작 시 일괄 정리
+- 호밍 파티클: 수명 50% 이후 400px/s² 가속으로 타겟 수렴
+
+### 시각적 스펙터클 시스템 (6 Phase)
+```
+Phase 1: 유닛 궤도 회전 (unit_slot.dart, defense_unit.dart)
+  → orbitAngle += orbitSpeed * dt (defense_game.dart)
+  → orbitSpeed = base × (1 + wave × waveScale) × (1 + unitCount × unitScale)
+  → 슬롯/유닛 각각 sin/cos 궤도 계산 + 스프라이트 좌우반전
+
+Phase 2: 투사체 트레일 + 타입별 모양 (projectile.dart)
+  → 8프레임 링버퍼 (trailX, trailY) → 알파/크기 감쇠 렌더
+  → _ProjProfile: 8종 유닛별 고유 색상+트레일 프로필
+  → _renderShape(): 8종 픽셀 모양 (화살/검기/마법구/바위/수리검/깃털/힐볼트/아케인)
+
+Phase 3: 적 스웜 밀도 (balance_config.dart, wave_manager.dart)
+  → baseEnemyCount 2배 + swarmHpMultiplier 0.55 (총 웨이브 HP 동일)
+  → ±15% 속도 편차 (_scaledSpeed에 0.85~1.15 랜덤)
+
+Phase 4: 사망이펙트 + 골드비산 (defense_particle.dart)
+  → 15~40파티클 사망 (콤보 스케일링)
+  → spawnShockwaveRing: 24개 방사형 확산
+  → spawnGoldScatter: 호밍 파티클 (비산→성벽 수렴)
+
+Phase 5: 반응형 배경 (reactive_background.dart)
+  → intensity = enemyCount/50 × 0.4 + comboScale × 0.3 + wave/50 × 0.3
+  → 색상: 네이비(0xFF1A1A2E) → 크림슨(0xFF2E1A1A)
+  → 40개 별 파티클 (사전 할당, GC 없음)
+  → pulse(Color, duration): 방사형 그라디언트 펄스
+
+Phase 6: 스킬 시각 이펙트 (skill_effect_overlay.dart)
+  → 8종 스킬별 풀스크린 오버레이 (SkillEffectOverlay.activate())
+  → 독립 파티클 풀 (최대 60개), 자동 리스폰 (arrow_rain, storm_call)
+  → 엣지 틴트 + 특수 오버레이 (서리 테두리, 메테오 글로우, 번개 플래시 등)
+```
 
 ## 새 컨텐츠 추가 가이드
 

@@ -31,7 +31,7 @@ class BalanceConfig {
   static const double betweenWavePause = 3.0;
 
   /// Min spawn interval (max spawn rate).
-  static const double minSpawnInterval = 0.15;
+  static const double minSpawnInterval = 0.08;
 
   /// Max spawn interval (min spawn rate).
   static const double maxSpawnInterval = 3.0;
@@ -43,24 +43,28 @@ class BalanceConfig {
   static const int rewardInterval = 5;
 
   /// Base enemy count per wave tier: [maxWave, count].
+  /// Doubled for visual density — compensated by swarmHpMultiplier.
   static const List<List<int>> baseEnemyCountTiers = [
-    [5, 5],
-    [10, 7],
-    [20, 10],
-    [30, 13],
+    [5, 10],
+    [10, 15],
+    [20, 22],
+    [30, 30],
   ];
 
   /// Default base enemy count for waves beyond all tiers.
-  static const int baseEnemyCountDefault = 16;
+  static const int baseEnemyCountDefault = 35;
 
   /// Enemy count scales with wave: base + wave * this.
-  static const double enemyCountWaveScale = 0.8;
+  static const double enemyCountWaveScale = 1.2;
 
   /// Enemy count scales with units: count * (1 + units * this).
   static const double enemyCountUnitScale = 0.04;
 
   /// Max enemies per wave (hard cap).
-  static const int maxEnemiesPerWave = 200;
+  static const int maxEnemiesPerWave = 300;
+
+  /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
+  static const double swarmHpMultiplier = 0.55;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling
@@ -237,6 +241,19 @@ class BalanceConfig {
 
   /// Splash radius for splash units.
   static const double splashRadius = 40.0;
+
+  // ══════════════════════════════════════
+  // Unit Orbit
+  // ══════════════════════════════════════
+
+  /// Base orbit speed in radians/sec (one full rotation ≈ 20 seconds).
+  static const double orbitBaseSpeed = 0.3;
+
+  /// Orbit speed bonus per wave: speed *= (1 + wave * this).
+  static const double orbitWaveScale = 0.02;
+
+  /// Orbit speed bonus per placed unit: speed *= (1 + units * this).
+  static const double orbitUnitScale = 0.05;
 
   // ══════════════════════════════════════
   // Viewport

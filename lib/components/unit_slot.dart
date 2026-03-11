@@ -76,6 +76,16 @@ class UnitSlot extends PositionComponent with HasGameReference<DefenseGame> {
   void update(double dt) {
     super.update(dt);
     _animTimer += dt;
+
+    // Orbit: update position around wall each frame
+    if (game.isPlaying) {
+      final wallPos = game.wall.position;
+      final totalSlots = game.maxSlots;
+      final angle =
+          game.orbitAngle + (2 * pi * slotIndex / totalSlots) - (pi / 2);
+      position.x = wallPos.x + cos(angle) * slotRadius;
+      position.y = wallPos.y + sin(angle) * slotRadius;
+    }
   }
 
   @override

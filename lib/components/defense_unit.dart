@@ -10,6 +10,7 @@ import '../game/defense_game.dart';
 import '../renderers/unit_renderer.dart';
 import 'defense_enemy.dart';
 import 'projectile.dart';
+import 'unit_slot.dart' as slot_comp;
 
 /// A defensive unit placed in a [UnitSlot] that automatically attacks enemies.
 /// Units can be leveled up via merging (two same-type, same-level units → level+1).
@@ -284,6 +285,16 @@ class DefenseUnit extends PositionComponent
     _attackTimer += dt;
     if (_recoilTimer > 0) _recoilTimer -= dt;
 
+    // Follow orbit position from slot
+    if (slotIndex >= 0 && game.isPlaying) {
+      final wallPos = game.wall.position;
+      final totalSlots = game.maxSlots;
+      final angle =
+          game.orbitAngle + (2 * pi * slotIndex / totalSlots) - (pi / 2);
+      position.x = wallPos.x + cos(angle) * slot_comp.UnitSlot.slotRadius;
+      position.y = wallPos.y + sin(angle) * slot_comp.UnitSlot.slotRadius;
+    }
+
     // Re-acquire target periodically or if target is dead/gone
     if (_target == null || _target!.isDead || !_target!.isMounted) {
       _findTarget();
@@ -321,6 +332,20 @@ class DefenseUnit extends PositionComponent
   @override
   void render(Canvas canvas) {
     canvas.save();
+
+    // Flip sprite when orbiting leftward (moving left)
+    bool _flipX = false;
+    if (slotIndex >= 0 && game.isPlaying) {
+      final totalSlots = game.maxSlots;
+      final angle =
+          game.orbitAngle + (2 * pi * slotIndex / totalSlots) - (pi / 2);
+      // Tangent direction: if sin(angle) > 0, unit moves left → flip
+      _flipX = sin(angle) > 0;
+    }
+    if (_flipX) {
+      canvas.translate(size.x, 0);
+      canvas.scale(-1, 1);
+    }
 
     // Idle bobbing animation when no target (breathing effect)
     if (_target == null) {
