@@ -3,7 +3,7 @@ import 'package:flame/components.dart';
 import '../game/defense_game.dart';
 
 /// Game feel system for castle defense.
-/// Provides hit stop, slow motion, zoom punch,
+/// Provides hit stop, slow motion, zoom punch, screen shake,
 /// and auto-merge / auto-place systems.
 class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   // ── Hit Stop (frame freeze) ──
@@ -20,6 +20,21 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   double _zoomPunchDuration = 0.3;
   double _zoomPunchTarget = 1.0;
   double currentZoom = 1.0;
+
+  // ── Screen Shake ──
+  double _shakeTimer = 0;
+  double _shakeIntensity = 0;
+  double _shakeFrequency = 40.0;
+  double shakeOffsetX = 0;
+  double shakeOffsetY = 0;
+  bool get isShaking => _shakeTimer > 0;
+
+  // ── Screen Flash ──
+  double _flashTimer = 0;
+  double _flashDuration = 0;
+  int flashColor = 0x00FFFFFF;
+  double get flashAlpha =>
+      _flashTimer > 0 ? (_flashTimer / _flashDuration).clamp(0.0, 1.0) * 0.3 : 0.0;
 
   // ── Auto Systems ──
   double _autoMergeTimer = 0;
@@ -38,6 +53,8 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
     _updateHitStop(dt);
     _updateSlowMotion(dt);
     _updateZoomPunch(dt);
+    _updateScreenShake(dt);
+    _updateFlash(dt);
     _updateAutoSystems(dt);
   }
 
@@ -101,17 +118,69 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   }
 
   // ══════════════════════════════════════
+  // Screen Shake
+  // ══════════════════════════════════════
+
+  /// Shake the screen with given [intensity] for [duration] seconds.
+  /// Higher [frequency] = faster vibration.
+  void screenShake({
+    double intensity = 4.0,
+    double duration = 0.3,
+    double frequency = 40.0,
+  }) {
+    if (intensity > _shakeIntensity || _shakeTimer <= 0) {
+      _shakeIntensity = intensity;
+      _shakeFrequency = frequency;
+    }
+    _shakeTimer = duration;
+  }
+
+  void _updateScreenShake(double dt) {
+    if (_shakeTimer > 0) {
+      _shakeTimer -= dt;
+      final decay = (_shakeTimer / 0.3).clamp(0.0, 1.0);
+      final t = _shakeTimer * _shakeFrequency;
+      shakeOffsetX = sin(t * 1.1) * _shakeIntensity * decay;
+      shakeOffsetY = cos(t * 1.3) * _shakeIntensity * decay * 0.8;
+      if (_shakeTimer <= 0) {
+        shakeOffsetX = 0;
+        shakeOffsetY = 0;
+        _shakeIntensity = 0;
+      }
+    }
+  }
+
+  // ══════════════════════════════════════
+  // Screen Flash
+  // ══════════════════════════════════════
+
+  /// Flash the screen with a color overlay that fades out.
+  void screenFlash({int color = 0xFFFFFFFF, double duration = 0.15}) {
+    flashColor = color;
+    _flashDuration = duration;
+    _flashTimer = duration;
+  }
+
+  void _updateFlash(double dt) {
+    if (_flashTimer > 0) {
+      _flashTimer -= dt;
+    }
+  }
+
+  // ══════════════════════════════════════
   // Castle Defense Presets
   // ══════════════════════════════════════
 
   /// Feedback when a normal enemy is killed.
   void onEnemyKill() {
-    // No visual feedback for normal kills
+    // Subtle micro-shake for satisfying feedback
+    screenShake(intensity: 0.8, duration: 0.05, frequency: 60.0);
   }
 
   /// Feedback when a boss takes a hit.
   void onBossHit() {
     hitStop(duration: 0.04);
+    screenShake(intensity: 2.0, duration: 0.1);
   }
 
   /// Dramatic feedback when a boss is killed.
@@ -119,11 +188,24 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
     hitStop(duration: 0.25);
     slowMotion(scale: 0.2, duration: 1.0);
     zoomPunch(targetZoom: 1.08, duration: 0.5);
+    screenShake(intensity: 8.0, duration: 0.5, frequency: 35.0);
+    screenFlash(color: 0xFFFFAA00, duration: 0.3);
   }
 
   /// Feedback when the wall takes a hit.
-  void onWallHit() {
-    // No visual feedback for wall hits
+  void onWallHit({bool isHeavy = false}) {
+    if (isHeavy) {
+      screenShake(intensity: 5.0, duration: 0.25, frequency: 45.0);
+      screenFlash(color: 0xFFFF4444, duration: 0.2);
+    } else {
+      screenShake(intensity: 2.5, duration: 0.15, frequency: 50.0);
+    }
+  }
+
+  /// Feedback when the wall HP drops below critical threshold.
+  void onWallCritical() {
+    screenFlash(color: 0xFFFF0000, duration: 0.4);
+    screenShake(intensity: 3.0, duration: 0.3);
   }
 
   /// Feedback when units are merged. Scales with resulting level.
@@ -132,6 +214,7 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
       targetZoom: 1.02 + newLevel * 0.01,
       duration: 0.2,
     );
+    screenShake(intensity: 1.0 + newLevel * 0.5, duration: 0.1);
   }
 
   /// Dramatic feedback when a unit evolves (Lv5 + relic).
@@ -139,16 +222,50 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
     hitStop(duration: 0.15);
     slowMotion(scale: 0.3, duration: 0.8);
     zoomPunch(targetZoom: 1.06, duration: 0.4);
+    screenShake(intensity: 4.0, duration: 0.3);
+    screenFlash(color: 0xFFFFD700, duration: 0.3);
+  }
+
+  /// Feedback when a hybrid unit is created.
+  void onHybridMerge() {
+    hitStop(duration: 0.1);
+    slowMotion(scale: 0.4, duration: 0.6);
+    zoomPunch(targetZoom: 1.05, duration: 0.3);
+    screenShake(intensity: 3.0, duration: 0.2);
+    screenFlash(color: 0xFFE040FB, duration: 0.25);
   }
 
   /// Feedback for ascension (prestige reset).
   void onAscension() {
     slowMotion(scale: 0.2, duration: 1.5);
+    screenFlash(color: 0xFFFFFFFF, duration: 0.5);
+    screenShake(intensity: 6.0, duration: 0.4);
   }
 
   /// Feedback for completing a wave without wall damage.
   void onPerfectWave() {
     zoomPunch(targetZoom: 1.03, duration: 0.3);
+    screenFlash(color: 0xFF4CAF50, duration: 0.2);
+  }
+
+  /// Feedback for skill activation.
+  void onSkillActivation() {
+    hitStop(duration: 0.08);
+    slowMotion(scale: 0.3, duration: 0.5);
+    zoomPunch(targetZoom: 1.04, duration: 0.3);
+    screenShake(intensity: 3.0, duration: 0.2);
+  }
+
+  /// Feedback for combo tier change.
+  void onComboTierChange(int tierColor) {
+    screenFlash(color: tierColor, duration: 0.3);
+    screenShake(intensity: 2.0, duration: 0.15);
+  }
+
+  /// Feedback for relic acquisition.
+  void onRelicAcquired() {
+    zoomPunch(targetZoom: 1.03, duration: 0.2);
+    screenFlash(color: 0xFFE040FB, duration: 0.2);
   }
 
   // ══════════════════════════════════════

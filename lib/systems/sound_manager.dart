@@ -1,9 +1,10 @@
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sound and vibration settings manager.
 /// Manages BGM/SFX/vibration toggles and volume levels.
-/// Audio playback via flame_audio.
+/// Audio playback via flame_audio, haptic via HapticFeedback.
 class SoundManager {
   bool _bgmEnabled = true;
   bool _sfxEnabled = true;
@@ -11,6 +12,7 @@ class SoundManager {
   double _bgmVolume = 0.7;
   double _sfxVolume = 1.0;
   bool _bgmPlaying = false;
+  String _currentBgmTrack = '';
 
   bool get bgmEnabled => _bgmEnabled;
   bool get sfxEnabled => _sfxEnabled;
@@ -60,35 +62,164 @@ class SoundManager {
     }
   }
 
-  void playHit() => _playSfx('sfx/hit.ogg');
+  // === Core SFX ===
 
-  void playMerge() => _playSfx('sfx/merge.ogg');
+  void playHit() {
+    _playSfx('sfx/hit.ogg');
+    hapticLight();
+  }
+
+  void playCriticalHit() {
+    _playSfx('sfx/hit.ogg', volumeScale: 1.3);
+    hapticMedium();
+  }
+
+  void playMerge() {
+    _playSfx('sfx/merge.ogg');
+    hapticMedium();
+  }
 
   void playBuy() => _playSfx('sfx/buy.ogg');
 
-  void playWaveClear() => _playSfx('sfx/wave_clear.ogg');
+  void playWaveClear() {
+    _playSfx('sfx/wave_clear.ogg');
+    hapticMedium();
+  }
 
-  void playBossKill() => _playSfx('sfx/boss_kill.ogg');
+  void playBossKill() {
+    _playSfx('sfx/boss_kill.ogg', volumeScale: 1.2);
+    hapticHeavy();
+  }
 
   void playRewardSelect() => _playSfx('sfx/reward.ogg');
 
-  void playGameOver() => _playSfx('sfx/game_over.ogg');
+  void playGameOver() {
+    _playSfx('sfx/game_over.ogg');
+    hapticHeavy();
+  }
 
   void playButtonTap() => _playSfx('sfx/tap.ogg', volumeScale: 0.5);
 
+  // === Extended SFX (AAA-level variety) ===
+
+  void playEvolve() {
+    _playSfx('sfx/merge.ogg', volumeScale: 1.3);
+    hapticHeavy();
+  }
+
+  void playHybridMerge() {
+    _playSfx('sfx/merge.ogg', volumeScale: 1.2);
+    hapticHeavy();
+  }
+
+  void playWallHit() {
+    _playSfx('sfx/hit.ogg', volumeScale: 0.8);
+    hapticLight();
+  }
+
+  void playWallCritical() {
+    _playSfx('sfx/hit.ogg', volumeScale: 1.0);
+    hapticHeavy();
+  }
+
+  void playSkillActivation() {
+    _playSfx('sfx/reward.ogg', volumeScale: 1.1);
+    hapticMedium();
+  }
+
+  void playComboTierUp() {
+    _playSfx('sfx/wave_clear.ogg', volumeScale: 0.8);
+    hapticMedium();
+  }
+
+  void playRelicAcquired() {
+    _playSfx('sfx/reward.ogg', volumeScale: 1.0);
+    hapticMedium();
+  }
+
+  void playSell() => _playSfx('sfx/buy.ogg', volumeScale: 0.7);
+
+  void playWaveStart() => _playSfx('sfx/tap.ogg', volumeScale: 0.8);
+
+  void playBossSpawn() {
+    _playSfx('sfx/boss_kill.ogg', volumeScale: 0.6);
+    hapticMedium();
+  }
+
+  void playPerfectWave() {
+    _playSfx('sfx/wave_clear.ogg', volumeScale: 1.2);
+    hapticMedium();
+  }
+
+  void playAchievement() {
+    _playSfx('sfx/reward.ogg', volumeScale: 1.0);
+    hapticMedium();
+  }
+
+  // === Haptic Feedback ===
+
+  void hapticLight() {
+    if (!_vibrationEnabled) return;
+    HapticFeedback.lightImpact();
+  }
+
+  void hapticMedium() {
+    if (!_vibrationEnabled) return;
+    HapticFeedback.mediumImpact();
+  }
+
+  void hapticHeavy() {
+    if (!_vibrationEnabled) return;
+    HapticFeedback.heavyImpact();
+  }
+
+  void hapticSelection() {
+    if (!_vibrationEnabled) return;
+    HapticFeedback.selectionClick();
+  }
+
   // === BGM playback ===
 
-  void startBgm() {
+  /// Start BGM with the given track. Falls back to bg1 if not found.
+  void startBgm({String track = 'bgm/bg1.ogg'}) {
     if (!_bgmEnabled) return;
+    // Avoid restarting the same track
+    if (_bgmPlaying && _currentBgmTrack == track) return;
     try {
-      FlameAudio.bgm.play('bgm/bg1.ogg', volume: _bgmVolume);
+      FlameAudio.bgm.play(track, volume: _bgmVolume);
       _bgmPlaying = true;
+      _currentBgmTrack = track;
     } catch (_) {
-      // Silently ignore if file not found
+      // Fallback to default track
+      if (track != 'bgm/bg1.ogg') {
+        try {
+          FlameAudio.bgm.play('bgm/bg1.ogg', volume: _bgmVolume);
+          _bgmPlaying = true;
+          _currentBgmTrack = 'bgm/bg1.ogg';
+        } catch (_) {}
+      }
     }
   }
 
+  /// Switch BGM based on game state (adaptive audio).
+  void updateGameMusic({required int wave, required double wallHpPercent}) {
+    // Decide which track to play based on game intensity
+    String targetTrack;
+    if (wallHpPercent < 0.2) {
+      targetTrack = 'bgm/bg1.ogg'; // Intense — use existing, future: crisis track
+    } else if (wave > 0 && wave % 10 == 0) {
+      targetTrack = 'bgm/bg1.ogg'; // Boss wave — future: boss track
+    } else {
+      targetTrack = 'bgm/bg1.ogg'; // Normal gameplay
+    }
+    startBgm(track: targetTrack);
+  }
+
   void stopBgm() {
+    if (!_bgmPlaying) {
+      _bgmPlaying = false;
+      return;
+    }
     try {
       FlameAudio.bgm.stop();
     } catch (_) {}
@@ -123,7 +254,9 @@ class SoundManager {
   /// Dispose audio resources.
   void dispose() {
     stopBgm();
-    FlameAudio.bgm.dispose();
+    try {
+      FlameAudio.bgm.dispose();
+    } catch (_) {}
   }
 
   // === Persistence ===
