@@ -1034,7 +1034,14 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Called when the wall is destroyed — end the run.
   void onWallDestroyed() {
     isPlaying = false;
+    soundManager.stopBgm();
     soundManager.playGameOver();
+
+    // Stop all game components so nothing keeps running in the background
+    _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
 
     // Calculate star reward
     final baseStars = waveManager.currentWave;
@@ -1542,6 +1549,16 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Go back to main menu from results.
   void goToMainMenu() {
+    isPlaying = false;
+    soundManager.stopBgm();
+
+    // Clean up any remaining game components
+    _clearAllUnits();
+    _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
+
     overlays.remove('RunResult');
     overlays.remove('DefenseHud');
     overlays.add('DefenseMainMenu');
