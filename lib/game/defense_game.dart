@@ -356,6 +356,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _unitsBought = 0;
     isPlaying = true;
     _isPaused = false;
+    gameSpeed = 1.0;
 
     // Reset reward buffs
     rewardAtkMultiplier = 1.0;
@@ -533,12 +534,13 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Pause the game.
   void pauseGame() {
+    if (!isPlaying) return;
     _isPaused = true;
-    // Could show a pause overlay
   }
 
   /// Resume the game.
   void resumeGame() {
+    if (!isPlaying) return;
     _isPaused = false;
   }
 
@@ -1033,6 +1035,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Called when the wall is destroyed — end the run.
   void onWallDestroyed() {
+    if (!isPlaying) return; // Prevent double-call
     isPlaying = false;
     soundManager.stopBgm();
     soundManager.playGameOver();
@@ -1497,6 +1500,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Show the wave reward card selection screen.
   void showRewardSelection() {
+    if (!isPlaying) return;
+    if (overlays.isActive('WaveReward') || overlays.isActive('RelicSelection')) {
+      return;
+    }
     _isPaused = true;
     overlays.add('WaveReward');
   }
@@ -1597,7 +1604,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Generate relic choices from relicManager and show the overlay.
   void showRelicSelection() {
+    if (!isPlaying) return;
     if (relicManager.isFull) return;
+    if (overlays.isActive('WaveReward') || overlays.isActive('RelicSelection')) {
+      return;
+    }
 
     final choices = relicManager.generateRelicChoices(
       _rng,
