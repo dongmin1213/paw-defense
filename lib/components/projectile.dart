@@ -72,13 +72,13 @@ class Projectile extends PositionComponent
           anchor: Anchor.center,
           priority: 14,
         ) {
-    // Scale visuals by level: Lv1=1.0, Lv3=1.3, Lv5=1.6, evolved=+0.3
-    _visualScale = 1.0 +
-        (level - 1) * 0.15 +
-        (isEvolved ? 0.3 : 0.0) +
-        (isHybrid ? 0.15 : 0.0);
-    // Trail length: 6 at Lv1, up to 12 at Lv5+evolved
-    _trailLength = (6 + level + (isEvolved ? 2 : 0)).clamp(6, 12);
+    // Scale visuals by level: Lv1=1.2, Lv3=1.8, Lv5=2.4, evolved=+0.5
+    _visualScale = 1.2 +
+        (level - 1) * 0.3 +
+        (isEvolved ? 0.5 : 0.0) +
+        (isHybrid ? 0.3 : 0.0);
+    // Trail length: 10 at Lv1, up to 24 at Lv5+evolved
+    _trailLength = (10 + level * 2 + (isEvolved ? 4 : 0)).clamp(10, 24);
     // Pre-allocate ring buffer for trail
     _trailX = List<double>.filled(_trailLength, 0);
     _trailY = List<double>.filled(_trailLength, 0);
@@ -315,7 +315,7 @@ class Projectile extends PositionComponent
         final idx = (start + i) % _trailLength;
         final t = i / len; // 0.0 = oldest, ~1.0 = newest
         final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
-        final trailSize = (1.5 + t * 2.5) * s;
+        final trailSize = (2.0 + t * 4.0) * s;
         final dx = _trailX[idx] - position.x;
         final dy = _trailY[idx] - position.y;
         _trailPaint.color = profile.trailColor.withValues(alpha: alpha);

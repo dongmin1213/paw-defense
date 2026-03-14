@@ -30,8 +30,8 @@ class DamageNumber extends PositionComponent
   double _elapsed = 0.0;
   double _scale = 1.0;
 
-  static const double _lifetime = 0.8;
-  static const double _floatSpeed = 40.0;
+  static const double _lifetime = 1.2;
+  static const double _floatSpeed = 50.0;
 
   static final Random _rng = Random();
 
@@ -51,8 +51,8 @@ class DamageNumber extends PositionComponent
     this.isCritical = false,
     this.type = DamageNumberType.normal,
   }) : super(position: position.clone()) {
-    // Slight random X offset for visual variety
-    this.position.x += _rng.nextDouble() * 10 - 5;
+    // Random X offset for visual spread (wider scatter)
+    this.position.x += _rng.nextDouble() * 24 - 12;
     // Scale and speed vary by type
     switch (type) {
       case DamageNumberType.critical:

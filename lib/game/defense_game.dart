@@ -1643,18 +1643,18 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// [damageAmount] scales the font size — bigger hits get bigger numbers.
   void showDamageNumber(Vector2 pos, String text, Color color,
       {bool isCritical = false, double damageAmount = 0}) {
-    // Cap visible damage numbers to prevent GPU overload
+    // Cap visible damage numbers — generous limit for visual spectacle
     final existing = world.children.whereType<DamageNumber>();
-    if (existing.length > 25) return; // Skip when too many on screen
+    if (existing.length > 150) return;
 
-    // Scale fontSize by damage amount
-    double fontSize = 8;
+    // Scale fontSize by damage amount — bigger hits get much bigger numbers
+    double fontSize = 12;
     if (damageAmount >= 1000) {
-      fontSize = 12;
+      fontSize = 20;
     } else if (damageAmount >= 500) {
-      fontSize = 10;
+      fontSize = 17;
     } else if (damageAmount >= 100) {
-      fontSize = 9;
+      fontSize = 14;
     }
 
     world.add(DamageNumber(
