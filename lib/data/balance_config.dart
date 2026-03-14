@@ -33,11 +33,11 @@ class BalanceConfig {
   /// Pause between waves in seconds.
   static const double betweenWavePause = 3.0;
 
-  /// Min spawn interval (max spawn rate).
-  static const double minSpawnInterval = 0.08;
+  /// Min spawn interval (max spawn rate) — very fast for swarm density.
+  static const double minSpawnInterval = 0.03;
 
   /// Max spawn interval (min spawn rate).
-  static const double maxSpawnInterval = 3.0;
+  static const double maxSpawnInterval = 1.5;
 
   /// Boss appears every N waves.
   static const int bossInterval = 10;
@@ -46,16 +46,17 @@ class BalanceConfig {
   static const int rewardInterval = 5;
 
   /// Base enemy count per wave tier: [maxWave, count].
-  /// High density from wave 1 for visual spectacle — compensated by swarmHpMultiplier.
+  /// Massive density from wave 1 for screen-filling spectacle — compensated by swarmHpMultiplier.
   static const List<List<int>> baseEnemyCountTiers = [
-    [5, 25],
-    [10, 35],
-    [20, 45],
-    [30, 55],
+    [3, 40],
+    [5, 55],
+    [10, 70],
+    [20, 90],
+    [30, 120],
   ];
 
   /// Default base enemy count for waves beyond all tiers.
-  static const int baseEnemyCountDefault = 65;
+  static const int baseEnemyCountDefault = 150;
 
   /// Enemy count scales with wave: base + wave * this.
   static const double enemyCountWaveScale = 1.2;
@@ -67,8 +68,8 @@ class BalanceConfig {
   static const int maxEnemiesPerWave = 300;
 
   /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
-  /// Lowered to compensate for 2.5x enemy density increase.
-  static const double swarmHpMultiplier = 0.25;
+  /// Very low to compensate for 4-5x enemy density increase.
+  static const double swarmHpMultiplier = 0.15;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling

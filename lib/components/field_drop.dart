@@ -44,7 +44,7 @@ class FieldDrop extends PositionComponent
   static const double _homeMaxSpeed = 500.0;
 
   /// Max active field drops to prevent performance issues.
-  static const int maxDrops = 80;
+  static const int maxDrops = 150;
 
   FieldDrop({
     required Vector2 spawnPosition,

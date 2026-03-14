@@ -76,22 +76,25 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
 
   /// Base enemy count per wave tier with late-game scaling (swarm density).
   int get _baseEnemyCount {
-    // Late-game scaling: massive enemy counts for visual spectacle
-    if (currentWave > 30) return 100;
-    if (currentWave > 24) return 75;
-    if (currentWave > 20) return 55;
-    if (currentWave > 15) return 40;
-
     for (final tier in BalanceConfig.baseEnemyCountTiers) {
       if (currentWave <= tier[0]) return tier[1];
     }
     return BalanceConfig.baseEnemyCountDefault;
   }
 
-  /// Spawn interval: spread enemies evenly across wave duration.
+  /// Spawn interval: front-loaded spawning for screen-filling density.
+  /// First 60% of enemies spawn in the first 40% of wave time.
   double get _spawnInterval {
     if (totalEnemiesInWave <= 0) return 1.0;
-    return (waveDuration / totalEnemiesInWave)
+    final progress = enemiesSpawned / totalEnemiesInWave;
+    // Front-loaded: fast spawn for first 60%, then slow down
+    final effectiveDuration = progress < 0.6
+        ? waveDuration * 0.4  // 60% of enemies in 40% of time
+        : waveDuration * 0.6; // remaining 40% in 60% of time
+    final enemiesInPhase = progress < 0.6
+        ? totalEnemiesInWave * 0.6
+        : totalEnemiesInWave * 0.4;
+    return (effectiveDuration / enemiesInPhase)
         .clamp(BalanceConfig.minSpawnInterval, BalanceConfig.maxSpawnInterval);
   }
 
