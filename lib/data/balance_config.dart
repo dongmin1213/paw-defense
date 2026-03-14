@@ -46,16 +46,16 @@ class BalanceConfig {
   static const int rewardInterval = 5;
 
   /// Base enemy count per wave tier: [maxWave, count].
-  /// Doubled for visual density — compensated by swarmHpMultiplier.
+  /// High density from wave 1 for visual spectacle — compensated by swarmHpMultiplier.
   static const List<List<int>> baseEnemyCountTiers = [
-    [5, 10],
-    [10, 15],
-    [20, 22],
-    [30, 30],
+    [5, 25],
+    [10, 35],
+    [20, 45],
+    [30, 55],
   ];
 
   /// Default base enemy count for waves beyond all tiers.
-  static const int baseEnemyCountDefault = 35;
+  static const int baseEnemyCountDefault = 65;
 
   /// Enemy count scales with wave: base + wave * this.
   static const double enemyCountWaveScale = 1.2;
@@ -67,7 +67,8 @@ class BalanceConfig {
   static const int maxEnemiesPerWave = 300;
 
   /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
-  static const double swarmHpMultiplier = 0.55;
+  /// Lowered to compensate for 2.5x enemy density increase.
+  static const double swarmHpMultiplier = 0.25;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling

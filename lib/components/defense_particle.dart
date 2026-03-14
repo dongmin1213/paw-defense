@@ -12,12 +12,36 @@ import '../game/defense_game.dart';
 class DefenseParticle extends PositionComponent
     with HasGameReference<DefenseGame> {
   final List<_FxParticle> _particles = [];
+  final List<_GroundMark> _groundMarks = [];
 
   DefenseParticle() : super(priority: 60);
 
   /// Remove all active particles.
   void clear() {
     _particles.clear();
+    _groundMarks.clear();
+  }
+
+  /// Spawn a ground impact mark at the given position (enemy death splat).
+  void spawnGroundMark(double x, double y, {String enemyId = ''}) {
+    // Cap ground marks for performance
+    if (_groundMarks.length > 60) {
+      _groundMarks.removeRange(0, _groundMarks.length - 50);
+    }
+    final colors = _deathColorsForEnemy(enemyId);
+    final color = colors[Random().nextInt(colors.length)];
+    final rng = Random();
+    // 1-3 splat marks per death for variety
+    final count = 1 + rng.nextInt(3);
+    for (int i = 0; i < count; i++) {
+      _groundMarks.add(_GroundMark(
+        x: x + (rng.nextDouble() - 0.5) * 16,
+        y: y + (rng.nextDouble() - 0.5) * 12,
+        size: 3.0 + rng.nextDouble() * 5.0,
+        life: 4.0 + rng.nextDouble() * 3.0, // persist 4-7 seconds
+        color: color,
+      ));
+    }
   }
 
   /// Gold coin collect burst at a world position.
@@ -562,10 +586,40 @@ class DefenseParticle extends PositionComponent
     if (_particles.length > 2000) {
       _particles.removeRange(0, _particles.length - 2000);
     }
+
+    // Age ground marks
+    for (final m in _groundMarks) {
+      m.life -= dt;
+    }
+    _groundMarks.removeWhere((m) => m.life <= 0);
   }
 
   @override
   void render(Canvas canvas) {
+    // ── Ground marks (render below particles) ──
+    final markPaint = Paint()..isAntiAlias = false;
+    for (final m in _groundMarks) {
+      // Fade out over the last 2 seconds
+      final alpha = m.life < 2.0 ? (m.life / 2.0).clamp(0.0, 0.4) : 0.4;
+      markPaint.color = m.color.withValues(alpha: alpha);
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset(m.x, m.y), width: m.size, height: m.size * 0.5),
+        markPaint,
+      );
+      // Smaller splatter dots around
+      if (m.size > 4) {
+        markPaint.color = m.color.withValues(alpha: alpha * 0.6);
+        canvas.drawRect(
+          Rect.fromLTWH(m.x + m.size * 0.4, m.y - m.size * 0.2, 2, 2),
+          markPaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(m.x - m.size * 0.5, m.y + m.size * 0.1, 1.5, 1.5),
+          markPaint,
+        );
+      }
+    }
+
     // No camera offset — fixed viewport for defense game
     final paint = Paint()..isAntiAlias = false;
     for (final p in _particles) {
@@ -616,4 +670,18 @@ class _FxParticle {
     this.homeY = 0,
   })  : life = life,
         maxLife = life;
+}
+
+class _GroundMark {
+  final double x, y, size;
+  double life;
+  final Color color;
+
+  _GroundMark({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.life,
+    required this.color,
+  });
 }

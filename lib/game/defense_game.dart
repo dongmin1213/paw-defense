@@ -37,6 +37,7 @@ import '../data/relic_data.dart';
 import '../components/damage_number.dart';
 import '../components/reactive_background.dart';
 import '../components/skill_effect_overlay.dart';
+import '../components/field_drop.dart';
 import '../ui/defense_hud.dart' as hud;
 import '../ui/game_theme.dart' show GameTheme, ColorBlindMode;
 
@@ -970,6 +971,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wall.position.x, wall.position.y,
     );
 
+    // Physical field drops — coins/gems scatter on the ground
+    _spawnFieldDrops(enemy);
+
+    // Ground impact mark (persistent splat)
+    particleEffect.spawnGroundMark(
+      enemy.position.x, enemy.position.y,
+      enemyId: enemy.enemyId,
+    );
+
     // Relic: bonus gold on kill
     final bonusGold = relicManager.onEnemyKilled(_rng);
     if (bonusGold > 0) {
@@ -1069,6 +1079,44 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         source.position.x, source.position.y,
         nearest.position.x, nearest.position.y,
       );
+    }
+  }
+
+  /// Spawn physical field drop items when an enemy dies.
+  void _spawnFieldDrops(DefenseEnemy enemy) {
+    // Count current field drops to prevent performance issues
+    final currentDrops = world.children.whereType<FieldDrop>().length;
+    if (currentDrops >= FieldDrop.maxDrops) return;
+
+    final pos = enemy.position;
+    final isBoss = enemy.enemyId == 'boss';
+
+    // Gold drops: 1-3 per normal enemy, 5-8 per boss
+    final goldCount = isBoss ? 5 + _rng.nextInt(4) : 1 + _rng.nextInt(3);
+    for (int i = 0; i < goldCount && currentDrops + i < FieldDrop.maxDrops; i++) {
+      world.add(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.gold,
+        value: isBoss ? 3 : 1,
+      ));
+    }
+
+    // Occasional gem drop (10% chance, 25% for bosses)
+    if (_rng.nextDouble() < (isBoss ? 0.25 : 0.10)) {
+      world.add(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.gem,
+        value: isBoss ? 5 : 1,
+      ));
+    }
+
+    // Health drop (5% chance, heals wall)
+    if (_rng.nextDouble() < 0.05 && !wall.isDestroyed) {
+      world.add(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.health,
+        value: 2,
+      ));
     }
   }
 
