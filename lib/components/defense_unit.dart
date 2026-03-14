@@ -24,6 +24,8 @@ class DefenseUnit extends PositionComponent
   double _attackTimer = 0;
   double _animTimer = 0;
   DefenseEnemy? _target;
+  double _targetSearchTimer = 0;
+  static const double _targetSearchInterval = 0.15; // search every 150ms instead of every frame
 
   // Stats from UnitData
   final double baseAtk;
@@ -321,14 +323,19 @@ class DefenseUnit extends PositionComponent
       position.y = wallPos.y + sin(angle) * slot_comp.UnitSlot.slotRadius;
     }
 
-    // Re-acquire target periodically or if target is dead/gone
+    // Re-acquire target: immediately if no valid target, throttled otherwise
     if (_target == null || _target!.isDead || !_target!.isMounted) {
       _findTarget();
+      _targetSearchTimer = 0;
     } else {
-      // Check if target moved out of range
-      final dist = position.distanceTo(_target!.position);
-      if (dist > range * 1.2) {
-        _findTarget();
+      _targetSearchTimer += dt;
+      if (_targetSearchTimer >= _targetSearchInterval) {
+        _targetSearchTimer = 0;
+        // Check if target moved out of range
+        final dist = position.distanceTo(_target!.position);
+        if (dist > range * 1.2) {
+          _findTarget();
+        }
       }
     }
 
@@ -343,6 +350,11 @@ class DefenseUnit extends PositionComponent
   // Attack recoil animation
   double _recoilTimer = 0;
   static const double _recoilDuration = 0.1;
+
+  // Cached Paint objects for render()
+  static final Paint _glowPaint = Paint();
+  static final Paint _shimmerPaint = Paint();
+  static final Paint _dotPaint = Paint()..isAntiAlias = false;
 
   /// Sine approximation for idle bob animation.
   double _sin(double x) {
@@ -410,24 +422,22 @@ class DefenseUnit extends PositionComponent
     // Evolved unit glow aura
     if (isEvolved) {
       final glowAlpha = (25 + 15 * _sin(_animTimer * 3).abs()).toInt();
-      final glowPaint = Paint()
-        ..color = Color.fromARGB(glowAlpha, 255, 215, 0);
+      _glowPaint.color = Color.fromARGB(glowAlpha, 255, 215, 0);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.55,
-        glowPaint,
+        _glowPaint,
       );
     }
 
     // Hybrid unit purple shimmer
     if (isHybrid && !isEvolved) {
       final shimmerAlpha = (18 + 12 * _sin(_animTimer * 4).abs()).toInt();
-      final shimmerPaint = Paint()
-        ..color = Color.fromARGB(shimmerAlpha, 224, 64, 251);
+      _shimmerPaint.color = Color.fromARGB(shimmerAlpha, 224, 64, 251);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.5,
-        shimmerPaint,
+        _shimmerPaint,
       );
     }
 
@@ -436,17 +446,15 @@ class DefenseUnit extends PositionComponent
       final dotY = size.y + 2;
       final totalWidth = (level - 1) * 3.0;
       final startX = (size.x - totalWidth) / 2;
-      final dotPaint = Paint()
-        ..isAntiAlias = false
-        ..color = isEvolved
-            ? const Color(0xFFFFD700) // gold for evolved
-            : isHybrid
-                ? const Color(0xFFE040FB) // purple for hybrid
-                : const Color(0xFFFFFFFF); // white for normal
+      _dotPaint.color = isEvolved
+          ? const Color(0xFFFFD700) // gold for evolved
+          : isHybrid
+              ? const Color(0xFFE040FB) // purple for hybrid
+              : const Color(0xFFFFFFFF); // white for normal
       for (int i = 0; i < level - 1; i++) {
         canvas.drawRect(
           Rect.fromLTWH(startX + i * 3.0, dotY, 2, 2),
-          dotPaint,
+          _dotPaint,
         );
       }
     }

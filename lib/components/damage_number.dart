@@ -35,6 +35,14 @@ class DamageNumber extends PositionComponent
 
   static final Random _rng = Random();
 
+  // Cached ParagraphStyle to avoid per-frame allocation
+  static final ui.ParagraphStyle _paragraphStyle = ui.ParagraphStyle(
+    textAlign: ui.TextAlign.center,
+    maxLines: 1,
+  );
+  static const ui.ParagraphConstraints _constraints =
+      ui.ParagraphConstraints(width: 100);
+
   DamageNumber({
     required Vector2 position,
     required this.text,
@@ -100,11 +108,6 @@ class DamageNumber extends PositionComponent
 
     final actualFontSize = isCritical ? fontSize * 1.3 : fontSize;
 
-    final paragraphStyle = ui.ParagraphStyle(
-      textAlign: ui.TextAlign.center,
-      maxLines: 1,
-    );
-
     // Shadow/outline based on type
     final shadows = <ui.Shadow>[];
     if (type == DamageNumberType.critical || isCritical) {
@@ -164,12 +167,12 @@ class DamageNumber extends PositionComponent
         displayText = isCritical ? '$text!' : text;
     }
 
-    final builder = ui.ParagraphBuilder(paragraphStyle)
+    final builder = ui.ParagraphBuilder(_paragraphStyle)
       ..pushStyle(textStyle)
       ..addText(displayText);
 
     final paragraph = builder.build();
-    paragraph.layout(const ui.ParagraphConstraints(width: 100));
+    paragraph.layout(_constraints);
 
     // Center the text horizontally
     canvas.drawParagraph(

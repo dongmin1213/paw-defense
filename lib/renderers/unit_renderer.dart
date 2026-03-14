@@ -72,24 +72,37 @@ class UnitRenderer {
     }
   }
 
+  // Palette cache to avoid re-creating Maps every frame
+  static final Map<int, Map<String, Color>> _brightenCache = {};
+  static final Map<int, Map<String, Color>> _tintCache = {};
+
   static Map<String, Color> _brightenPalette(Map<String, Color> p, int amount) {
-    return p.map((k, v) => MapEntry(k, Color.fromARGB(
+    final cacheKey = Object.hashAll([...p.values.map((c) => c.value), amount]);
+    final cached = _brightenCache[cacheKey];
+    if (cached != null) return cached;
+    final result = p.map((k, v) => MapEntry(k, Color.fromARGB(
       v.alpha,
       min(255, v.red + amount),
       min(255, v.green + amount),
       min(255, v.blue + amount),
     )));
+    // Keep cache bounded
+    if (_brightenCache.length > 128) _brightenCache.clear();
+    _brightenCache[cacheKey] = result;
+    return result;
   }
 
+  // Cached Paint for sparkles
+  static final Paint _sparklePaint = Paint()
+    ..color = const Color(0xCCFFFFFF)
+    ..isAntiAlias = false;
+
   static void _drawSparkles(Canvas canvas, Size size, double t) {
-    final paint = Paint()
-      ..color = const Color(0xCCFFFFFF)
-      ..isAntiAlias = false;
     final rng = Random((t * 10).toInt());
     for (var i = 0; i < 3; i++) {
       final x = rng.nextDouble() * size.width;
       final y = rng.nextDouble() * size.height * 0.5;
-      canvas.drawRect(Rect.fromLTWH(x, y, 2, 2), paint);
+      canvas.drawRect(Rect.fromLTWH(x, y, 2, 2), _sparklePaint);
     }
   }
 
@@ -779,24 +792,34 @@ class UnitRenderer {
   /// Tint a palette toward a target color by [amount] (0.0~1.0).
   static Map<String, Color> _tintPalette(
       Map<String, Color> p, Color target, double amount) {
-    return p.map((k, v) => MapEntry(k, Color.fromARGB(
+    final cacheKey = Object.hashAll([
+      ...p.values.map((c) => c.value), target.value, (amount * 100).toInt()
+    ]);
+    final cached = _tintCache[cacheKey];
+    if (cached != null) return cached;
+    final result = p.map((k, v) => MapEntry(k, Color.fromARGB(
       v.alpha,
       (v.red + (target.red - v.red) * amount).toInt().clamp(0, 255),
       (v.green + (target.green - v.green) * amount).toInt().clamp(0, 255),
       (v.blue + (target.blue - v.blue) * amount).toInt().clamp(0, 255),
     )));
+    if (_tintCache.length > 128) _tintCache.clear();
+    _tintCache[cacheKey] = result;
+    return result;
   }
+
+  // Cached Paint for hybrid badge
+  static final Paint _hybridBadgePaint = Paint()
+    ..color = const Color(0xCCFFFFFF)
+    ..isAntiAlias = false;
 
   /// Draw a small badge indicator for hybrid units.
   static void _drawHybridBadge(Canvas canvas, Size size, String emoji, double t) {
     // Pulsing indicator dot in corner
-    final dotPaint = Paint()
-      ..color = const Color(0xCCFFFFFF)
-      ..isAntiAlias = false;
     final dotSize = 3.0 + sin(t * 5) * 0.5;
     canvas.drawRect(
       Rect.fromLTWH(size.width - dotSize - 1, 1, dotSize, dotSize),
-      dotPaint,
+      _hybridBadgePaint,
     );
   }
 }

@@ -34,8 +34,17 @@ class DefenseEnemyRenderer {
     PixelArt.drawCentered(canvas, data.frames, palette, size, pixelSize: px);
   }
 
+  // Cache white palettes by identity to avoid re-creating every hit frame
+  static final Map<int, Map<String, Color>> _whitePaletteCache = {};
+
   static Map<String, Color> _whitePalette(Map<String, Color> original) {
-    return original.map((k, v) => MapEntry(k, const Color(0xFFFFFFFF)));
+    final key = identityHashCode(original);
+    final cached = _whitePaletteCache[key];
+    if (cached != null) return cached;
+    final result = original.map((k, v) => MapEntry(k, const Color(0xFFFFFFFF)));
+    if (_whitePaletteCache.length > 32) _whitePaletteCache.clear();
+    _whitePaletteCache[key] = result;
+    return result;
   }
 
   static _SpriteData _getSpriteData(String id, int frame) {

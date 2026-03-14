@@ -77,6 +77,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   bool _livingEnemiesDirty = true;
   List<DefenseEnemy> _livingEnemiesCache = [];
   int _relicEffectFrame = 0;
+
+  /// Cached unitSlots for HUD, rebuilt only when slots change.
+  bool _unitSlotsDirty = true;
+  List<hud.UnitSlot> _unitSlotsCache = [];
+
+  /// Call when unit slots change (place, merge, sell, etc.).
+  void markUnitSlotsDirty() {
+    _unitSlotsDirty = true;
+  }
   List<DefenseEnemy> get livingEnemies {
     if (_livingEnemiesDirty) {
       _livingEnemiesCache = world.children
@@ -177,6 +186,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Unit slots exposed for UI (HUD), with merge hints.
   List<hud.UnitSlot> get unitSlots {
+    if (!_unitSlotsDirty) return _unitSlotsCache;
+
     // Compute merge-hint data: count occurrences of (type, level)
     final counts = <String, int>{};
     for (final s in _unitSlots) {
@@ -196,7 +207,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       crossBreedSlots.add(cb.slotIndexB);
     }
 
-    return List.generate(_unitSlots.length, (i) {
+    _unitSlotsCache = List.generate(_unitSlots.length, (i) {
       final u = _unitSlots[i].unit;
       if (u == null) return const hud.UnitSlot();
       final key = '${u.unitTypeId}:${u.level}';
@@ -211,6 +222,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         canHybrid: canHybrid,
       );
     });
+    _unitSlotsDirty = false;
+    return _unitSlotsCache;
   }
 
   DefenseGame()
@@ -305,6 +318,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   void _refreshSlotComponents() {
+    markUnitSlotsDirty();
     // Remove existing slot components
     world.children
         .whereType<slot_component.UnitSlot>()

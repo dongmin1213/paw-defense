@@ -22,6 +22,14 @@ class ReactiveBackground extends PositionComponent
   double _pulseDuration = 0;
   Color _pulseColor = const Color(0x00000000);
 
+  // Cached Paint objects to avoid per-frame allocation
+  final Paint _bgPaint = Paint();
+  final Paint _starPaint = Paint()..isAntiAlias = false;
+  final Paint _pulsePaint = Paint();
+
+  static final Rect _fullScreenRect = Rect.fromLTWH(
+      0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight);
+
   ReactiveBackground()
       : super(
           priority: -10, // render behind everything
@@ -92,23 +100,19 @@ class ReactiveBackground extends PositionComponent
     final r = (18 + (47 * intensity)).toInt().clamp(0, 255);
     final g = (18 - (6 * intensity)).toInt().clamp(0, 255);
     final b = (48 - (36 * intensity)).toInt().clamp(0, 255);
-    final bgPaint = Paint()..color = Color.fromARGB(255, r, g, b);
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight),
-      bgPaint,
-    );
+    _bgPaint.color = Color.fromARGB(255, r, g, b);
+    canvas.drawRect(_fullScreenRect, _bgPaint);
 
     // ── Ambient stars ──
-    final starPaint = Paint()..isAntiAlias = false;
     for (final star in _stars) {
       // Stars get noticeably brighter with intensity
       final a = (star.alpha + intensity * 0.35).clamp(0.0, 0.8);
-      starPaint.color = Color.fromARGB(
+      _starPaint.color = Color.fromARGB(
         (a * 255).toInt(), 255, 255, 255,
       );
       canvas.drawRect(
         Rect.fromLTWH(star.x, star.y, star.size, star.size),
-        starPaint,
+        _starPaint,
       );
     }
 
@@ -119,19 +123,15 @@ class ReactiveBackground extends PositionComponent
       final pulseRadius = 50 + progress * 250;
       final wallX = game.wall.position.x;
       final wallY = game.wall.position.y;
-      final pulsePaint = Paint()
-        ..shader = Gradient.radial(
-          Offset(wallX, wallY),
-          pulseRadius,
-          [
-            _pulseColor.withValues(alpha: pulseAlpha),
-            _pulseColor.withValues(alpha: 0.0),
-          ],
-        );
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight),
-        pulsePaint,
+      _pulsePaint.shader = Gradient.radial(
+        Offset(wallX, wallY),
+        pulseRadius,
+        [
+          _pulseColor.withValues(alpha: pulseAlpha),
+          _pulseColor.withValues(alpha: 0.0),
+        ],
       );
+      canvas.drawRect(_fullScreenRect, _pulsePaint);
     }
   }
 }
