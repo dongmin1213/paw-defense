@@ -259,6 +259,17 @@ void main() {
     });
   });
 
+  group('Pity system', () {
+    test('pity counter starts at 0', () {
+      expect(manager.pityCounter, 0);
+    });
+
+    test('pity counter resets on reset()', () {
+      manager.reset();
+      expect(manager.pityCounter, 0);
+    });
+  });
+
   group('Save/Load', () {
     test('toList/loadFromList roundtrip', () {
       manager.addRelic('relic_atk_boost');

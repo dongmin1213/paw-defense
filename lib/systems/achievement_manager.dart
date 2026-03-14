@@ -79,6 +79,28 @@ class AchievementDatabase {
     // ── Gold achievements ──
     AchievementDef(id: 'gold_1000', name: '부자', description: '한 런에서 골드 1,000 획득', icon: '💰', starReward: 10, type: AchievementType.gold, target: 1000),
     AchievementDef(id: 'gold_5000', name: '재벌', description: '한 런에서 골드 5,000 획득', icon: '💎', starReward: 30, type: AchievementType.gold, target: 5000),
+    AchievementDef(id: 'gold_10000', name: '드래곤의 보물', description: '한 런에서 골드 10,000 획득', icon: '🐉', starReward: 50, type: AchievementType.gold, target: 10000),
+
+    // ── Extended wave achievements ──
+    AchievementDef(id: 'wave_75', name: '75파 돌파', description: '웨이브 75 도달', icon: '🌟', starReward: 75, type: AchievementType.waves, target: 75),
+    AchievementDef(id: 'wave_100', name: '100파 전설', description: '웨이브 100 도달', icon: '🏆', starReward: 150, type: AchievementType.waves, target: 100),
+
+    // ── Extended kill achievements ──
+    AchievementDef(id: 'kill_25000', name: '대학살자', description: '적 25,000마리 처치', icon: '💀', starReward: 150, type: AchievementType.kills, target: 25000),
+    AchievementDef(id: 'kill_50000', name: '멸망의 화신', description: '적 50,000마리 처치', icon: '🔥', starReward: 300, type: AchievementType.kills, target: 50000),
+
+    // ── Extended boss achievements ──
+    AchievementDef(id: 'boss_25', name: '보스 파괴자', description: '보스 25마리 처치', icon: '🐲', starReward: 50, type: AchievementType.bosses, target: 25),
+    AchievementDef(id: 'boss_50', name: '보스 정복자', description: '보스 50마리 처치', icon: '👑', starReward: 100, type: AchievementType.bosses, target: 50),
+
+    // ── Extended combo achievements ──
+    AchievementDef(id: 'combo_200', name: '콤보 신', description: '200 콤보 달성', icon: '⚡', starReward: 100, type: AchievementType.combos, target: 200),
+
+    // ── Extended merge achievements ──
+    AchievementDef(id: 'merge_500', name: '머지 그랜드마스터', description: '유닛 500회 머지', icon: '🔀', starReward: 75, type: AchievementType.merges, target: 500),
+
+    // ── Extended hybrid achievements ──
+    AchievementDef(id: 'hybrid_10', name: '유전공학자', description: '하이브리드 유닛 10마리 생성', icon: '🧬', starReward: 50, type: AchievementType.hybrids, target: 10),
   ];
 
   static final Map<String, AchievementDef> _byId = {

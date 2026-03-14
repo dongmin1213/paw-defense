@@ -264,4 +264,70 @@ class BalanceConfig {
 
   /// Game viewport height (portrait).
   static const double gameHeight = 700;
+
+  // ══════════════════════════════════════
+  // Pity System
+  // ══════════════════════════════════════
+
+  /// Pity counter: guaranteed epic+ relic after this many consecutive non-epic drops.
+  static const int pityEpicThreshold = 5;
+
+  /// Pity counter: guaranteed legendary+ after this many consecutive non-legendary drops.
+  static const int pityLegendaryThreshold = 10;
+
+  // ══════════════════════════════════════
+  // Late-game Scaling Improvements
+  // ══════════════════════════════════════
+
+  /// Wave at which enemy HP soft cap kicks in.
+  static const double enemyHpSoftCapWave = 40;
+
+  /// HP scaling multiplier after soft cap wave (reduces exponential growth).
+  static const double enemyHpSoftCapMultiplier = 0.7;
+
+  /// Catch-up gold multiplier for players falling behind.
+  static const double catchUpGoldMultiplier = 1.5;
+
+  /// Number of waves behind expected progress to trigger catch-up bonus.
+  static const int catchUpWaveThreshold = 5;
+
+  // ══════════════════════════════════════
+  // New Game+ (Ascension)
+  // ══════════════════════════════════════
+
+  /// Enemy HP multiplier per ascension level.
+  static const double ascensionEnemyHpScale = 1.25;
+
+  /// Bonus starting gold per ascension level.
+  static const int ascensionBonusGold = 20;
+
+  /// Bonus star multiplier per ascension level.
+  static const double ascensionStarMultiplier = 0.15;
+
+  // ══════════════════════════════════════
+  // Battle Pass
+  // ══════════════════════════════════════
+
+  /// Battle pass season length in days.
+  static const int battlePassSeasonDays = 30;
+
+  /// Number of tiers in the battle pass.
+  static const int battlePassTiers = 30;
+
+  /// XP required per battle pass tier.
+  static const int battlePassXpPerTier = 100;
+
+  // ══════════════════════════════════════
+  // Leaderboard
+  // ══════════════════════════════════════
+
+  /// Maximum local leaderboard entries stored.
+  static const int maxLeaderboardEntries = 50;
+
+  // ══════════════════════════════════════
+  // Story Milestones
+  // ══════════════════════════════════════
+
+  /// Waves at which story events trigger.
+  static const List<int> storyMilestoneWaves = [5, 10, 15, 20, 30, 40, 50];
 }

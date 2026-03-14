@@ -16,6 +16,13 @@ class RelicManager {
   bool _lastStandUsed = false;
   bool _phoenixUsed = false;
 
+  // ── Pity system ──
+  int _pityCounter = 0;
+  int _relicsSinceLegendary = 0;
+
+  /// Current pity counter (consecutive non-epic+ drops).
+  int get pityCounter => _pityCounter;
+
   /// Read-only view of owned relics.
   List<String> get ownedRelics => List.unmodifiable(_ownedRelics);
 
@@ -30,7 +37,27 @@ class RelicManager {
     if (isFull) return false;
     if (_ownedRelics.contains(relicId)) return false;
     _ownedRelics.add(relicId);
+    // Track pity counters via onRelicSelected
+    onRelicSelected(relicId);
     return true;
+  }
+
+  /// Called when a relic is selected. Checks rarity and resets/increments pity.
+  void onRelicSelected(String relicId) {
+    final def = RelicDatabase.get(relicId);
+    if (def == null) return;
+    if (def.rarity.index >= 2) {
+      // Epic or above resets epic pity
+      _pityCounter = 0;
+    } else {
+      _pityCounter++;
+    }
+    if (def.rarity.index >= 3) {
+      // Legendary or above resets legendary pity
+      _relicsSinceLegendary = 0;
+    } else {
+      _relicsSinceLegendary++;
+    }
   }
 
   /// Check if a specific relic is owned.
@@ -44,6 +71,8 @@ class RelicManager {
     _ownedRelics.clear();
     _lastStandUsed = false;
     _phoenixUsed = false;
+    _pityCounter = 0;
+    _relicsSinceLegendary = 0;
   }
 
   // ══════════════════════════════════════
@@ -62,16 +91,65 @@ class RelicManager {
     if (available.isEmpty) return [];
     if (available.length <= choiceCount) return List.from(available);
 
+    // Apply pity system: boost quality when overdue
+    double effectiveQuality = qualityBonus;
+    if (_pityCounter >= BalanceConfig.pityEpicThreshold) {
+      effectiveQuality += 0.5; // Strongly boost rare+ chances
+    }
+    if (_relicsSinceLegendary >= BalanceConfig.pityLegendaryThreshold) {
+      effectiveQuality += 1.0; // Guarantee high-rarity options
+    }
+
     // Weighted selection by rarity
     final choices = <String>[];
     final pool = List<String>.from(available);
 
     for (int i = 0; i < choiceCount && pool.isNotEmpty; i++) {
       final selected =
-          _weightedPick(pool, rng, qualityBonus: qualityBonus);
+          _weightedPick(pool, rng, qualityBonus: effectiveQuality);
       choices.add(selected);
       pool.remove(selected);
     }
+
+    // Pity guarantee: if legendary pity threshold reached, ensure at least one legendary+ option
+    if (_relicsSinceLegendary >= BalanceConfig.pityLegendaryThreshold) {
+      final hasLegendaryPlus = choices.any((id) {
+        final def = RelicDatabase.get(id);
+        return def != null && def.rarity.index >= 3;
+      });
+      if (!hasLegendaryPlus) {
+        final legendaryPool = available
+            .where((id) {
+              final def = RelicDatabase.get(id);
+              return def != null && def.rarity.index >= 3 && !choices.contains(id);
+            })
+            .toList();
+        if (legendaryPool.isNotEmpty) {
+          choices[0] = legendaryPool[rng.nextInt(legendaryPool.length)];
+        }
+      }
+    }
+
+    // Pity guarantee: if epic pity threshold reached, ensure at least one epic+ option
+    if (_pityCounter >= BalanceConfig.pityEpicThreshold) {
+      final hasEpicPlus = choices.any((id) {
+        final def = RelicDatabase.get(id);
+        return def != null && def.rarity.index >= 2;
+      });
+      if (!hasEpicPlus) {
+        // Replace lowest rarity choice with a random epic+ relic
+        final epicPool = available
+            .where((id) {
+              final def = RelicDatabase.get(id);
+              return def != null && def.rarity.index >= 2 && !choices.contains(id);
+            })
+            .toList();
+        if (epicPool.isNotEmpty) {
+          choices[0] = epicPool[rng.nextInt(epicPool.length)];
+        }
+      }
+    }
+
     return choices;
   }
 
@@ -400,8 +478,30 @@ class RelicManager {
   // Save/Load (for mid-run save)
   // ══════════════════════════════════════
 
+  /// Serialize owned relics and pity state for mid-run save.
+  Map<String, dynamic> toSaveMap() => {
+    'relics': List<String>.from(_ownedRelics),
+    'pityCounter': _pityCounter,
+    'relicsSinceLegendary': _relicsSinceLegendary,
+  };
+
+  /// Legacy: serialize as list (backwards compat).
   List<String> toList() => List<String>.from(_ownedRelics);
 
+  /// Load from save map (includes pity state).
+  void loadFromSaveMap(Map<String, dynamic> map) {
+    _ownedRelics.clear();
+    final relics = (map['relics'] as List<dynamic>?)?.cast<String>() ?? [];
+    for (final id in relics) {
+      if (RelicDatabase.get(id) != null && _ownedRelics.length < maxRelics) {
+        _ownedRelics.add(id);
+      }
+    }
+    _pityCounter = (map['pityCounter'] as int?) ?? 0;
+    _relicsSinceLegendary = (map['relicsSinceLegendary'] as int?) ?? 0;
+  }
+
+  /// Legacy: load from list (no pity state — backwards compat).
   void loadFromList(List<String> list) {
     _ownedRelics.clear();
     for (final id in list) {
@@ -409,5 +509,7 @@ class RelicManager {
         _ownedRelics.add(id);
       }
     }
+    _pityCounter = 0;
+    _relicsSinceLegendary = 0;
   }
 }

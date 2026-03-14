@@ -24,6 +24,10 @@ import '../systems/achievement_manager.dart';
 import '../systems/daily_manager.dart';
 import '../systems/codex_manager.dart';
 import '../systems/synergy_manager.dart';
+import '../systems/battle_pass_manager.dart';
+import '../systems/new_game_plus_manager.dart';
+import '../systems/story_manager.dart';
+import '../systems/leaderboard_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
@@ -34,6 +38,7 @@ import '../components/damage_number.dart';
 import '../components/reactive_background.dart';
 import '../components/skill_effect_overlay.dart';
 import '../ui/defense_hud.dart' as hud;
+import '../ui/game_theme.dart' show GameTheme, ColorBlindMode;
 
 /// Main game class for castle defense mode.
 /// Portrait mode (400x700), fixed resolution viewport.
@@ -65,6 +70,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DailyManager dailyManager;
   late CodexManager codexManager;
   late SynergyManager synergyManager;
+  late BattlePassManager battlePassManager;
+  late NewGamePlusManager newGamePlusManager;
+  late StoryManager storyManager;
+  late LeaderboardManager leaderboardManager;
 
   // ── Core Components ──
   late Wall wall;
@@ -297,6 +306,29 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     await codexManager.init(codexPrefs);
 
     synergyManager = SynergyManager();
+
+    // Initialize new systems
+    final prefs = await SharedPreferences.getInstance();
+
+    battlePassManager = BattlePassManager();
+    await battlePassManager.init(prefs);
+
+    newGamePlusManager = NewGamePlusManager();
+    await newGamePlusManager.init(prefs);
+
+    storyManager = StoryManager();
+    await storyManager.init(prefs);
+
+    leaderboardManager = LeaderboardManager();
+    await leaderboardManager.init(prefs);
+
+    // Load accessibility settings
+    final colorBlindIdx = prefs.getInt('accessibility_colorBlind') ?? 0;
+    if (colorBlindIdx > 0 && colorBlindIdx < ColorBlindMode.values.length) {
+      GameTheme.setColorBlindMode(ColorBlindMode.values[colorBlindIdx]);
+    }
+    final uiScale = prefs.getDouble('accessibility_uiScale') ?? 1.0;
+    GameTheme.setUiScale(uiScale);
 
     // Initialize unit slots
     _initSlots();

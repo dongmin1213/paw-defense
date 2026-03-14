@@ -84,9 +84,13 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   // Zoom Punch
   // ══════════════════════════════════════
 
-  /// Zoom punch disabled — causes distracting screen shake.
+  /// Subtle zoom punch — gentler than original to avoid distracting shake.
   void zoomPunch({double targetZoom = 1.05, double duration = 0.3}) {
-    // Intentionally disabled: zoom punch felt like unwanted screen shake.
+    // Re-enabled with reduced intensity for satisfying impact feedback.
+    final clampedZoom = targetZoom.clamp(1.0, 1.06);
+    _zoomPunchTarget = clampedZoom;
+    _zoomPunchDuration = duration;
+    _zoomPunchTimer = duration;
   }
 
   void _updateZoomPunch(double dt) {

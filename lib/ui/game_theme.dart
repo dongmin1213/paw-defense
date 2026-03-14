@@ -2,10 +2,80 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 // Fonts bundled locally: assets/fonts/PressStart2P, Silkscreen
 
+/// Color-blind mode options.
+enum ColorBlindMode {
+  none,
+  protanopia, // Red-blind
+  deuteranopia, // Green-blind
+  tritanopia, // Blue-blind
+}
+
 /// Paw Defense — Professional Game UI Theme System
 /// Unified design language with consistent hierarchy, spacing, and color.
+/// Supports color-blind mode with alternative palettes.
 class GameTheme {
   GameTheme._();
+
+  // ══════════════════════════════════════════
+  // ── Accessibility Settings ──
+  // ══════════════════════════════════════════
+
+  static ColorBlindMode _colorBlindMode = ColorBlindMode.none;
+  static double _uiScale = 1.0;
+
+  static ColorBlindMode get colorBlindMode => _colorBlindMode;
+  static double get uiScale => _uiScale;
+
+  static void setColorBlindMode(ColorBlindMode mode) {
+    _colorBlindMode = mode;
+  }
+
+  static void setUiScale(double scale) {
+    _uiScale = scale.clamp(0.8, 1.5);
+  }
+
+  /// Scale a font size by the UI scale factor.
+  static double scaledFont(double baseSize) => baseSize * _uiScale;
+
+  /// Get accessible color — replaces problematic colors in color-blind modes.
+  static Color accessible(Color original) {
+    if (_colorBlindMode == ColorBlindMode.none) return original;
+    return _colorBlindReplace(original);
+  }
+
+  static Color _colorBlindReplace(Color c) {
+    switch (_colorBlindMode) {
+      case ColorBlindMode.protanopia:
+      case ColorBlindMode.deuteranopia:
+        // Replace red/green with blue/orange distinguishable pair
+        if (c == accentRed || c == accentRedDark) return const Color(0xFFFF8A65); // warm orange
+        if (c == accentGreen || c == accentGreenDark) return const Color(0xFF42A5F5); // blue
+        if (c == rarityEpic) return const Color(0xFF90CAF9); // light blue
+        return c;
+      case ColorBlindMode.tritanopia:
+        // Replace blue/yellow with red/cyan
+        if (c == accentGold || c == accentGoldDark) return const Color(0xFFFFAB91); // peach
+        if (c == accent || c == accentDark) return const Color(0xFFEF5350); // red
+        if (c == rarityRare) return const Color(0xFFEF9A9A); // light red
+        return c;
+      case ColorBlindMode.none:
+        return c;
+    }
+  }
+
+  /// Get rarity color with color-blind support + text label suffix.
+  static String rarityLabel(String rarity) {
+    if (_colorBlindMode == ColorBlindMode.none) return '';
+    // Add shape/pattern indicator for color-blind users
+    switch (rarity) {
+      case 'common': return ' [C]';
+      case 'rare': return ' [R]';
+      case 'epic': return ' [E]';
+      case 'legendary': return ' [L]';
+      case 'mythic': return ' [M]';
+      default: return '';
+    }
+  }
 
   // ══════════════════════════════════════════
   // ── Color Palette — Disciplined 4-color hierarchy ──
