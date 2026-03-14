@@ -20,6 +20,9 @@ class BalanceConfig {
   /// Late wave speed scaling starts at this wave.
   static const int enemySpeedLateWaveStart = 30;
 
+  /// Maximum enemy speed multiplier (caps late-game speed scaling).
+  static const double enemySpeedMaxMultiplier = 3.0;
+
   // ══════════════════════════════════════
   // Wave System
   // ══════════════════════════════════════
@@ -155,8 +158,9 @@ class BalanceConfig {
   // Reward Buffs (Wave Rewards)
   // ══════════════════════════════════════
 
-  /// Duration of temporary reward buffs in waves.
-  static const int rewardBuffDurationWaves = 999; // lasts entire run
+  /// Duration of reward buffs in waves — intentionally set to full run duration.
+  /// Reward buffs are run-scoped and reset on new run, not per-wave temporary.
+  static const int rewardBuffDurationWaves = 999;
 
   /// Common reward: ATK bonus.
   static const double rewardAtkBonus = 0.10;

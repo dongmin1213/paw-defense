@@ -498,7 +498,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Save the current run state (called from app lifecycle).
   void saveRunState() {
     if (!isPlaying) return;
-    saveManager.saveRunState(buildRunState());
+    try {
+      saveManager.saveRunState(buildRunState());
+    } catch (_) {
+      // Silently fail — saving is best-effort, don't crash the game
+    }
   }
 
   /// Resume from a saved run state. Returns true if successful.
@@ -506,6 +510,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final state = saveManager.loadRunState();
     if (state == null) return false;
 
+    try {
     // Restore game state
     gold = (state['gold'] as num?)?.toInt() ?? 50;
     _runKills = (state['runKills'] as num?)?.toInt() ?? 0;
@@ -576,6 +581,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.add('DefenseHud');
 
     return true;
+    } catch (_) {
+      // Corrupted save data — discard and start fresh
+      saveManager.clearRunState();
+      return false;
+    }
   }
 
   /// Pause the game.
@@ -1210,15 +1220,20 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Activate the charged skill. Called from HUD button.
   void activateSkill() {
+    if (!isPlaying || wall.isDestroyed) return;
     final effectId = skillManager.activate();
     if (effectId == null) return;
+
+    // Snapshot enemies to avoid concurrent modification during skill damage
+    final enemies = livingEnemies.toList();
 
     // Apply immediate effects
     switch (effectId) {
       case 'arrow_rain':
         // Damage all enemies for ATK x2
         final avgAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           e.takeDamage(avgAtk * 2);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
               enemyId: e.enemyId);
@@ -1230,7 +1245,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       case 'meteor':
         // Big explosion near wall center
         final meteorAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           final dist = e.position.distanceTo(wall.position);
           if (dist < 150) {
             e.takeDamage(meteorAtk * 5);
@@ -1249,7 +1265,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       case 'storm_call':
         // All flying instant kill + ground ATK x3
         final stormAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           if (e.isFlying) {
             e.takeDamage(e.hp * 2); // instant kill
           } else {
@@ -1267,7 +1284,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'mana_burst':
         // All enemies lose 30% HP
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           e.takeDamage(e.hp * 0.3);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
               enemyId: e.enemyId);

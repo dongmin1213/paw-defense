@@ -52,7 +52,7 @@ class _DefenseHudState extends State<DefenseHud>
     );
     _goldRollController.addListener(_onGoldRoll);
 
-    _refreshTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+    _refreshTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
       bool needsRebuild = false;
 
@@ -64,7 +64,7 @@ class _DefenseHudState extends State<DefenseHud>
         needsRebuild = true;
       }
       if (_achievementText != null) {
-        _achievementTimer -= 0.25;
+        _achievementTimer -= 0.1;
         if (_achievementTimer <= 0) { _achievementText = null; needsRebuild = true; }
       } else {
         final notif = widget.game.popAchievementNotification();
@@ -75,7 +75,7 @@ class _DefenseHudState extends State<DefenseHud>
         }
       }
       if (_tierFlashTimer > 0) {
-        _tierFlashTimer -= 0.25;
+        _tierFlashTimer -= 0.1;
         if (_tierFlashTimer <= 0) { _tierFlashColor = null; needsRebuild = true; }
       }
       if (widget.game.comboManager.tierJustChanged) {
@@ -92,7 +92,7 @@ class _DefenseHudState extends State<DefenseHud>
         needsRebuild = true;
       }
       if (_modifierTimer > 0) {
-        _modifierTimer -= 0.25;
+        _modifierTimer -= 0.1;
         if (_modifierTimer <= 0) {
           _modifierText = null;
           _modifierIcon = null;

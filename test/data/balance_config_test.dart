@@ -51,6 +51,11 @@ void main() {
       }
     });
 
+    test('enemy speed cap is reasonable', () {
+      expect(BalanceConfig.enemySpeedMaxMultiplier, greaterThan(1.0));
+      expect(BalanceConfig.enemySpeedMaxMultiplier, lessThanOrEqualTo(5.0));
+    });
+
     test('pity system thresholds are reasonable', () {
       expect(BalanceConfig.pityEpicThreshold, greaterThan(0));
       expect(BalanceConfig.pityLegendaryThreshold, greaterThan(BalanceConfig.pityEpicThreshold));

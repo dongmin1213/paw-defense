@@ -189,16 +189,18 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
         waveModifier.enemyHpMultiplier;
   }
 
-  /// Scale speed by wave and unit count, with ±15% random variation.
+  /// Scale speed by wave and unit count, with ±15% random variation and hard cap.
   double _scaledSpeed(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseSpeed = data?.baseSpeed ?? 40;
     final variation = 0.85 + _rng.nextDouble() * 0.3; // 0.85~1.15
-    return baseSpeed *
-        (1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
+    final speedMultiplier = ((1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
         (1 +
             max(0, currentWave - BalanceConfig.enemySpeedLateWaveStart) *
-                BalanceConfig.enemySpeedLateWaveScale) *
+                BalanceConfig.enemySpeedLateWaveScale))
+        .clamp(0.0, BalanceConfig.enemySpeedMaxMultiplier);
+    return baseSpeed *
+        speedMultiplier *
         waveModifier.enemySpeedMultiplier *
         variation;
   }
