@@ -68,8 +68,8 @@ class BalanceConfig {
   static const int maxEnemiesPerWave = 300;
 
   /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
-  /// Very low to compensate for 4-5x enemy density increase.
-  static const double swarmHpMultiplier = 0.15;
+  /// Balanced so wave 1 enemies take 2-4 hits (not 1-shot).
+  static const double swarmHpMultiplier = 0.30;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling

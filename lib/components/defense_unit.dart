@@ -312,6 +312,7 @@ class DefenseUnit extends PositionComponent
     _animTimer += dt;
     _attackTimer += dt;
     if (_recoilTimer > 0) _recoilTimer -= dt;
+    if (_beamTimer > 0) _beamTimer -= dt;
 
     // Follow orbit position from slot
     if (slotIndex >= 0) {
@@ -343,13 +344,18 @@ class DefenseUnit extends PositionComponent
     if (_attackTimer >= attackInterval && _target != null) {
       _attackTimer = 0;
       _recoilTimer = _recoilDuration;
+      _beamTimer = _beamDuration;
       _attack();
     }
   }
 
   // Attack recoil animation
   double _recoilTimer = 0;
-  static const double _recoilDuration = 0.1;
+  static const double _recoilDuration = 0.15;
+
+  // Beam visibility timer (longer than recoil for visual clarity)
+  double _beamTimer = 0;
+  static const double _beamDuration = 0.25;
 
   // Cached Paint objects for render()
   static final Paint _glowPaint = Paint();
@@ -376,8 +382,8 @@ class DefenseUnit extends PositionComponent
     return _beamColors[unitTypeId] ?? const Color(0xFFFFD700);
   }
 
-  /// Whether the unit is currently in its attack flash window.
-  bool get _isAttacking => _recoilTimer > 0;
+  /// Whether the unit should show attack beam.
+  bool get _isAttacking => _beamTimer > 0;
 
   /// Sine approximation for idle bob animation.
   double _sin(double x) {
@@ -483,36 +489,40 @@ class DefenseUnit extends PositionComponent
     }
 
     // ── Attack beam / laser line ──
-    // Draw a visible beam from unit center to target when attacking
+    // Draw beam from unit center to target (in component-local coordinate space)
     if (_isAttacking && _target != null && !_target!.isDead) {
+      // Both points in component-local space (relative to this component's position)
       final unitCenter = Offset(size.x / 2, size.y / 2);
-      final targetOffset = Offset(
-        _target!.position.x - position.x + size.x / 2,
-        _target!.position.y - position.y + size.y / 2,
+      final targetLocal = Offset(
+        _target!.position.x - position.x,
+        _target!.position.y - position.y,
       );
 
       final beamColor = _beamColor;
-      final recoilT = (_recoilTimer / _recoilDuration).clamp(0.0, 1.0);
-      final beamAlpha = (recoilT * 0.9).clamp(0.0, 1.0);
+      final beamT = (_beamTimer / _beamDuration).clamp(0.0, 1.0);
+      final beamAlpha = beamT * 0.9;
 
       // Outer glow (wider, semi-transparent)
       final glowWidth = 3.0 + level * 1.0 + (isEvolved ? 2.0 : 0.0);
-      _beamGlowPaint.color = beamColor.withValues(alpha: beamAlpha * 0.3);
-      _beamGlowPaint.strokeWidth = glowWidth;
-      _beamGlowPaint.style = PaintingStyle.stroke;
-      canvas.drawLine(unitCenter, targetOffset, _beamGlowPaint);
+      _beamGlowPaint
+        ..color = beamColor.withValues(alpha: beamAlpha * 0.3)
+        ..strokeWidth = glowWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(unitCenter, targetLocal, _beamGlowPaint);
 
       // Core beam (thinner, brighter)
       final coreWidth = 1.0 + level * 0.4 + (isEvolved ? 1.0 : 0.0);
-      _beamPaint.color = beamColor.withValues(alpha: beamAlpha * 0.8);
-      _beamPaint.strokeWidth = coreWidth;
-      _beamPaint.style = PaintingStyle.stroke;
-      canvas.drawLine(unitCenter, targetOffset, _beamPaint);
+      _beamPaint
+        ..color = beamColor.withValues(alpha: beamAlpha * 0.8)
+        ..strokeWidth = coreWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(unitCenter, targetLocal, _beamPaint);
 
       // Bright center line (1px, full brightness)
-      _beamPaint.color = const Color(0xFFFFFFFF).withValues(alpha: beamAlpha * 0.6);
-      _beamPaint.strokeWidth = 0.5;
-      canvas.drawLine(unitCenter, targetOffset, _beamPaint);
+      _beamPaint
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: beamAlpha * 0.6)
+        ..strokeWidth = 0.5;
+      canvas.drawLine(unitCenter, targetLocal, _beamPaint);
     }
   }
 }

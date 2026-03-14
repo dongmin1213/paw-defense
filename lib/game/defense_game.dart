@@ -123,6 +123,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   int totalBossKills = 0;
   int _runKills = 0;
   int _runGoldEarned = 0;
+  int _activeFieldDrops = 0;
 
   bool isPlaying = false;
   bool _isPaused = false;
@@ -277,6 +278,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     particleEffect = DefenseParticle();
     world.add(particleEffect);
+    world.add(GroundMarkLayer());
 
     gameFeel = DefenseGameFeel();
     world.add(gameFeel);
@@ -401,6 +403,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _runKills = 0;
     _runGoldEarned = 0;
     _unitsBought = 0;
+    _activeFieldDrops = 0;
     isPlaying = true;
     _isPaused = false;
     gameSpeed = 1.0;
@@ -1084,17 +1087,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Spawn physical field drop items when an enemy dies.
   void _spawnFieldDrops(DefenseEnemy enemy) {
-    // Count current field drops to prevent performance issues
-    final currentDrops = world.children.whereType<FieldDrop>().length;
-    if (currentDrops >= FieldDrop.maxDrops) return;
+    if (_activeFieldDrops >= FieldDrop.maxDrops) return;
 
     final pos = enemy.position;
     final isBoss = enemy.enemyId == 'boss';
 
     // Gold drops: 1-3 per normal enemy, 5-8 per boss
     final goldCount = isBoss ? 5 + _rng.nextInt(4) : 1 + _rng.nextInt(3);
-    for (int i = 0; i < goldCount && currentDrops + i < FieldDrop.maxDrops; i++) {
-      world.add(FieldDrop(
+    for (int i = 0; i < goldCount && _activeFieldDrops < FieldDrop.maxDrops; i++) {
+      _addFieldDrop(FieldDrop(
         spawnPosition: pos.clone(),
         type: FieldDropType.gold,
         value: isBoss ? 3 : 1,
@@ -1102,8 +1103,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
 
     // Occasional gem drop (10% chance, 25% for bosses)
-    if (_rng.nextDouble() < (isBoss ? 0.25 : 0.10)) {
-      world.add(FieldDrop(
+    if (_activeFieldDrops < FieldDrop.maxDrops && _rng.nextDouble() < (isBoss ? 0.25 : 0.10)) {
+      _addFieldDrop(FieldDrop(
         spawnPosition: pos.clone(),
         type: FieldDropType.gem,
         value: isBoss ? 5 : 1,
@@ -1111,13 +1112,23 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
 
     // Health drop (5% chance, heals wall)
-    if (_rng.nextDouble() < 0.05 && !wall.isDestroyed) {
-      world.add(FieldDrop(
+    if (_activeFieldDrops < FieldDrop.maxDrops && _rng.nextDouble() < 0.05 && !wall.isDestroyed) {
+      _addFieldDrop(FieldDrop(
         spawnPosition: pos.clone(),
         type: FieldDropType.health,
         value: 2,
       ));
     }
+  }
+
+  void _addFieldDrop(FieldDrop drop) {
+    _activeFieldDrops++;
+    world.add(drop);
+  }
+
+  /// Called by FieldDrop when it's absorbed or removed.
+  void onFieldDropRemoved() {
+    _activeFieldDrops = (_activeFieldDrops - 1).clamp(0, FieldDrop.maxDrops);
   }
 
   /// Add gold to the player. Optionally show a floating number at [popupPos].

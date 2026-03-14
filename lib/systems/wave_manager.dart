@@ -82,19 +82,16 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
     return BalanceConfig.baseEnemyCountDefault;
   }
 
-  /// Spawn interval: front-loaded spawning for screen-filling density.
-  /// First 60% of enemies spawn in the first 40% of wave time.
+  /// Spawn interval: smoothly front-loaded for screen-filling density.
+  /// Starts fast (dense burst) and gradually slows down toward wave end.
   double get _spawnInterval {
     if (totalEnemiesInWave <= 0) return 1.0;
     final progress = enemiesSpawned / totalEnemiesInWave;
-    // Front-loaded: fast spawn for first 60%, then slow down
-    final effectiveDuration = progress < 0.6
-        ? waveDuration * 0.4  // 60% of enemies in 40% of time
-        : waveDuration * 0.6; // remaining 40% in 60% of time
-    final enemiesInPhase = progress < 0.6
-        ? totalEnemiesInWave * 0.6
-        : totalEnemiesInWave * 0.4;
-    return (effectiveDuration / enemiesInPhase)
+    // Smooth curve: interval grows from 0.5x to 2x of base as wave progresses
+    // This creates a natural density that tapers off smoothly
+    final baseInterval = waveDuration / totalEnemiesInWave;
+    final speedFactor = 0.4 + progress * 1.6; // 0.4x at start → 2.0x at end
+    return (baseInterval * speedFactor)
         .clamp(BalanceConfig.minSpawnInterval, BalanceConfig.maxSpawnInterval);
   }
 

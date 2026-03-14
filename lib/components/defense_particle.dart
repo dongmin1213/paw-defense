@@ -22,23 +22,28 @@ class DefenseParticle extends PositionComponent
     _groundMarks.clear();
   }
 
+  // Cached Random for ground marks (avoid per-call allocation)
+  static final Random _groundRng = Random();
+
+  // Cached Paint for ground mark rendering (avoid per-frame allocation)
+  static final Paint _groundMarkPaint = Paint()..isAntiAlias = false;
+
   /// Spawn a ground impact mark at the given position (enemy death splat).
   void spawnGroundMark(double x, double y, {String enemyId = ''}) {
-    // Cap ground marks for performance
-    if (_groundMarks.length > 60) {
-      _groundMarks.removeRange(0, _groundMarks.length - 50);
+    // Cap ground marks for performance — generous for high-density waves
+    if (_groundMarks.length > 150) {
+      _groundMarks.removeRange(0, _groundMarks.length - 120);
     }
     final colors = _deathColorsForEnemy(enemyId);
-    final color = colors[Random().nextInt(colors.length)];
-    final rng = Random();
+    final color = colors[_groundRng.nextInt(colors.length)];
     // 1-3 splat marks per death for variety
-    final count = 1 + rng.nextInt(3);
+    final count = 1 + _groundRng.nextInt(3);
     for (int i = 0; i < count; i++) {
       _groundMarks.add(_GroundMark(
-        x: x + (rng.nextDouble() - 0.5) * 16,
-        y: y + (rng.nextDouble() - 0.5) * 12,
-        size: 3.0 + rng.nextDouble() * 5.0,
-        life: 4.0 + rng.nextDouble() * 3.0, // persist 4-7 seconds
+        x: x + (_groundRng.nextDouble() - 0.5) * 16,
+        y: y + (_groundRng.nextDouble() - 0.5) * 12,
+        size: 3.0 + _groundRng.nextDouble() * 5.0,
+        life: 4.0 + _groundRng.nextDouble() * 3.0, // persist 4-7 seconds
         color: color,
       ));
     }
@@ -594,32 +599,31 @@ class DefenseParticle extends PositionComponent
     _groundMarks.removeWhere((m) => m.life <= 0);
   }
 
-  @override
-  void render(Canvas canvas) {
-    // ── Ground marks (render below particles) ──
-    final markPaint = Paint()..isAntiAlias = false;
+  /// Render ground marks (called by GroundMarkLayer at low priority).
+  void renderGroundMarks(Canvas canvas) {
     for (final m in _groundMarks) {
-      // Fade out over the last 2 seconds
       final alpha = m.life < 2.0 ? (m.life / 2.0).clamp(0.0, 0.4) : 0.4;
-      markPaint.color = m.color.withValues(alpha: alpha);
+      _groundMarkPaint.color = m.color.withValues(alpha: alpha);
       canvas.drawRect(
         Rect.fromCenter(center: Offset(m.x, m.y), width: m.size, height: m.size * 0.5),
-        markPaint,
+        _groundMarkPaint,
       );
-      // Smaller splatter dots around
       if (m.size > 4) {
-        markPaint.color = m.color.withValues(alpha: alpha * 0.6);
+        _groundMarkPaint.color = m.color.withValues(alpha: alpha * 0.6);
         canvas.drawRect(
           Rect.fromLTWH(m.x + m.size * 0.4, m.y - m.size * 0.2, 2, 2),
-          markPaint,
+          _groundMarkPaint,
         );
         canvas.drawRect(
           Rect.fromLTWH(m.x - m.size * 0.5, m.y + m.size * 0.1, 1.5, 1.5),
-          markPaint,
+          _groundMarkPaint,
         );
       }
     }
+  }
 
+  @override
+  void render(Canvas canvas) {
     // No camera offset — fixed viewport for defense game
     final paint = Paint()..isAntiAlias = false;
     for (final p in _particles) {
@@ -684,4 +688,15 @@ class _GroundMark {
     required this.life,
     required this.color,
   });
+}
+
+/// Renders ground marks at low priority (below enemies/units/projectiles).
+class GroundMarkLayer extends PositionComponent
+    with HasGameReference<DefenseGame> {
+  GroundMarkLayer() : super(priority: 5); // below wall (10), enemies (12), etc.
+
+  @override
+  void render(Canvas canvas) {
+    game.particleEffect.renderGroundMarks(canvas);
+  }
 }

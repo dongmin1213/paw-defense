@@ -103,7 +103,11 @@ class FieldDrop extends PositionComponent
         _homing = true;
       }
     } else if (_homing) {
-      // Home toward wall
+      // Home toward wall — stop if wall is destroyed
+      if (game.wall.isDestroyed) {
+        _remove();
+        return;
+      }
       _homeTimer += dt;
       final wallPos = game.wall.position;
       final dx = wallPos.x - position.x;
@@ -111,9 +115,8 @@ class FieldDrop extends PositionComponent
       final dist = sqrt(dx * dx + dy * dy);
 
       if (dist < 10) {
-        // Absorbed!
         _onAbsorbed();
-        removeFromParent();
+        _remove();
         return;
       }
 
@@ -128,6 +131,11 @@ class FieldDrop extends PositionComponent
         _alpha = (dist / 30).clamp(0.3, 1.0);
       }
     }
+  }
+
+  void _remove() {
+    game.onFieldDropRemoved();
+    removeFromParent();
   }
 
   void _onAbsorbed() {
