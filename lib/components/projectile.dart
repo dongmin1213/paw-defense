@@ -89,6 +89,7 @@ class Projectile extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    if (!game.isPlaying) return;
 
     // Record trail position before moving
     _trailX.add(position.x);

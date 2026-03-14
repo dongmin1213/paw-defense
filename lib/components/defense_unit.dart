@@ -306,12 +306,13 @@ class DefenseUnit extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    if (!game.isPlaying) return;
     _animTimer += dt;
     _attackTimer += dt;
     if (_recoilTimer > 0) _recoilTimer -= dt;
 
     // Follow orbit position from slot
-    if (slotIndex >= 0 && game.isPlaying) {
+    if (slotIndex >= 0) {
       final wallPos = game.wall.position;
       final totalSlots = game.maxSlots;
       final angle =

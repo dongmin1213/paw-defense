@@ -97,6 +97,7 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
 
   @override
   void update(double dt) {
+    if (!game.isPlaying) return;
     if (betweenWaves) {
       _updateBetweenWaves(dt);
       return;
