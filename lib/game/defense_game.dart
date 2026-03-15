@@ -136,6 +136,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   int _runGoldEarned = 0;
   int _activeFieldDrops = 0;
 
+  /// Per-frame kill counter — used to throttle particle effects during mass kills.
+  int _frameKillCount = 0;
+
   bool isPlaying = false;
   bool _isPaused = false;
   double gameSpeed = 1.0; // 1x or 2x speed toggle
@@ -724,6 +727,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       return;
     }
 
+    // Reset per-frame kill counter for effect throttling
+    _frameKillCount = 0;
+
     // Cap dt to prevent physics glitches on lag spikes (max ~20fps equivalent)
     final cappedDt = dt.clamp(0.0, 0.05);
     final effectiveDt = cappedDt * gameFeel.timeScale * gameSpeed;
@@ -933,8 +939,17 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     unregisterEnemy(enemy);
     _runKills++;
     totalKills++;
+    _frameKillCount++;
     waveManager.onEnemyKilled();
-    gameFeel.onEnemyKill(comboTier: comboManager.currentTier.index);
+
+    // Throttle visual effects when many enemies die in the same frame.
+    // First 3 kills get full effects; kills 4-8 get reduced effects; 9+ minimal.
+    final bool fullEffects = _frameKillCount <= 3;
+    final bool reducedEffects = _frameKillCount <= 8;
+
+    if (fullEffects) {
+      gameFeel.onEnemyKill(comboTier: comboManager.currentTier.index);
+    }
     soundManager.playHit();
 
     // Skill gauge: charge on kill
@@ -945,8 +960,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     comboManager.onEnemyKilled();
     final comboScale = comboManager.effectSizeMultiplier;
 
-    // Combo-scaled death effect
-    if (comboScale > 1.0) {
+    // Combo-scaled death effect (skip for mass kills beyond threshold)
+    if (comboScale > 1.0 && reducedEffects) {
       particleEffect.spawnEnemyDeathScaled(
         enemy.position.x, enemy.position.y, comboScale,
         enemyId: enemy.enemyId);
@@ -977,21 +992,27 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       gameFeel.onComboTierChange(comboManager.currentTier.color);
     }
 
-    // Gold scatter visual (VS-style XP gems flying to wall)
-    particleEffect.spawnGoldScatter(
-      enemy.position.x, enemy.position.y,
-      (1 + (comboScale - 1.0) * 2).toInt(),
-      wall.position.x, wall.position.y,
-    );
+    // Gold scatter visual — throttle during mass kills
+    if (reducedEffects) {
+      particleEffect.spawnGoldScatter(
+        enemy.position.x, enemy.position.y,
+        (1 + (comboScale - 1.0) * 2).toInt(),
+        wall.position.x, wall.position.y,
+      );
+    }
 
-    // Physical field drops — coins/gems scatter on the ground
-    _spawnFieldDrops(enemy);
+    // Physical field drops — skip during mass kills
+    if (reducedEffects) {
+      _spawnFieldDrops(enemy);
+    }
 
-    // Ground impact mark (persistent splat)
-    particleEffect.spawnGroundMark(
-      enemy.position.x, enemy.position.y,
-      enemyId: enemy.enemyId,
-    );
+    // Ground impact mark (persistent splat) — skip during mass kills
+    if (fullEffects) {
+      particleEffect.spawnGroundMark(
+        enemy.position.x, enemy.position.y,
+        enemyId: enemy.enemyId,
+      );
+    }
 
     // Relic: bonus gold on kill
     final bonusGold = relicManager.onEnemyKilled(_rng);
@@ -1005,9 +1026,9 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wall.heal(healAmt);
     }
 
-    // Relic: chain lightning — deal 50% damage to nearby enemy
-    // Wave modifier: chain — always trigger chain lightning on kill
-    if (relicManager.hasChainLightning || waveManager.waveModifier.alwaysChain) {
+    // Relic: chain lightning — throttle during mass kills
+    if (reducedEffects &&
+        (relicManager.hasChainLightning || waveManager.waveModifier.alwaysChain)) {
       _applyChainLightning(enemy);
     }
 

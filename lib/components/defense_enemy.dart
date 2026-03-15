@@ -56,6 +56,22 @@ class DefenseEnemy extends PositionComponent
 
   static const double wallProximity = 35.0;
 
+  // Cached Paint objects to avoid per-frame allocation
+  static final Paint _glowPaint = Paint();
+  static final Paint _dotPaint = Paint()..isAntiAlias = false;
+  static final Paint _slowPaint = Paint()
+    ..isAntiAlias = false
+    ..color = const Color(0x2040A0FF);
+  static final Paint _hpBgPaint = Paint()
+    ..color = const Color(0xFF333333)
+    ..isAntiAlias = false;
+  static final Paint _hpFillPaint = Paint()..isAntiAlias = false;
+  static final Paint _hpBorderPaint = Paint()
+    ..color = const Color(0x88FFFFFF)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.5
+    ..isAntiAlias = false;
+
   // Special type detection helpers
   bool get _isHealer => enemyId.contains('healer');
   bool get _isBomber => enemyId.contains('bomber');
@@ -384,16 +400,14 @@ class DefenseEnemy extends PositionComponent
   void render(Canvas canvas) {
     // Boss: red glow effect
     if (_isBoss) {
-      final glowPaint = Paint()
-        ..color = Color.fromARGB(
-          (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
-          255, 0, 0,
-        )
-        ;
+      _glowPaint.color = Color.fromARGB(
+        (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
+        255, 0, 0,
+      );
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.6,
-        glowPaint,
+        _glowPaint,
       );
     }
 
@@ -410,23 +424,19 @@ class DefenseEnemy extends PositionComponent
 
     // DoT visual feedback — colored overlay
     if (_dotDuration > 0 && _dotType.isNotEmpty) {
-      final dotPaint = Paint()..isAntiAlias = false;
       if (_dotType == 'fire') {
         final pulse = 0.15 + 0.1 * _sin(_animTimer * 8).abs();
-        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 255, 100, 0);
+        _dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 255, 100, 0);
       } else if (_dotType == 'poison') {
         final pulse = 0.12 + 0.08 * _sin(_animTimer * 6).abs();
-        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 0, 200, 50);
+        _dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 0, 200, 50);
       }
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), dotPaint);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _dotPaint);
     }
 
     // Slow visual feedback — blue tint
     if (_slowTimer > 0) {
-      final slowPaint = Paint()
-        ..isAntiAlias = false
-        ..color = const Color(0x2040A0FF);
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), slowPaint);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _slowPaint);
     }
 
     // HP bar above enemy
@@ -442,38 +452,27 @@ class DefenseEnemy extends PositionComponent
     final barY = _isBoss ? -7.0 : -5.0;
 
     // Background
-    final bgPaint = Paint()
-      ..color = const Color(0xFF333333)
-      ..isAntiAlias = false;
     canvas.drawRect(
       Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
-      bgPaint,
+      _hpBgPaint,
     );
 
     // Fill
-    final fillColor = hpPercent > 0.5
+    _hpFillPaint.color = hpPercent > 0.5
         ? const Color(0xFF4CAF50)
         : hpPercent > 0.25
             ? const Color(0xFFFF9800)
             : const Color(0xFFF44336);
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..isAntiAlias = false;
     canvas.drawRect(
       Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight),
-      fillPaint,
+      _hpFillPaint,
     );
 
     // Boss: white border for visibility
     if (_isBoss) {
-      final borderPaint = Paint()
-        ..color = const Color(0x88FFFFFF)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.5
-        ..isAntiAlias = false;
       canvas.drawRect(
         Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
-        borderPaint,
+        _hpBorderPaint,
       );
     }
   }

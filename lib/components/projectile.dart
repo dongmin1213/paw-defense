@@ -53,6 +53,9 @@ class Projectile extends PositionComponent
   /// Visual scale factor based on level/evolved/hybrid status.
   late final double _visualScale;
 
+  /// Cached profile to avoid per-frame HybridDatabase lookups.
+  late final _ProjProfile _cachedProfile;
+
   Projectile({
     required Vector2 spawnPosition,
     required this.velocity,
@@ -84,6 +87,8 @@ class Projectile extends PositionComponent
     _trailY = List<double>.filled(_trailLength, 0);
     // Update component size for hitbox
     size = Vector2(6 * _visualScale, 6 * _visualScale);
+    // Cache profile at construction time
+    _cachedProfile = _computeProfile();
   }
 
   @override
@@ -245,7 +250,9 @@ class Projectile extends PositionComponent
         color: Color(0xFF651FFF), trailColor: Color(0xFFB388FF)),
   };
 
-  _ProjProfile get _profile {
+  _ProjProfile get _profile => _cachedProfile;
+
+  _ProjProfile _computeProfile() {
     // Piercing/splash override color but keep trail
     if (isPiercing && !isHybrid && !isEvolved) {
       return const _ProjProfile(
@@ -307,14 +314,16 @@ class Projectile extends PositionComponent
     final s = _visualScale;
 
     // ── Draw trail from ring buffer (scaled by level) ──
+    // Render every other segment to halve draw calls while keeping visual quality
     if (_trailCount > 0) {
       final len = _trailCount;
-      // Oldest entry is at (_trailHead - _trailCount + _trailLength) % _trailLength
       final start = (_trailHead - _trailCount + _trailLength) % _trailLength;
-      for (int i = 0; i < len; i++) {
+      final step = len > 8 ? 2 : 1;
+      for (int i = 0; i < len; i += step) {
         final idx = (start + i) % _trailLength;
         final t = i / len; // 0.0 = oldest, ~1.0 = newest
         final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
+        if (alpha < 0.05) continue; // skip invisible segments
         final trailSize = (2.0 + t * 4.0) * s;
         final dx = _trailX[idx] - position.x;
         final dy = _trailY[idx] - position.y;

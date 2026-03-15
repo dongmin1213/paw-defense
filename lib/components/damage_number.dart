@@ -43,6 +43,10 @@ class DamageNumber extends PositionComponent
   static const ui.ParagraphConstraints _constraints =
       ui.ParagraphConstraints(width: 100);
 
+  // Per-instance paragraph cache — rebuild only when alpha changes significantly
+  ui.Paragraph? _cachedParagraph;
+  int _cachedAlphaBucket = -1;
+
   DamageNumber({
     required Vector2 position,
     required this.text,
@@ -109,75 +113,81 @@ class DamageNumber extends PositionComponent
 
     final actualFontSize = isCritical ? fontSize * 1.3 : fontSize;
 
-    // Shadow/outline based on type
-    final shadows = <ui.Shadow>[];
-    if (type == DamageNumberType.critical || isCritical) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF000000).withValues(alpha: _alpha * 0.9),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-      shadows.add(ui.Shadow(
-        color: const Color(0xFFFF0000).withValues(alpha: _alpha * 0.4),
-        offset: const ui.Offset(0, 0),
-        blurRadius: 4,
-      ));
-    } else if (type == DamageNumberType.heal) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF004D00).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-    } else if (type == DamageNumberType.gold) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF5D4037).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-    } else {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF000000).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
+    // Quantize alpha to reduce paragraph rebuilds (~10 buckets)
+    final alphaBucket = (_alpha * 10).round();
+    if (_cachedParagraph == null || alphaBucket != _cachedAlphaBucket) {
+      _cachedAlphaBucket = alphaBucket;
+
+      // Shadow/outline based on type
+      final shadows = <ui.Shadow>[];
+      if (type == DamageNumberType.critical || isCritical) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF000000).withValues(alpha: _alpha * 0.9),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+        shadows.add(ui.Shadow(
+          color: const Color(0xFFFF0000).withValues(alpha: _alpha * 0.4),
+          offset: const ui.Offset(0, 0),
+          blurRadius: 4,
+        ));
+      } else if (type == DamageNumberType.heal) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF004D00).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      } else if (type == DamageNumberType.gold) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF5D4037).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      } else {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF000000).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      }
+
+      final textStyle = ui.TextStyle(
+        color: color.withValues(alpha: _alpha),
+        fontSize: actualFontSize,
+        fontWeight: ui.FontWeight.w900,
+        shadows: shadows,
+      );
+
+      // Format display text based on type
+      String displayText;
+      switch (type) {
+        case DamageNumberType.critical:
+          displayText = '$text!';
+          break;
+        case DamageNumberType.heal:
+          displayText = '+$text';
+          break;
+        case DamageNumberType.gold:
+          displayText = '+$text';
+          break;
+        case DamageNumberType.shield:
+          displayText = text;
+          break;
+        default:
+          displayText = isCritical ? '$text!' : text;
+      }
+
+      final builder = ui.ParagraphBuilder(_paragraphStyle)
+        ..pushStyle(textStyle)
+        ..addText(displayText);
+
+      _cachedParagraph = builder.build();
+      _cachedParagraph!.layout(_constraints);
     }
-
-    final textStyle = ui.TextStyle(
-      color: color.withValues(alpha: _alpha),
-      fontSize: actualFontSize,
-      fontWeight: ui.FontWeight.w900,
-      shadows: shadows,
-    );
-
-    // Format display text based on type
-    String displayText;
-    switch (type) {
-      case DamageNumberType.critical:
-        displayText = '$text!';
-        break;
-      case DamageNumberType.heal:
-        displayText = '+$text';
-        break;
-      case DamageNumberType.gold:
-        displayText = '+$text';
-        break;
-      case DamageNumberType.shield:
-        displayText = text;
-        break;
-      default:
-        displayText = isCritical ? '$text!' : text;
-    }
-
-    final builder = ui.ParagraphBuilder(_paragraphStyle)
-      ..pushStyle(textStyle)
-      ..addText(displayText);
-
-    final paragraph = builder.build();
-    paragraph.layout(_constraints);
 
     // Center the text horizontally
     canvas.drawParagraph(
-      paragraph,
+      _cachedParagraph!,
       ui.Offset(-50, -actualFontSize / 2),
     );
 
