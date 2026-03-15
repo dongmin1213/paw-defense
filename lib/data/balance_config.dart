@@ -20,6 +20,9 @@ class BalanceConfig {
   /// Late wave speed scaling starts at this wave.
   static const int enemySpeedLateWaveStart = 30;
 
+  /// Maximum enemy speed multiplier (caps late-game speed scaling).
+  static const double enemySpeedMaxMultiplier = 3.0;
+
   // ══════════════════════════════════════
   // Wave System
   // ══════════════════════════════════════
@@ -30,11 +33,11 @@ class BalanceConfig {
   /// Pause between waves in seconds.
   static const double betweenWavePause = 3.0;
 
-  /// Min spawn interval (max spawn rate).
-  static const double minSpawnInterval = 0.08;
+  /// Min spawn interval (max spawn rate) — very fast for swarm density.
+  static const double minSpawnInterval = 0.03;
 
   /// Max spawn interval (min spawn rate).
-  static const double maxSpawnInterval = 3.0;
+  static const double maxSpawnInterval = 1.5;
 
   /// Boss appears every N waves.
   static const int bossInterval = 10;
@@ -43,16 +46,17 @@ class BalanceConfig {
   static const int rewardInterval = 5;
 
   /// Base enemy count per wave tier: [maxWave, count].
-  /// Doubled for visual density — compensated by swarmHpMultiplier.
+  /// Massive density from wave 1 for screen-filling spectacle — compensated by swarmHpMultiplier.
   static const List<List<int>> baseEnemyCountTiers = [
-    [5, 10],
-    [10, 15],
-    [20, 22],
-    [30, 30],
+    [3, 40],
+    [5, 55],
+    [10, 70],
+    [20, 90],
+    [30, 120],
   ];
 
   /// Default base enemy count for waves beyond all tiers.
-  static const int baseEnemyCountDefault = 35;
+  static const int baseEnemyCountDefault = 150;
 
   /// Enemy count scales with wave: base + wave * this.
   static const double enemyCountWaveScale = 1.2;
@@ -64,7 +68,8 @@ class BalanceConfig {
   static const int maxEnemiesPerWave = 300;
 
   /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
-  static const double swarmHpMultiplier = 0.55;
+  /// Balanced so wave 1 enemies take 2-4 hits (not 1-shot).
+  static const double swarmHpMultiplier = 0.30;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling
@@ -155,8 +160,9 @@ class BalanceConfig {
   // Reward Buffs (Wave Rewards)
   // ══════════════════════════════════════
 
-  /// Duration of temporary reward buffs in waves.
-  static const int rewardBuffDurationWaves = 999; // lasts entire run
+  /// Duration of reward buffs in waves — intentionally set to full run duration.
+  /// Reward buffs are run-scoped and reset on new run, not per-wave temporary.
+  static const int rewardBuffDurationWaves = 999;
 
   /// Common reward: ATK bonus.
   static const double rewardAtkBonus = 0.10;
@@ -264,4 +270,70 @@ class BalanceConfig {
 
   /// Game viewport height (portrait).
   static const double gameHeight = 700;
+
+  // ══════════════════════════════════════
+  // Pity System
+  // ══════════════════════════════════════
+
+  /// Pity counter: guaranteed epic+ relic after this many consecutive non-epic drops.
+  static const int pityEpicThreshold = 5;
+
+  /// Pity counter: guaranteed legendary+ after this many consecutive non-legendary drops.
+  static const int pityLegendaryThreshold = 10;
+
+  // ══════════════════════════════════════
+  // Late-game Scaling Improvements
+  // ══════════════════════════════════════
+
+  /// Wave at which enemy HP soft cap kicks in.
+  static const double enemyHpSoftCapWave = 40;
+
+  /// HP scaling multiplier after soft cap wave (reduces exponential growth).
+  static const double enemyHpSoftCapMultiplier = 0.7;
+
+  /// Catch-up gold multiplier for players falling behind.
+  static const double catchUpGoldMultiplier = 1.5;
+
+  /// Number of waves behind expected progress to trigger catch-up bonus.
+  static const int catchUpWaveThreshold = 5;
+
+  // ══════════════════════════════════════
+  // New Game+ (Ascension)
+  // ══════════════════════════════════════
+
+  /// Enemy HP multiplier per ascension level.
+  static const double ascensionEnemyHpScale = 1.25;
+
+  /// Bonus starting gold per ascension level.
+  static const int ascensionBonusGold = 20;
+
+  /// Bonus star multiplier per ascension level.
+  static const double ascensionStarMultiplier = 0.15;
+
+  // ══════════════════════════════════════
+  // Battle Pass
+  // ══════════════════════════════════════
+
+  /// Battle pass season length in days.
+  static const int battlePassSeasonDays = 30;
+
+  /// Number of tiers in the battle pass.
+  static const int battlePassTiers = 30;
+
+  /// XP required per battle pass tier.
+  static const int battlePassXpPerTier = 100;
+
+  // ══════════════════════════════════════
+  // Leaderboard
+  // ══════════════════════════════════════
+
+  /// Maximum local leaderboard entries stored.
+  static const int maxLeaderboardEntries = 50;
+
+  // ══════════════════════════════════════
+  // Story Milestones
+  // ══════════════════════════════════════
+
+  /// Waves at which story events trigger.
+  static const List<int> storyMilestoneWaves = [5, 10, 15, 20, 30, 40, 50];
 }

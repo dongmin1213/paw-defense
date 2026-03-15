@@ -3,7 +3,7 @@ import 'game_theme.dart';
 import '../game/defense_game.dart';
 
 /// Tutorial overlay shown on first play.
-/// 4-step slide guide explaining core mechanics.
+/// 4-step concise guide — covers essentials without overwhelming new players.
 class TutorialScreen extends StatefulWidget {
   final DefenseGame game;
   const TutorialScreen({super.key, required this.game});
@@ -22,50 +22,26 @@ class _TutorialScreenState extends State<TutorialScreen>
     _TutorialStep(
       icon: '🏰',
       title: '성벽을 지켜라!',
-      description: '적들이 사방에서 몰려옵니다.\n성벽 HP가 0이 되면 게임 오버!',
-      hint: '성벽 HP를 항상 주시하세요',
-    ),
-    _TutorialStep(
-      icon: '🐱',
-      title: '유닛을 배치하세요',
-      description: '하단의 [뽑기] 버튼으로 유닛을 소환합니다.\n유닛은 자동으로 적을 공격합니다.',
-      hint: '골드를 모아 강한 유닛을 뽑으세요',
+      description: '적들이 몰려옵니다.\n[뽑기]로 유닛을 소환하고,\n성벽 HP가 0이 되면 게임 오버!',
+      hint: '유닛은 자동으로 적을 공격합니다',
     ),
     _TutorialStep(
       icon: '🔀',
-      title: '같은 유닛 3개 = 합체!',
-      description: '동일 종류 + 동일 레벨 유닛 3개가\n모이면 자동으로 레벨업 합체됩니다.',
-      hint: 'Lv5 도달 시 진화합니다',
+      title: '합체 & 진화',
+      description: '같은 유닛 3개 → 레벨업 합체!\n다른 종 Lv3+ 2개 → 하이브리드 탄생!\nLv5 도달 시 자동 진화합니다.',
+      hint: '초록 글로우 = 합체 가능, 보라 글로우 = 하이브리드',
     ),
     _TutorialStep(
       icon: '🎴',
-      title: '보상과 유물',
-      description: '5웨이브마다 보상 카드를 선택하고\n보스를 잡으면 유물을 획득합니다.',
-      hint: '유물은 런 동안 영구 버프를 줍니다',
+      title: '보상 & 유물 & 콤보',
+      description: '5웨이브마다 보상 카드를 선택하고\n보스 처치 시 유물을 획득합니다.\n연속 처치로 콤보 보너스 골드!',
+      hint: '유물은 런 내 영구 버프, 별은 영구 업그레이드',
     ),
     _TutorialStep(
-      icon: '🧬',
-      title: '하이브리드 유닛',
-      description: '서로 다른 종류의 Lv3+ 유닛 2개가\n있으면 이종 합체가 발동됩니다!\n특수 능력을 가진 강력한 유닛이 탄생합니다.',
-      hint: '12종의 하이브리드를 발견하세요',
-    ),
-    _TutorialStep(
-      icon: '🔥',
-      title: '콤보 시스템',
-      description: '적을 연속으로 처치하면 콤보가 쌓입니다.\n콤보가 높을수록 보너스 골드와\n화려한 이펙트가 발생합니다!',
-      hint: '2초 안에 다음 적을 처치하세요',
-    ),
-    _TutorialStep(
-      icon: '⭐',
-      title: '진화 & 업그레이드',
-      description: 'Lv5 유닛은 자동 진화하여\n공격력이 크게 증가합니다.\n별을 모아 영구 업그레이드를 구매하세요!',
-      hint: '메인 메뉴에서 업그레이드 상점을 열 수 있어요',
-    ),
-    _TutorialStep(
-      icon: '💰',
-      title: '판매 & 리롤',
-      description: '필요 없는 유닛은 판매하여 골드를 회수하고\n리롤로 모든 유닛을 새로 뽑을 수 있습니다.\n슬롯 관리가 승리의 핵심!',
-      hint: '같은 유닛을 모아야 합체가 가능합니다',
+      icon: '💡',
+      title: '전략 팁',
+      description: '불필요한 유닛은 판매하여 골드를 회수하고\n리롤로 새 유닛을 뽑을 수 있습니다.\n같은 유닛을 모으는 것이 핵심 전략!',
+      hint: '배속(2x)과 판매 버튼을 잘 활용하세요',
     ),
   ];
 

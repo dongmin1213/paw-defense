@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
+import '../systems/story_manager.dart';
 
 /// Castle defense main menu overlay — professional layout with unified button sizes.
 class DefenseMainMenu extends StatefulWidget {
@@ -185,10 +186,62 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
                 ],
               ),
             ),
+            // NG+ indicator
+            if (widget.game.newGamePlusManager.isNewGamePlus) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: GameTheme.accentRed.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+                  border: Border.all(
+                    color: GameTheme.accentRed.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  widget.game.newGamePlusManager.displayName,
+                  style: GameTheme.pixel(
+                    fontSize: 7,
+                    color: GameTheme.accentRed,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+            // Battle pass tier
+            if (widget.game.battlePassManager.tier > 0) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '시즌 패스 Tier ${widget.game.battlePassManager.tier}',
+                    style: GameTheme.pixel(
+                      fontSize: 6,
+                      color: GameTheme.accentOrange,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 60,
+                    child: GameTheme.pixelProgressBar(
+                      value: widget.game.battlePassManager.tierProgress,
+                      height: 4,
+                      fillColor: GameTheme.accentOrange,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             // Progression milestone indicator
             if (widget.game.highestWave > 0) ...[
               const SizedBox(height: 8),
               _buildProgressMilestone(),
+            ],
+            // Story progress
+            if (widget.game.storyManager.unlockedChapters.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _buildStoryProgress(),
             ],
           ],
         ),
@@ -287,6 +340,44 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
     );
   }
 
+  Widget _buildStoryProgress() {
+    final story = widget.game.storyManager;
+    final next = story.nextChapter;
+    final pct = (story.completionPercent * 100).round();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: GameTheme.accentPurple.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+        border: Border.all(
+          color: GameTheme.accentPurple.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '스토리 $pct%',
+            style: GameTheme.pixel(
+              fontSize: 6,
+              color: GameTheme.accentPurple,
+            ),
+          ),
+          if (next != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              '다음: ${next.emoji} W${next.requiredWave}',
+              style: GameTheme.pixel(
+                fontSize: 5,
+                color: GameTheme.textMuted,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildButtons() {
     final hasResume = widget.game.saveManager.hasRunState;
     final showAchievement =
@@ -356,7 +447,7 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
           ],
         ),
         const SizedBox(height: 8),
-        // Third row — 2 equal buttons
+        // Third row — achievements + battle pass
         Row(
           children: [
             if (showAchievement) ...[
@@ -372,16 +463,53 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
             ],
             Expanded(
               child: _secondaryButton(
+                label: '시즌 패스',
+                icon: Icons.card_giftcard,
+                color: GameTheme.accentOrange,
+                onTap: () {
+                  // Battle pass screen - shows current tier/progress
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Fourth row — NG+ and settings
+        Row(
+          children: [
+            if (widget.game.newGamePlusManager.highestLevel > 0 ||
+                widget.game.highestWave >= 30) ...[
+              Expanded(
+                child: _secondaryButton(
+                  label: widget.game.newGamePlusManager.displayName,
+                  icon: Icons.replay_circle_filled,
+                  color: GameTheme.accentRed,
+                  onTap: () {
+                    // NG+ difficulty selection
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: _secondaryButton(
+                label: '기록',
+                icon: Icons.leaderboard,
+                color: GameTheme.accent,
+                onTap: () {
+                  // Leaderboard screen
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _secondaryButton(
                 label: '설정',
                 icon: Icons.settings,
                 color: GameTheme.textSecondary,
                 onTap: () => widget.game.overlays.add('Settings'),
               ),
             ),
-            if (!showAchievement) ...[
-              const SizedBox(width: 8),
-              const Expanded(child: SizedBox()),
-            ],
           ],
         ),
       ],

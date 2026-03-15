@@ -5,6 +5,20 @@ import '../utils/pixel_art.dart';
 /// Pixel art renderer for the castle wall / fortress.
 /// All static methods, no instances.
 class WallRenderer {
+  // Cached Paint objects to avoid per-frame allocation
+  static final Paint _flagPaint = Paint()
+    ..color = const Color(0xFFFF0000)
+    ..isAntiAlias = false;
+  static final Paint _hpBgPaint = Paint()
+    ..color = const Color(0xFF424242)
+    ..isAntiAlias = false;
+  static final Paint _hpFillPaint = Paint()..isAntiAlias = false;
+  static final Paint _hpBorderPaint = Paint()
+    ..color = const Color(0xFF212121)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0
+    ..isAntiAlias = false;
+
   /// Render the castle wall.
   /// [hpPercent] 0.0-1.0 controls color (green>yellow>red) and crack overlays.
   /// [level] adds visual flourishes (flags, bigger towers).
@@ -238,18 +252,14 @@ class WallRenderer {
     final offsetX = (size.width - spriteW * px) / 2;
     final offsetY = (size.height - spriteH * px) / 2;
 
-    final flagPaint = Paint()
-      ..color = const Color(0xFFFF0000)
-      ..isAntiAlias = false;
-
     // Wave offset
     final wave = sin(t * 5) * px * 0.5;
 
     // Left tower flag position (col ~5, row ~0)
     final fx1 = offsetX + 5 * px;
     final fy1 = offsetY - 1 * px + wave;
-    canvas.drawRect(Rect.fromLTWH(fx1, fy1, px * 3, px), flagPaint);
-    canvas.drawRect(Rect.fromLTWH(fx1, fy1 + px, px * 2, px), flagPaint);
+    canvas.drawRect(Rect.fromLTWH(fx1, fy1, px * 3, px), _flagPaint);
+    canvas.drawRect(Rect.fromLTWH(fx1, fy1 + px, px * 2, px), _flagPaint);
   }
 
   /// Draw a horizontal HP bar below the castle.
@@ -260,10 +270,7 @@ class WallRenderer {
     final barY = size.height - barHeight - 2;
 
     // Background
-    final bgPaint = Paint()
-      ..color = const Color(0xFF424242)
-      ..isAntiAlias = false;
-    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth, barHeight), bgPaint);
+    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth, barHeight), _hpBgPaint);
 
     // Fill
     Color fillColor;
@@ -274,17 +281,10 @@ class WallRenderer {
     } else {
       fillColor = const Color(0xFFFF1744);
     }
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..isAntiAlias = false;
-    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth * hp, barHeight), fillPaint);
+    _hpFillPaint.color = fillColor;
+    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth * hp, barHeight), _hpFillPaint);
 
     // Border
-    final borderPaint = Paint()
-      ..color = const Color(0xFF212121)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..isAntiAlias = false;
-    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth, barHeight), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(barX, barY, barWidth, barHeight), _hpBorderPaint);
   }
 }

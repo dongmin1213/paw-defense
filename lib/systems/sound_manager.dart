@@ -156,6 +156,69 @@ class SoundManager {
     hapticMedium();
   }
 
+  // === Enhanced SFX (type-specific) ===
+
+  /// Play kill SFX with pitch variation based on combo count.
+  void playKill({int comboCount = 0}) {
+    final pitch = 1.0 + (comboCount.clamp(0, 20) * 0.02);
+    _playSfx('sfx/hit.ogg', volumeScale: (0.4 + pitch * 0.1).clamp(0.4, 1.0));
+    if (comboCount >= 10) {
+      hapticLight();
+    }
+  }
+
+  /// Play unit-type-specific attack SFX.
+  void playUnitAttack(String unitTypeId) {
+    // Vary volume slightly for organic feel
+    final variance = 0.9 + (unitTypeId.hashCode % 20) * 0.01;
+    _playSfx('sfx/hit.ogg', volumeScale: variance * 0.5);
+  }
+
+  /// Play enemy death with intensity based on enemy tier.
+  void playEnemyDeath({bool isBoss = false, bool isElite = false}) {
+    if (isBoss) {
+      playBossKill();
+    } else if (isElite) {
+      _playSfx('sfx/hit.ogg', volumeScale: 1.0);
+      hapticMedium();
+    } else {
+      _playSfx('sfx/hit.ogg', volumeScale: 0.4);
+    }
+  }
+
+  /// Play wall damage SFX scaled by damage percentage.
+  void playWallDamage(double damagePercent) {
+    if (damagePercent > 0.1) {
+      _playSfx('sfx/hit.ogg', volumeScale: 0.8 + damagePercent * 0.4);
+      hapticHeavy();
+    } else {
+      _playSfx('sfx/hit.ogg', volumeScale: 0.5);
+      hapticLight();
+    }
+  }
+
+  /// Play level-up / merge success with scale.
+  void playMergeLevel(int newLevel) {
+    _playSfx('sfx/merge.ogg', volumeScale: 0.8 + newLevel * 0.1);
+    if (newLevel >= 4) {
+      hapticHeavy();
+    } else {
+      hapticMedium();
+    }
+  }
+
+  /// Play pity relic notification.
+  void playPityRelic() {
+    _playSfx('sfx/reward.ogg', volumeScale: 1.3);
+    hapticHeavy();
+  }
+
+  /// Play story chapter unlock.
+  void playStoryUnlock() {
+    _playSfx('sfx/reward.ogg', volumeScale: 1.2);
+    hapticHeavy();
+  }
+
   // === Haptic Feedback ===
 
   void hapticLight() {
@@ -176,6 +239,40 @@ class SoundManager {
   void hapticSelection() {
     if (!_vibrationEnabled) return;
     HapticFeedback.selectionClick();
+  }
+
+  /// Haptic pattern for combo milestones.
+  void hapticComboMilestone(int comboTier) {
+    if (!_vibrationEnabled) return;
+    // Higher tiers get stronger haptic
+    switch (comboTier) {
+      case 1: // NICE
+        HapticFeedback.lightImpact();
+        break;
+      case 2: // GREAT
+        HapticFeedback.mediumImpact();
+        break;
+      case 3: // AMAZING
+        HapticFeedback.heavyImpact();
+        break;
+      case >= 4: // UNSTOPPABLE+
+        HapticFeedback.heavyImpact();
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_vibrationEnabled) HapticFeedback.heavyImpact();
+        });
+        break;
+    }
+  }
+
+  /// Haptic for wave clear.
+  void hapticWaveClear(bool isPerfect) {
+    if (!_vibrationEnabled) return;
+    HapticFeedback.mediumImpact();
+    if (isPerfect) {
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (_vibrationEnabled) HapticFeedback.lightImpact();
+      });
+    }
   }
 
   // === BGM playback ===

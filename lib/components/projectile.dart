@@ -43,10 +43,12 @@ class Projectile extends PositionComponent
   /// Track already-hit enemies to avoid double damage on piercing projectiles.
   final Set<DefenseEnemy> _hitEnemies = {};
 
-  // ── Trail system (length scales with level) ──
+  // ── Trail system (ring buffer, length scales with level) ──
   late final int _trailLength;
-  final List<double> _trailX = [];
-  final List<double> _trailY = [];
+  late final List<double> _trailX;
+  late final List<double> _trailY;
+  int _trailHead = 0;
+  int _trailCount = 0;
 
   /// Visual scale factor based on level/evolved/hybrid status.
   late final double _visualScale;
@@ -70,13 +72,16 @@ class Projectile extends PositionComponent
           anchor: Anchor.center,
           priority: 14,
         ) {
-    // Scale visuals by level: Lv1=1.0, Lv3=1.3, Lv5=1.6, evolved=+0.3
-    _visualScale = 1.0 +
-        (level - 1) * 0.15 +
-        (isEvolved ? 0.3 : 0.0) +
-        (isHybrid ? 0.15 : 0.0);
-    // Trail length: 6 at Lv1, up to 12 at Lv5+evolved
-    _trailLength = (6 + level + (isEvolved ? 2 : 0)).clamp(6, 12);
+    // Scale visuals by level: Lv1=1.2, Lv3=1.8, Lv5=2.4, evolved=+0.5
+    _visualScale = 1.2 +
+        (level - 1) * 0.3 +
+        (isEvolved ? 0.5 : 0.0) +
+        (isHybrid ? 0.3 : 0.0);
+    // Trail length: 10 at Lv1, up to 24 at Lv5+evolved
+    _trailLength = (10 + level * 2 + (isEvolved ? 4 : 0)).clamp(10, 24);
+    // Pre-allocate ring buffer for trail
+    _trailX = List<double>.filled(_trailLength, 0);
+    _trailY = List<double>.filled(_trailLength, 0);
     // Update component size for hitbox
     size = Vector2(6 * _visualScale, 6 * _visualScale);
   }
@@ -89,14 +94,13 @@ class Projectile extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    if (!game.isPlaying) return;
 
-    // Record trail position before moving
-    _trailX.add(position.x);
-    _trailY.add(position.y);
-    if (_trailX.length > _trailLength) {
-      _trailX.removeAt(0);
-      _trailY.removeAt(0);
-    }
+    // Record trail position in ring buffer (O(1) instead of O(n) removeAt)
+    _trailX[_trailHead] = position.x;
+    _trailY[_trailHead] = position.y;
+    _trailHead = (_trailHead + 1) % _trailLength;
+    if (_trailCount < _trailLength) _trailCount++;
 
     // Move along velocity
     position.add(velocity * dt);
@@ -172,6 +176,20 @@ class Projectile extends PositionComponent
   }
 
   static final Random _rng = Random();
+
+  // Cached Paint objects for render()
+  static final Paint _trailPaint = Paint()..isAntiAlias = false;
+  static final Paint _glowPaint = Paint()
+    ..isAntiAlias = false
+    ..color = const Color(0x44FFD700);
+  static final Paint _mainPaint = Paint()..isAntiAlias = false;
+  static final Paint _corePaintCached = Paint()..isAntiAlias = false;
+  static final Paint _hybridDotPaint = Paint()
+    ..isAntiAlias = false
+    ..color = const Color(0xAAE040FB);
+  static final Paint _mageSparkPaint = Paint()
+    ..isAntiAlias = false
+    ..color = const Color(0x88FFFFFF);
 
   /// Elemental: apply random fire/ice/poison effect.
   void _applyElementalEffect(DefenseEnemy enemy) {
@@ -288,40 +306,39 @@ class Projectile extends PositionComponent
     final profile = _profile;
     final s = _visualScale;
 
-    // ── Draw trail (scaled by level) ──
-    if (_trailX.isNotEmpty) {
-      final trailPaint = Paint()..isAntiAlias = false;
-      final len = _trailX.length;
+    // ── Draw trail from ring buffer (scaled by level) ──
+    if (_trailCount > 0) {
+      final len = _trailCount;
+      // Oldest entry is at (_trailHead - _trailCount + _trailLength) % _trailLength
+      final start = (_trailHead - _trailCount + _trailLength) % _trailLength;
       for (int i = 0; i < len; i++) {
+        final idx = (start + i) % _trailLength;
         final t = i / len; // 0.0 = oldest, ~1.0 = newest
         final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
-        final trailSize = (1.5 + t * 2.5) * s;
-        final dx = _trailX[i] - position.x;
-        final dy = _trailY[i] - position.y;
-        trailPaint.color = profile.trailColor.withValues(alpha: alpha);
+        final trailSize = (2.0 + t * 4.0) * s;
+        final dx = _trailX[idx] - position.x;
+        final dy = _trailY[idx] - position.y;
+        _trailPaint.color = profile.trailColor.withValues(alpha: alpha);
         canvas.drawRect(
           Rect.fromCenter(
             center: Offset(dx + size.x / 2, dy + size.y / 2),
             width: trailSize,
             height: trailSize,
           ),
-          trailPaint,
+          _trailPaint,
         );
       }
     }
 
     // ── Evolved glow outline ──
     if (isEvolved) {
-      final glowPaint = Paint()
-        ..isAntiAlias = false
-        ..color = const Color(0x44FFD700); // gold glow
       canvas.drawRect(
         Rect.fromCenter(
           center: Offset(size.x / 2, size.y / 2),
           width: size.x + 3,
           height: size.y + 3,
         ),
-        glowPaint,
+        _glowPaint,
       );
     }
 
@@ -331,34 +348,26 @@ class Projectile extends PositionComponent
     canvas.scale(s, s);
     canvas.translate(-3, -3); // center of original 6x6
 
-    final paint = Paint()
-      ..isAntiAlias = false
-      ..color = profile.color;
+    _mainPaint.color = profile.color;
     // Lv3+ brighter core, Lv5 pure white core
-    final coreColor = level >= 5
+    _corePaintCached.color = level >= 5
         ? const Color(0xFFFFFFFF)
         : level >= 3
             ? const Color(0xFFFFFFCC)
             : const Color(0xFFFFFFFF);
-    final corePaint = Paint()
-      ..isAntiAlias = false
-      ..color = coreColor;
 
-    _renderShape(canvas, paint, corePaint);
+    _renderShape(canvas, _mainPaint, _corePaintCached);
     canvas.restore();
 
     // ── Hybrid center dot ──
     if (isHybrid) {
-      final hybridDot = Paint()
-        ..isAntiAlias = false
-        ..color = const Color(0xAAE040FB); // purple
       canvas.drawRect(
         Rect.fromCenter(
           center: Offset(size.x / 2, size.y / 2),
           width: 2 * s,
           height: 2 * s,
         ),
-        hybridDot,
+        _hybridDotPaint,
       );
     }
   }
@@ -380,11 +389,8 @@ class Projectile extends PositionComponent
         canvas.drawRect(Rect.fromLTWH(1, 1, 4, 4), paint);
         canvas.drawRect(Rect.fromLTWH(2, 2, 2, 2), corePaint);
         // Side sparkle pixels
-        final sparkPaint = Paint()
-          ..isAntiAlias = false
-          ..color = const Color(0x88FFFFFF);
-        canvas.drawRect(Rect.fromLTWH(0, 3, 1, 1), sparkPaint);
-        canvas.drawRect(Rect.fromLTWH(5, 2, 1, 1), sparkPaint);
+        canvas.drawRect(Rect.fromLTWH(0, 3, 1, 1), _mageSparkPaint);
+        canvas.drawRect(Rect.fromLTWH(5, 2, 1, 1), _mageSparkPaint);
         break;
       case 'bear_tanker':
         // Rock: big square

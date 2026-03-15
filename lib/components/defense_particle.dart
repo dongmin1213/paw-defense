@@ -12,12 +12,41 @@ import '../game/defense_game.dart';
 class DefenseParticle extends PositionComponent
     with HasGameReference<DefenseGame> {
   final List<_FxParticle> _particles = [];
+  final List<_GroundMark> _groundMarks = [];
 
   DefenseParticle() : super(priority: 60);
 
   /// Remove all active particles.
   void clear() {
     _particles.clear();
+    _groundMarks.clear();
+  }
+
+  // Cached Random for ground marks (avoid per-call allocation)
+  static final Random _groundRng = Random();
+
+  // Cached Paint for ground mark rendering (avoid per-frame allocation)
+  static final Paint _groundMarkPaint = Paint()..isAntiAlias = false;
+
+  /// Spawn a ground impact mark at the given position (enemy death splat).
+  void spawnGroundMark(double x, double y, {String enemyId = ''}) {
+    // Cap ground marks for performance — generous for high-density waves
+    if (_groundMarks.length > 150) {
+      _groundMarks.removeRange(0, _groundMarks.length - 120);
+    }
+    final colors = _deathColorsForEnemy(enemyId);
+    final color = colors[_groundRng.nextInt(colors.length)];
+    // 1-3 splat marks per death for variety
+    final count = 1 + _groundRng.nextInt(3);
+    for (int i = 0; i < count; i++) {
+      _groundMarks.add(_GroundMark(
+        x: x + (_groundRng.nextDouble() - 0.5) * 16,
+        y: y + (_groundRng.nextDouble() - 0.5) * 12,
+        size: 3.0 + _groundRng.nextDouble() * 5.0,
+        life: 4.0 + _groundRng.nextDouble() * 3.0, // persist 4-7 seconds
+        color: color,
+      ));
+    }
   }
 
   /// Gold coin collect burst at a world position.
@@ -77,7 +106,7 @@ class DefenseParticle extends PositionComponent
     final rng = Random();
     final colors = _deathColorsForEnemy(enemyId);
     final isBomber = enemyId.contains('bomber');
-    final count = isBomber ? 22 : 15;
+    final count = isBomber ? 40 : 25;
 
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -111,7 +140,7 @@ class DefenseParticle extends PositionComponent
   /// Boss explosion — large burst with mixed fire colors.
   void spawnBossExplosion(double wx, double wy) {
     final rng = Random();
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 60; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 50 + rng.nextDouble() * 120;
       const colors = [
@@ -282,7 +311,7 @@ class DefenseParticle extends PositionComponent
   void spawnComboFlash(double centerX, double centerY, int comboColor) {
     final rng = Random();
     final color = Color(comboColor);
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 80; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 80 + rng.nextDouble() * 150;
       _particles.add(_FxParticle(
@@ -297,10 +326,10 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Projectile hit impact — small burst at hit point.
+  /// Projectile hit impact — burst at hit point.
   void spawnProjectileHit(double wx, double wy, Color color) {
     final rng = Random();
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 8; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 20 + rng.nextDouble() * 30;
       _particles.add(_FxParticle(
@@ -318,7 +347,7 @@ class DefenseParticle extends PositionComponent
   /// Skill activation — large radial burst with skill color.
   void spawnSkillActivation(double wx, double wy, Color color) {
     final rng = Random();
-    for (var i = 0; i < 35; i++) {
+    for (var i = 0; i < 70; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 60 + rng.nextDouble() * 120;
       _particles.add(_FxParticle(
@@ -428,7 +457,7 @@ class DefenseParticle extends PositionComponent
   void spawnEnemyDeathScaled(double wx, double wy, double scale,
       {String enemyId = ''}) {
     final rng = Random();
-    final count = (15 * scale).clamp(8, 40).toInt();
+    final count = (25 * scale).clamp(12, 80).toInt();
     final colors = _deathColorsForEnemy(enemyId);
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -462,8 +491,8 @@ class DefenseParticle extends PositionComponent
 
   /// Shockwave ring — expanding ring of particles (boss kill, big combos).
   void spawnShockwaveRing(double wx, double wy, Color color) {
-    for (int i = 0; i < 24; i++) {
-      final angle = i / 24 * 2 * pi;
+    for (int i = 0; i < 48; i++) {
+      final angle = i / 48 * 2 * pi;
       _particles.add(_FxParticle(
         x: wx,
         y: wy,
@@ -476,11 +505,11 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Muzzle flash on attack — small burst of color at unit position.
-  /// Scales with level: Lv1=2 particles, Lv5=6 particles.
+  /// Muzzle flash on attack — burst of color at unit position.
+  /// Scales with level: Lv1=4 particles, Lv5=12 particles.
   void spawnMuzzleFlash(double wx, double wy, Color color, {int level = 1}) {
     final rng = Random();
-    final count = 1 + level; // Lv1=2, Lv3=4, Lv5=6
+    final count = 2 + level * 2; // Lv1=4, Lv3=8, Lv5=12
     final isEvolved = level >= 5;
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -502,7 +531,7 @@ class DefenseParticle extends PositionComponent
   void spawnGoldScatter(double wx, double wy, int amount,
       double wallX, double wallY) {
     final rng = Random();
-    final count = (amount + 1).clamp(2, 8);
+    final count = (amount * 2 + 3).clamp(5, 20);
 
     // Initial white flash at death position (brief, eye-catching)
     _particles.add(_FxParticle(
@@ -558,9 +587,38 @@ class DefenseParticle extends PositionComponent
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Hard cap
-    if (_particles.length > 600) {
-      _particles.removeRange(0, _particles.length - 600);
+    // Hard cap — generous for visual spectacle
+    if (_particles.length > 2000) {
+      _particles.removeRange(0, _particles.length - 2000);
+    }
+
+    // Age ground marks
+    for (final m in _groundMarks) {
+      m.life -= dt;
+    }
+    _groundMarks.removeWhere((m) => m.life <= 0);
+  }
+
+  /// Render ground marks (called by GroundMarkLayer at low priority).
+  void renderGroundMarks(Canvas canvas) {
+    for (final m in _groundMarks) {
+      final alpha = m.life < 2.0 ? (m.life / 2.0).clamp(0.0, 0.4) : 0.4;
+      _groundMarkPaint.color = m.color.withValues(alpha: alpha);
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset(m.x, m.y), width: m.size, height: m.size * 0.5),
+        _groundMarkPaint,
+      );
+      if (m.size > 4) {
+        _groundMarkPaint.color = m.color.withValues(alpha: alpha * 0.6);
+        canvas.drawRect(
+          Rect.fromLTWH(m.x + m.size * 0.4, m.y - m.size * 0.2, 2, 2),
+          _groundMarkPaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(m.x - m.size * 0.5, m.y + m.size * 0.1, 1.5, 1.5),
+          _groundMarkPaint,
+        );
+      }
     }
   }
 
@@ -616,4 +674,29 @@ class _FxParticle {
     this.homeY = 0,
   })  : life = life,
         maxLife = life;
+}
+
+class _GroundMark {
+  final double x, y, size;
+  double life;
+  final Color color;
+
+  _GroundMark({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.life,
+    required this.color,
+  });
+}
+
+/// Renders ground marks at low priority (below enemies/units/projectiles).
+class GroundMarkLayer extends PositionComponent
+    with HasGameReference<DefenseGame> {
+  GroundMarkLayer() : super(priority: 5); // below wall (10), enemies (12), etc.
+
+  @override
+  void render(Canvas canvas) {
+    game.particleEffect.renderGroundMarks(canvas);
+  }
 }

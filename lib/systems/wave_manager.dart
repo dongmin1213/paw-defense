@@ -76,27 +76,28 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
 
   /// Base enemy count per wave tier with late-game scaling (swarm density).
   int get _baseEnemyCount {
-    // Late-game scaling: massive enemy counts for visual spectacle
-    if (currentWave > 30) return 100;
-    if (currentWave > 24) return 75;
-    if (currentWave > 20) return 55;
-    if (currentWave > 15) return 40;
-
     for (final tier in BalanceConfig.baseEnemyCountTiers) {
       if (currentWave <= tier[0]) return tier[1];
     }
     return BalanceConfig.baseEnemyCountDefault;
   }
 
-  /// Spawn interval: spread enemies evenly across wave duration.
+  /// Spawn interval: smoothly front-loaded for screen-filling density.
+  /// Starts fast (dense burst) and gradually slows down toward wave end.
   double get _spawnInterval {
     if (totalEnemiesInWave <= 0) return 1.0;
-    return (waveDuration / totalEnemiesInWave)
+    final progress = enemiesSpawned / totalEnemiesInWave;
+    // Smooth curve: interval grows from 0.5x to 2x of base as wave progresses
+    // This creates a natural density that tapers off smoothly
+    final baseInterval = waveDuration / totalEnemiesInWave;
+    final speedFactor = 0.4 + progress * 1.6; // 0.4x at start → 2.0x at end
+    return (baseInterval * speedFactor)
         .clamp(BalanceConfig.minSpawnInterval, BalanceConfig.maxSpawnInterval);
   }
 
   @override
   void update(double dt) {
+    if (!game.isPlaying) return;
     if (betweenWaves) {
       _updateBetweenWaves(dt);
       return;
@@ -188,16 +189,18 @@ class WaveManager extends Component with HasGameReference<DefenseGame> {
         waveModifier.enemyHpMultiplier;
   }
 
-  /// Scale speed by wave and unit count, with ±15% random variation.
+  /// Scale speed by wave and unit count, with ±15% random variation and hard cap.
   double _scaledSpeed(String typeId, int unitCount) {
     final data = DefenseEnemyDatabase.get(typeId);
     final baseSpeed = data?.baseSpeed ?? 40;
     final variation = 0.85 + _rng.nextDouble() * 0.3; // 0.85~1.15
-    return baseSpeed *
-        (1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
+    final speedMultiplier = ((1 + unitCount * BalanceConfig.enemySpeedUnitScale) *
         (1 +
             max(0, currentWave - BalanceConfig.enemySpeedLateWaveStart) *
-                BalanceConfig.enemySpeedLateWaveScale) *
+                BalanceConfig.enemySpeedLateWaveScale))
+        .clamp(0.0, BalanceConfig.enemySpeedMaxMultiplier);
+    return baseSpeed *
+        speedMultiplier *
         waveModifier.enemySpeedMultiplier *
         variation;
   }

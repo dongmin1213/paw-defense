@@ -24,6 +24,8 @@ class DefenseUnit extends PositionComponent
   double _attackTimer = 0;
   double _animTimer = 0;
   DefenseEnemy? _target;
+  double _targetSearchTimer = 0;
+  static const double _targetSearchInterval = 0.15; // search every 150ms instead of every frame
 
   // Stats from UnitData
   final double baseAtk;
@@ -306,12 +308,14 @@ class DefenseUnit extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    if (!game.isPlaying) return;
     _animTimer += dt;
     _attackTimer += dt;
     if (_recoilTimer > 0) _recoilTimer -= dt;
+    if (_beamTimer > 0) _beamTimer -= dt;
 
     // Follow orbit position from slot
-    if (slotIndex >= 0 && game.isPlaying) {
+    if (slotIndex >= 0) {
       final wallPos = game.wall.position;
       final totalSlots = game.maxSlots;
       final angle =
@@ -320,14 +324,19 @@ class DefenseUnit extends PositionComponent
       position.y = wallPos.y + sin(angle) * slot_comp.UnitSlot.slotRadius;
     }
 
-    // Re-acquire target periodically or if target is dead/gone
+    // Re-acquire target: immediately if no valid target, throttled otherwise
     if (_target == null || _target!.isDead || !_target!.isMounted) {
       _findTarget();
+      _targetSearchTimer = 0;
     } else {
-      // Check if target moved out of range
-      final dist = position.distanceTo(_target!.position);
-      if (dist > range * 1.2) {
-        _findTarget();
+      _targetSearchTimer += dt;
+      if (_targetSearchTimer >= _targetSearchInterval) {
+        _targetSearchTimer = 0;
+        // Check if target moved out of range
+        final dist = position.distanceTo(_target!.position);
+        if (dist > range * 1.2) {
+          _findTarget();
+        }
       }
     }
 
@@ -335,13 +344,46 @@ class DefenseUnit extends PositionComponent
     if (_attackTimer >= attackInterval && _target != null) {
       _attackTimer = 0;
       _recoilTimer = _recoilDuration;
+      _beamTimer = _beamDuration;
       _attack();
     }
   }
 
   // Attack recoil animation
   double _recoilTimer = 0;
-  static const double _recoilDuration = 0.1;
+  static const double _recoilDuration = 0.15;
+
+  // Beam visibility timer (longer than recoil for visual clarity)
+  double _beamTimer = 0;
+  static const double _beamDuration = 0.25;
+
+  // Cached Paint objects for render()
+  static final Paint _glowPaint = Paint();
+  static final Paint _shimmerPaint = Paint();
+  static final Paint _dotPaint = Paint()..isAntiAlias = false;
+  static final Paint _beamPaint = Paint()..isAntiAlias = false;
+  static final Paint _beamGlowPaint = Paint()..isAntiAlias = false;
+
+  // Attack beam colors per unit type
+  static const Map<String, Color> _beamColors = {
+    'cat_archer': Color(0xFFFFD700),    // gold
+    'dog_warrior': Color(0xFFB0BEC5),   // silver
+    'rabbit_mage': Color(0xFF9C27B0),   // purple
+    'bear_tanker': Color(0xFF8D6E63),   // brown
+    'fox_assassin': Color(0xFFFF3D00),  // red-orange
+    'bird_scout': Color(0xFF42A5F5),    // sky blue
+    'turtle_healer': Color(0xFF66BB6A), // green
+    'owl_wizard': Color(0xFF651FFF),    // indigo
+  };
+
+  Color get _beamColor {
+    if (isEvolved) return const Color(0xFFFFD700);
+    if (isHybrid) return const Color(0xFFE040FB);
+    return _beamColors[unitTypeId] ?? const Color(0xFFFFD700);
+  }
+
+  /// Whether the unit should show attack beam.
+  bool get _isAttacking => _beamTimer > 0;
 
   /// Sine approximation for idle bob animation.
   double _sin(double x) {
@@ -409,24 +451,22 @@ class DefenseUnit extends PositionComponent
     // Evolved unit glow aura
     if (isEvolved) {
       final glowAlpha = (25 + 15 * _sin(_animTimer * 3).abs()).toInt();
-      final glowPaint = Paint()
-        ..color = Color.fromARGB(glowAlpha, 255, 215, 0);
+      _glowPaint.color = Color.fromARGB(glowAlpha, 255, 215, 0);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.55,
-        glowPaint,
+        _glowPaint,
       );
     }
 
     // Hybrid unit purple shimmer
     if (isHybrid && !isEvolved) {
       final shimmerAlpha = (18 + 12 * _sin(_animTimer * 4).abs()).toInt();
-      final shimmerPaint = Paint()
-        ..color = Color.fromARGB(shimmerAlpha, 224, 64, 251);
+      _shimmerPaint.color = Color.fromARGB(shimmerAlpha, 224, 64, 251);
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.5,
-        shimmerPaint,
+        _shimmerPaint,
       );
     }
 
@@ -435,19 +475,54 @@ class DefenseUnit extends PositionComponent
       final dotY = size.y + 2;
       final totalWidth = (level - 1) * 3.0;
       final startX = (size.x - totalWidth) / 2;
-      final dotPaint = Paint()
-        ..isAntiAlias = false
-        ..color = isEvolved
-            ? const Color(0xFFFFD700) // gold for evolved
-            : isHybrid
-                ? const Color(0xFFE040FB) // purple for hybrid
-                : const Color(0xFFFFFFFF); // white for normal
+      _dotPaint.color = isEvolved
+          ? const Color(0xFFFFD700) // gold for evolved
+          : isHybrid
+              ? const Color(0xFFE040FB) // purple for hybrid
+              : const Color(0xFFFFFFFF); // white for normal
       for (int i = 0; i < level - 1; i++) {
         canvas.drawRect(
           Rect.fromLTWH(startX + i * 3.0, dotY, 2, 2),
-          dotPaint,
+          _dotPaint,
         );
       }
+    }
+
+    // ── Attack beam / laser line ──
+    // Draw beam from unit center to target (in component-local coordinate space)
+    if (_isAttacking && _target != null && !_target!.isDead) {
+      // Both points in component-local space (relative to this component's position)
+      final unitCenter = Offset(size.x / 2, size.y / 2);
+      final targetLocal = Offset(
+        _target!.position.x - position.x,
+        _target!.position.y - position.y,
+      );
+
+      final beamColor = _beamColor;
+      final beamT = (_beamTimer / _beamDuration).clamp(0.0, 1.0);
+      final beamAlpha = beamT * 0.9;
+
+      // Outer glow (wider, semi-transparent)
+      final glowWidth = 3.0 + level * 1.0 + (isEvolved ? 2.0 : 0.0);
+      _beamGlowPaint
+        ..color = beamColor.withValues(alpha: beamAlpha * 0.3)
+        ..strokeWidth = glowWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(unitCenter, targetLocal, _beamGlowPaint);
+
+      // Core beam (thinner, brighter)
+      final coreWidth = 1.0 + level * 0.4 + (isEvolved ? 1.0 : 0.0);
+      _beamPaint
+        ..color = beamColor.withValues(alpha: beamAlpha * 0.8)
+        ..strokeWidth = coreWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(unitCenter, targetLocal, _beamPaint);
+
+      // Bright center line (1px, full brightness)
+      _beamPaint
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: beamAlpha * 0.6)
+        ..strokeWidth = 0.5;
+      canvas.drawLine(unitCenter, targetLocal, _beamPaint);
     }
   }
 }

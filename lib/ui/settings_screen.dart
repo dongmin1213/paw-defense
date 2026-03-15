@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'game_theme.dart';
 import '../game/defense_game.dart';
 
@@ -152,6 +153,54 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     height: 1,
                     color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  // Divider
+                  Container(
+                    height: 1,
+                    color: GameTheme.pixelBorder.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  // Color-blind mode
+                  _buildDropdownRow(
+                    icon: Icons.accessibility_new,
+                    label: '색각 보정',
+                    value: GameTheme.colorBlindMode,
+                    items: const [
+                      DropdownMenuItem(
+                        value: ColorBlindMode.none,
+                        child: Text('없음', style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: ColorBlindMode.protanopia,
+                        child: Text('적색맹', style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: ColorBlindMode.deuteranopia,
+                        child: Text('녹색맹', style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: ColorBlindMode.tritanopia,
+                        child: Text('청색맹', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => GameTheme.setColorBlindMode(v));
+                        _saveAccessibility();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // UI Scale
+                  _buildSliderRow(
+                    label: 'UI 크기',
+                    value: (GameTheme.uiScale - 0.8) / 0.7, // normalize 0.8-1.5 to 0-1
+                    enabled: true,
+                    onChanged: (v) {
+                      setState(() => GameTheme.setUiScale(0.8 + v * 0.7));
+                      _saveAccessibility();
+                    },
                   ),
                   const SizedBox(height: 16),
                   // Data reset button
@@ -341,6 +390,59 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveAccessibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('accessibility_colorBlind', GameTheme.colorBlindMode.index);
+    prefs.setDouble('accessibility_uiScale', GameTheme.uiScale);
+  }
+
+  Widget _buildDropdownRow<T>({
+    required IconData icon,
+    required String label,
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: GameTheme.bgDeep.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(GameTheme.radiusSm),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: GameTheme.textSecondary, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GameTheme.pixel(
+              fontSize: 8,
+              color: GameTheme.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          Theme(
+            data: ThemeData.dark().copyWith(
+              canvasColor: GameTheme.bgCard,
+            ),
+            child: DropdownButton<T>(
+              value: value,
+              items: items,
+              onChanged: onChanged,
+              underline: const SizedBox(),
+              isDense: true,
+              style: GameTheme.pixel(
+                fontSize: 7,
+                color: GameTheme.accent,
+              ),
+              dropdownColor: GameTheme.bgCard,
             ),
           ),
         ],

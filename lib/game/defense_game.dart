@@ -24,6 +24,10 @@ import '../systems/achievement_manager.dart';
 import '../systems/daily_manager.dart';
 import '../systems/codex_manager.dart';
 import '../systems/synergy_manager.dart';
+import '../systems/battle_pass_manager.dart';
+import '../systems/new_game_plus_manager.dart';
+import '../systems/story_manager.dart';
+import '../systems/leaderboard_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/unit_data.dart';
 import '../data/enemy_data.dart';
@@ -33,7 +37,9 @@ import '../data/relic_data.dart';
 import '../components/damage_number.dart';
 import '../components/reactive_background.dart';
 import '../components/skill_effect_overlay.dart';
+import '../components/field_drop.dart';
 import '../ui/defense_hud.dart' as hud;
+import '../ui/game_theme.dart' show GameTheme, ColorBlindMode;
 
 /// Main game class for castle defense mode.
 /// Portrait mode (400x700), fixed resolution viewport.
@@ -65,6 +71,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DailyManager dailyManager;
   late CodexManager codexManager;
   late SynergyManager synergyManager;
+  late BattlePassManager battlePassManager;
+  late NewGamePlusManager newGamePlusManager;
+  late StoryManager storyManager;
+  late LeaderboardManager leaderboardManager;
 
   // ── Core Components ──
   late Wall wall;
@@ -77,6 +87,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   bool _livingEnemiesDirty = true;
   List<DefenseEnemy> _livingEnemiesCache = [];
   int _relicEffectFrame = 0;
+
+  /// Cached unitSlots for HUD, rebuilt only when slots change.
+  bool _unitSlotsDirty = true;
+  List<hud.UnitSlot> _unitSlotsCache = [];
+
+  /// Call when unit slots change (place, merge, sell, etc.).
+  void markUnitSlotsDirty() {
+    _unitSlotsDirty = true;
+  }
   List<DefenseEnemy> get livingEnemies {
     if (_livingEnemiesDirty) {
       _livingEnemiesCache = world.children
@@ -104,6 +123,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   int totalBossKills = 0;
   int _runKills = 0;
   int _runGoldEarned = 0;
+  int _activeFieldDrops = 0;
 
   bool isPlaying = false;
   bool _isPaused = false;
@@ -177,6 +197,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Unit slots exposed for UI (HUD), with merge hints.
   List<hud.UnitSlot> get unitSlots {
+    if (!_unitSlotsDirty) return _unitSlotsCache;
+
     // Compute merge-hint data: count occurrences of (type, level)
     final counts = <String, int>{};
     for (final s in _unitSlots) {
@@ -196,7 +218,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       crossBreedSlots.add(cb.slotIndexB);
     }
 
-    return List.generate(_unitSlots.length, (i) {
+    _unitSlotsCache = List.generate(_unitSlots.length, (i) {
       final u = _unitSlots[i].unit;
       if (u == null) return const hud.UnitSlot();
       final key = '${u.unitTypeId}:${u.level}';
@@ -211,6 +233,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         canHybrid: canHybrid,
       );
     });
+    _unitSlotsDirty = false;
+    return _unitSlotsCache;
   }
 
   DefenseGame()
@@ -254,6 +278,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     particleEffect = DefenseParticle();
     world.add(particleEffect);
+    world.add(GroundMarkLayer());
 
     gameFeel = DefenseGameFeel();
     world.add(gameFeel);
@@ -285,6 +310,29 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
     synergyManager = SynergyManager();
 
+    // Initialize new systems
+    final prefs = await SharedPreferences.getInstance();
+
+    battlePassManager = BattlePassManager();
+    await battlePassManager.init(prefs);
+
+    newGamePlusManager = NewGamePlusManager();
+    await newGamePlusManager.init(prefs);
+
+    storyManager = StoryManager();
+    await storyManager.init(prefs);
+
+    leaderboardManager = LeaderboardManager();
+    await leaderboardManager.init(prefs);
+
+    // Load accessibility settings
+    final colorBlindIdx = prefs.getInt('accessibility_colorBlind') ?? 0;
+    if (colorBlindIdx > 0 && colorBlindIdx < ColorBlindMode.values.length) {
+      GameTheme.setColorBlindMode(ColorBlindMode.values[colorBlindIdx]);
+    }
+    final uiScale = prefs.getDouble('accessibility_uiScale') ?? 1.0;
+    GameTheme.setUiScale(uiScale);
+
     // Initialize unit slots
     _initSlots();
 
@@ -305,6 +353,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   void _refreshSlotComponents() {
+    markUnitSlotsDirty();
     // Remove existing slot components
     world.children
         .whereType<slot_component.UnitSlot>()
@@ -354,8 +403,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _runKills = 0;
     _runGoldEarned = 0;
     _unitsBought = 0;
+    _activeFieldDrops = 0;
     isPlaying = true;
     _isPaused = false;
+    gameSpeed = 1.0;
 
     // Reset reward buffs
     rewardAtkMultiplier = 1.0;
@@ -451,7 +502,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Save the current run state (called from app lifecycle).
   void saveRunState() {
     if (!isPlaying) return;
-    saveManager.saveRunState(buildRunState());
+    try {
+      saveManager.saveRunState(buildRunState());
+    } catch (_) {
+      // Silently fail — saving is best-effort, don't crash the game
+    }
   }
 
   /// Resume from a saved run state. Returns true if successful.
@@ -459,6 +514,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     final state = saveManager.loadRunState();
     if (state == null) return false;
 
+    try {
     // Restore game state
     gold = (state['gold'] as num?)?.toInt() ?? 50;
     _runKills = (state['runKills'] as num?)?.toInt() ?? 0;
@@ -529,16 +585,22 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     overlays.add('DefenseHud');
 
     return true;
+    } catch (_) {
+      // Corrupted save data — discard and start fresh
+      saveManager.clearRunState();
+      return false;
+    }
   }
 
   /// Pause the game.
   void pauseGame() {
+    if (!isPlaying) return;
     _isPaused = true;
-    // Could show a pause overlay
   }
 
   /// Resume the game.
   void resumeGame() {
+    if (!isPlaying) return;
     _isPaused = false;
   }
 
@@ -912,6 +974,15 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       wall.position.x, wall.position.y,
     );
 
+    // Physical field drops — coins/gems scatter on the ground
+    _spawnFieldDrops(enemy);
+
+    // Ground impact mark (persistent splat)
+    particleEffect.spawnGroundMark(
+      enemy.position.x, enemy.position.y,
+      enemyId: enemy.enemyId,
+    );
+
     // Relic: bonus gold on kill
     final bonusGold = relicManager.onEnemyKilled(_rng);
     if (bonusGold > 0) {
@@ -1014,6 +1085,52 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     }
   }
 
+  /// Spawn physical field drop items when an enemy dies.
+  void _spawnFieldDrops(DefenseEnemy enemy) {
+    if (_activeFieldDrops >= FieldDrop.maxDrops) return;
+
+    final pos = enemy.position;
+    final isBoss = enemy.enemyId == 'boss';
+
+    // Gold drops: 1-3 per normal enemy, 5-8 per boss
+    final goldCount = isBoss ? 5 + _rng.nextInt(4) : 1 + _rng.nextInt(3);
+    for (int i = 0; i < goldCount && _activeFieldDrops < FieldDrop.maxDrops; i++) {
+      _addFieldDrop(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.gold,
+        value: isBoss ? 3 : 1,
+      ));
+    }
+
+    // Occasional gem drop (10% chance, 25% for bosses)
+    if (_activeFieldDrops < FieldDrop.maxDrops && _rng.nextDouble() < (isBoss ? 0.25 : 0.10)) {
+      _addFieldDrop(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.gem,
+        value: isBoss ? 5 : 1,
+      ));
+    }
+
+    // Health drop (5% chance, heals wall)
+    if (_activeFieldDrops < FieldDrop.maxDrops && _rng.nextDouble() < 0.05 && !wall.isDestroyed) {
+      _addFieldDrop(FieldDrop(
+        spawnPosition: pos.clone(),
+        type: FieldDropType.health,
+        value: 2,
+      ));
+    }
+  }
+
+  void _addFieldDrop(FieldDrop drop) {
+    _activeFieldDrops++;
+    world.add(drop);
+  }
+
+  /// Called by FieldDrop when it's absorbed or removed.
+  void onFieldDropRemoved() {
+    _activeFieldDrops = (_activeFieldDrops - 1).clamp(0, FieldDrop.maxDrops);
+  }
+
   /// Add gold to the player. Optionally show a floating number at [popupPos].
   void addGold(int amount, {Vector2? popupPos}) {
     final goldMult = upgradeManager.goldGainMultiplier *
@@ -1033,8 +1150,16 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Called when the wall is destroyed — end the run.
   void onWallDestroyed() {
+    if (!isPlaying) return; // Prevent double-call
     isPlaying = false;
+    soundManager.stopBgm();
     soundManager.playGameOver();
+
+    // Stop all game components so nothing keeps running in the background
+    _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
 
     // Calculate star reward
     final baseStars = waveManager.currentWave;
@@ -1154,15 +1279,20 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Activate the charged skill. Called from HUD button.
   void activateSkill() {
+    if (!isPlaying || wall.isDestroyed) return;
     final effectId = skillManager.activate();
     if (effectId == null) return;
+
+    // Snapshot enemies to avoid concurrent modification during skill damage
+    final enemies = livingEnemies.toList();
 
     // Apply immediate effects
     switch (effectId) {
       case 'arrow_rain':
         // Damage all enemies for ATK x2
         final avgAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           e.takeDamage(avgAtk * 2);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
               enemyId: e.enemyId);
@@ -1174,7 +1304,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       case 'meteor':
         // Big explosion near wall center
         final meteorAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           final dist = e.position.distanceTo(wall.position);
           if (dist < 150) {
             e.takeDamage(meteorAtk * 5);
@@ -1193,7 +1324,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       case 'storm_call':
         // All flying instant kill + ground ATK x3
         final stormAtk = _getAverageUnitAtk();
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           if (e.isFlying) {
             e.takeDamage(e.hp * 2); // instant kill
           } else {
@@ -1211,7 +1343,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         break;
       case 'mana_burst':
         // All enemies lose 30% HP
-        for (final e in livingEnemies) {
+        for (final e in enemies) {
+          if (e.isDead) continue;
           e.takeDamage(e.hp * 0.3);
           particleEffect.spawnEnemyDeath(e.position.x, e.position.y,
               enemyId: e.enemyId);
@@ -1490,6 +1623,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Show the wave reward card selection screen.
   void showRewardSelection() {
+    if (!isPlaying) return;
+    if (overlays.isActive('WaveReward') || overlays.isActive('RelicSelection')) {
+      return;
+    }
     _isPaused = true;
     overlays.add('WaveReward');
   }
@@ -1542,6 +1679,16 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Go back to main menu from results.
   void goToMainMenu() {
+    isPlaying = false;
+    soundManager.stopBgm();
+
+    // Clean up any remaining game components
+    _clearAllUnits();
+    _clearAllEnemies();
+    _clearAllProjectiles();
+    _clearAllDamageNumbers();
+    _clearParticles();
+
     overlays.remove('RunResult');
     overlays.remove('DefenseHud');
     overlays.add('DefenseMainMenu');
@@ -1555,18 +1702,18 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// [damageAmount] scales the font size — bigger hits get bigger numbers.
   void showDamageNumber(Vector2 pos, String text, Color color,
       {bool isCritical = false, double damageAmount = 0}) {
-    // Cap visible damage numbers to prevent GPU overload
+    // Cap visible damage numbers — generous limit for visual spectacle
     final existing = world.children.whereType<DamageNumber>();
-    if (existing.length > 25) return; // Skip when too many on screen
+    if (existing.length > 150) return;
 
-    // Scale fontSize by damage amount
-    double fontSize = 8;
+    // Scale fontSize by damage amount — bigger hits get much bigger numbers
+    double fontSize = 12;
     if (damageAmount >= 1000) {
-      fontSize = 12;
+      fontSize = 20;
     } else if (damageAmount >= 500) {
-      fontSize = 10;
+      fontSize = 17;
     } else if (damageAmount >= 100) {
-      fontSize = 9;
+      fontSize = 14;
     }
 
     world.add(DamageNumber(
@@ -1580,7 +1727,11 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Generate relic choices from relicManager and show the overlay.
   void showRelicSelection() {
+    if (!isPlaying) return;
     if (relicManager.isFull) return;
+    if (overlays.isActive('WaveReward') || overlays.isActive('RelicSelection')) {
+      return;
+    }
 
     final choices = relicManager.generateRelicChoices(
       _rng,

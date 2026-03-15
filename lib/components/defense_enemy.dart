@@ -234,6 +234,7 @@ class DefenseEnemy extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    if (!game.isPlaying) return;
 
     // Death animation: shrink and fade out
     if (_deathAnimating) {

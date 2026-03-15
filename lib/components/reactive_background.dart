@@ -12,8 +12,8 @@ import '../data/balance_config.dart';
 /// - Radial pulse on wave start / boss kill
 class ReactiveBackground extends PositionComponent
     with HasGameReference<DefenseGame> {
-  // Pre-allocated ambient stars for zero-alloc rendering
-  static const int _starCount = 40;
+  // Pre-allocated ambient stars — dense for visual depth
+  static const int _starCount = 120;
   final List<_BgStar> _stars = [];
   final Random _rng = Random();
 
@@ -21,6 +21,14 @@ class ReactiveBackground extends PositionComponent
   double _pulseTimer = 0;
   double _pulseDuration = 0;
   Color _pulseColor = const Color(0x00000000);
+
+  // Cached Paint objects to avoid per-frame allocation
+  final Paint _bgPaint = Paint();
+  final Paint _starPaint = Paint()..isAntiAlias = false;
+  final Paint _pulsePaint = Paint();
+
+  static final Rect _fullScreenRect = Rect.fromLTWH(
+      0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight);
 
   ReactiveBackground()
       : super(
@@ -35,9 +43,9 @@ class ReactiveBackground extends PositionComponent
       _stars.add(_BgStar(
         x: _rng.nextDouble() * BalanceConfig.gameWidth,
         y: _rng.nextDouble() * BalanceConfig.gameHeight,
-        speed: 3 + _rng.nextDouble() * 8,
-        size: 1.0 + _rng.nextDouble() * 1.5,
-        alpha: 0.15 + _rng.nextDouble() * 0.25,
+        speed: 5 + _rng.nextDouble() * 15,
+        size: 1.0 + _rng.nextDouble() * 2.5,
+        alpha: 0.2 + _rng.nextDouble() * 0.4,
       ));
     }
   }
@@ -88,50 +96,42 @@ class ReactiveBackground extends PositionComponent
     final intensity = _intensity;
 
     // ── Background color shift ──
-    // Calm: deep navy (18,18,48) → Intense: deep crimson (65,12,12)
-    final r = (18 + (47 * intensity)).toInt().clamp(0, 255);
-    final g = (18 - (6 * intensity)).toInt().clamp(0, 255);
-    final b = (48 - (36 * intensity)).toInt().clamp(0, 255);
-    final bgPaint = Paint()..color = Color.fromARGB(255, r, g, b);
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight),
-      bgPaint,
-    );
+    // Calm: deep navy (12,12,36) → Intense: deep crimson (80,8,8)
+    final r = (12 + (68 * intensity)).toInt().clamp(0, 255);
+    final g = (12 - (4 * intensity)).toInt().clamp(0, 255);
+    final b = (36 - (28 * intensity)).toInt().clamp(0, 255);
+    _bgPaint.color = Color.fromARGB(255, r, g, b);
+    canvas.drawRect(_fullScreenRect, _bgPaint);
 
     // ── Ambient stars ──
-    final starPaint = Paint()..isAntiAlias = false;
     for (final star in _stars) {
-      // Stars get noticeably brighter with intensity
-      final a = (star.alpha + intensity * 0.35).clamp(0.0, 0.8);
-      starPaint.color = Color.fromARGB(
+      // Stars get much brighter with intensity
+      final a = (star.alpha + intensity * 0.5).clamp(0.0, 0.95);
+      _starPaint.color = Color.fromARGB(
         (a * 255).toInt(), 255, 255, 255,
       );
       canvas.drawRect(
         Rect.fromLTWH(star.x, star.y, star.size, star.size),
-        starPaint,
+        _starPaint,
       );
     }
 
     // ── Radial pulse ──
     if (_pulseTimer > 0 && _pulseDuration > 0) {
       final progress = 1.0 - (_pulseTimer / _pulseDuration);
-      final pulseAlpha = (1.0 - progress) * 0.12;
-      final pulseRadius = 50 + progress * 250;
+      final pulseAlpha = (1.0 - progress) * 0.3;
+      final pulseRadius = 80 + progress * 400;
       final wallX = game.wall.position.x;
       final wallY = game.wall.position.y;
-      final pulsePaint = Paint()
-        ..shader = Gradient.radial(
-          Offset(wallX, wallY),
-          pulseRadius,
-          [
-            _pulseColor.withValues(alpha: pulseAlpha),
-            _pulseColor.withValues(alpha: 0.0),
-          ],
-        );
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, BalanceConfig.gameWidth, BalanceConfig.gameHeight),
-        pulsePaint,
+      _pulsePaint.shader = Gradient.radial(
+        Offset(wallX, wallY),
+        pulseRadius,
+        [
+          _pulseColor.withValues(alpha: pulseAlpha),
+          _pulseColor.withValues(alpha: 0.0),
+        ],
       );
+      canvas.drawRect(_fullScreenRect, _pulsePaint);
     }
   }
 }
