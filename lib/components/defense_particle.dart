@@ -31,9 +31,9 @@ class DefenseParticle extends PositionComponent
 
   /// Spawn a ground impact mark at the given position (enemy death splat).
   void spawnGroundMark(double x, double y, {String enemyId = ''}) {
-    // Cap ground marks for performance
-    if (_groundMarks.length > 60) {
-      _groundMarks.removeRange(0, _groundMarks.length - 40);
+    // Cap ground marks for performance — generous for high-density waves
+    if (_groundMarks.length > 150) {
+      _groundMarks.removeRange(0, _groundMarks.length - 120);
     }
     final colors = _deathColorsForEnemy(enemyId);
     final color = colors[_rng.nextInt(colors.length)];
@@ -107,7 +107,7 @@ class DefenseParticle extends PositionComponent
     final rng = _rng;
     final colors = _deathColorsForEnemy(enemyId);
     final isBomber = enemyId.contains('bomber');
-    final count = isBomber ? 20 : 15;
+    final count = isBomber ? 40 : 25;
 
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -138,10 +138,10 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Boss explosion — burst with mixed fire colors.
+  /// Boss explosion — large burst with mixed fire colors.
   void spawnBossExplosion(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 60; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 50 + rng.nextDouble() * 120;
       const colors = [
@@ -312,7 +312,7 @@ class DefenseParticle extends PositionComponent
   void spawnComboFlash(double centerX, double centerY, int comboColor) {
     final rng = _rng;
     final color = Color(comboColor);
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 80; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 80 + rng.nextDouble() * 150;
       _particles.add(_FxParticle(
@@ -345,10 +345,10 @@ class DefenseParticle extends PositionComponent
     }
   }
 
-  /// Skill activation — radial burst with skill color.
+  /// Skill activation — large radial burst with skill color.
   void spawnSkillActivation(double wx, double wy, Color color) {
     final rng = _rng;
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 70; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 60 + rng.nextDouble() * 120;
       _particles.add(_FxParticle(
@@ -439,8 +439,8 @@ class DefenseParticle extends PositionComponent
   /// Skill activation — ring burst expanding outward.
   void spawnSkillRing(double wx, double wy, Color color) {
     final rng = _rng;
-    for (var i = 0; i < 20; i++) {
-      final angle = i / 20 * 2 * pi;
+    for (var i = 0; i < 40; i++) {
+      final angle = i / 40 * 2 * pi;
       final speed = 80 + rng.nextDouble() * 40;
       _particles.add(_FxParticle(
         x: wx,
@@ -458,7 +458,7 @@ class DefenseParticle extends PositionComponent
   void spawnEnemyDeathScaled(double wx, double wy, double scale,
       {String enemyId = ''}) {
     final rng = _rng;
-    final count = (15 * scale).clamp(8, 30).toInt();
+    final count = (25 * scale).clamp(12, 80).toInt();
     final colors = _deathColorsForEnemy(enemyId);
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -492,8 +492,8 @@ class DefenseParticle extends PositionComponent
 
   /// Shockwave ring — expanding ring of particles (boss kill, big combos).
   void spawnShockwaveRing(double wx, double wy, Color color) {
-    for (int i = 0; i < 24; i++) {
-      final angle = i / 24 * 2 * pi;
+    for (int i = 0; i < 48; i++) {
+      final angle = i / 48 * 2 * pi;
       _particles.add(_FxParticle(
         x: wx,
         y: wy,
@@ -532,7 +532,7 @@ class DefenseParticle extends PositionComponent
   void spawnGoldScatter(double wx, double wy, int amount,
       double wallX, double wallY) {
     final rng = _rng;
-    final count = (amount + 2).clamp(3, 10);
+    final count = (amount * 2 + 3).clamp(5, 20);
 
     // Initial white flash at death position (brief, eye-catching)
     _particles.add(_FxParticle(
@@ -588,9 +588,9 @@ class DefenseParticle extends PositionComponent
 
     _particles.removeWhere((p) => p.life <= 0);
 
-    // Hard cap — balanced for visual spectacle vs. mobile performance
-    if (_particles.length > 800) {
-      _particles.removeRange(0, _particles.length - 600);
+    // Hard cap — generous for visual spectacle
+    if (_particles.length > 2000) {
+      _particles.removeRange(0, _particles.length - 2000);
     }
 
     // Age ground marks
