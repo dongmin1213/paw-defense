@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paw_defense/data/balance_config.dart';
 import 'package:paw_defense/systems/combo_manager.dart';
 
 void main() {
@@ -45,7 +46,7 @@ void main() {
     });
 
     test('gold bonus interval is 10', () {
-      expect(ComboManager.goldBonusInterval, 10);
+      expect(BalanceConfig.comboGoldBonusInterval, 10);
     });
   });
 }
