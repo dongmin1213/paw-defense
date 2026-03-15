@@ -38,7 +38,7 @@ class DefenseEnemy extends PositionComponent
 
   // Death animation
   double _deathTimer = 0;
-  static const double _deathDuration = 0.3;
+  static final double _deathDuration = BalanceConfig.enemyDeathAnimDuration;
   bool _deathAnimating = false;
 
   // Special behavior timers
@@ -54,7 +54,7 @@ class DefenseEnemy extends PositionComponent
   double _dotTickTimer = 0; // time until next tick
   String _dotType = ''; // 'fire', 'poison' for visual feedback
 
-  static const double wallProximity = 35.0;
+  static double get wallProximity => BalanceConfig.enemyWallProximity;
 
   // Cached Paint objects to avoid per-frame allocation
   static final Paint _glowPaint = Paint();
@@ -118,23 +118,21 @@ class DefenseEnemy extends PositionComponent
 
     double finalAmount = amount;
 
-    // Shielded: 50% reduced damage from the front
+    // Shielded: reduced damage from the front
     if (_isShielded && sourcePosition != null) {
       final toSource = (sourcePosition - position).normalized();
-      // Front = same direction as movement direction
-      // dot > 0 means source is in front of the enemy (enemy facing toward wall)
       final dot = direction.dot(toSource);
       if (dot > 0) {
-        finalAmount *= 0.5;
+        finalAmount *= BalanceConfig.shieldedDamageReduction;
       }
     }
 
     hp -= finalAmount;
     _isHit = true;
-    _hitFlashTimer = 0.1;
+    _hitFlashTimer = BalanceConfig.enemyHitFlashDuration;
 
     // Show damage number on enemy (scales fontSize with damage amount)
-    final isBigHit = finalAmount > maxHp * 0.15;
+    final isBigHit = finalAmount > maxHp * BalanceConfig.bigHitThreshold;
     game.showDamageNumber(
       position,
       finalAmount.toInt().toString(),
@@ -150,7 +148,7 @@ class DefenseEnemy extends PositionComponent
     }
 
     // Knockback away from wall
-    position.add(direction * -3);
+    position.add(direction * -BalanceConfig.enemyKnockbackDistance);
 
     if (hp <= 0) {
       hp = 0;
@@ -211,7 +209,7 @@ class DefenseEnemy extends PositionComponent
     }
     // Active skill: ice_wall — all enemies speed -70%
     if (game.skillManager.isEffectActive('ice_wall')) {
-      s *= 0.3;
+      s *= BalanceConfig.iceWallSpeedMult;
     }
     return s;
   }
@@ -221,8 +219,8 @@ class DefenseEnemy extends PositionComponent
     for (final ally in game.livingEnemies) {
       if (identical(ally, this)) continue;
       final dist = position.distanceTo(ally.position);
-      if (dist <= 50.0) {
-        final healAmount = ally.maxHp * 0.10;
+      if (dist <= BalanceConfig.healerRadius) {
+        final healAmount = ally.maxHp * BalanceConfig.healerHealPercent;
         ally.hp = (ally.hp + healAmount).clamp(0.0, ally.maxHp);
       }
     }
@@ -289,10 +287,9 @@ class DefenseEnemy extends PositionComponent
     if (_dotDuration > 0) {
       _dotDuration -= dt;
       _dotTickTimer += dt;
-      if (_dotTickTimer >= 0.5) {
-        _dotTickTimer -= 0.5;
-        // Apply half-second tick of damage
-        final tickDmg = _dotDamage * 0.5;
+      if (_dotTickTimer >= BalanceConfig.dotTickInterval) {
+        _dotTickTimer -= BalanceConfig.dotTickInterval;
+        final tickDmg = _dotDamage * BalanceConfig.dotTickInterval;
         hp -= tickDmg;
         _isHit = true;
         _hitFlashTimer = 0.05;
@@ -311,8 +308,8 @@ class DefenseEnemy extends PositionComponent
     // Healer: heal allies every 3 seconds
     if (_isHealer) {
       _healTimer += dt;
-      if (_healTimer >= 3.0) {
-        _healTimer -= 3.0;
+      if (_healTimer >= BalanceConfig.healerInterval) {
+        _healTimer -= BalanceConfig.healerInterval;
         _healNearbyAllies();
       }
     }

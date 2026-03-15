@@ -426,4 +426,482 @@ class BalanceConfig {
 
   /// Background ambient star count.
   static const int backgroundStarCount = 120;
+
+  // ══════════════════════════════════════
+  // Combo System
+  // ══════════════════════════════════════
+
+  /// Base time window to maintain combo (seconds).
+  static const double comboWindowBase = 2.0;
+
+  /// Bonus gold every N combos.
+  static const int comboGoldBonusInterval = 10;
+
+  /// Gold amount per combo interval step (step * this).
+  static const int comboGoldPerInterval = 5;
+
+  /// Combo tier change display time (seconds).
+  static const double comboTierChangeDisplayTime = 1.5;
+
+  // ══════════════════════════════════════
+  // Skill System
+  // ══════════════════════════════════════
+
+  /// Default skill max charge.
+  static const int skillDefaultMaxCharge = 20;
+
+  /// Default skill effect duration (seconds).
+  static const double skillEffectDuration = 5.0;
+
+  /// Skill cooldown after use (seconds).
+  static const double skillCooldown = 1.0;
+
+  /// Skill effect overlay max particles.
+  static const int skillMaxParticles = 60;
+
+  // ══════════════════════════════════════
+  // Wave Modifiers
+  // ══════════════════════════════════════
+
+  /// Wave modifiers start from this wave.
+  static const int waveModifierStartWave = 10;
+
+  /// Elite modifier: enemy count multiplier.
+  static const double modifierEliteCountMult = 0.5;
+
+  /// Elite modifier: enemy HP multiplier.
+  static const double modifierEliteHpMult = 3.0;
+
+  /// Swarm modifier: enemy count multiplier.
+  static const double modifierSwarmCountMult = 3.0;
+
+  /// Swarm modifier: enemy HP multiplier.
+  static const double modifierSwarmHpMult = 0.5;
+
+  /// Speed run modifier: enemy speed multiplier.
+  static const double modifierSpeedRunSpeedMult = 2.0;
+
+  /// Golden modifier: gold drop multiplier.
+  static const double modifierGoldenGoldMult = 3.0;
+
+  /// Speed run modifier: gold drop multiplier.
+  static const double modifierSpeedRunGoldMult = 1.5;
+
+  /// Fog modifier: unit range multiplier.
+  static const double modifierFogRangeMult = 0.6;
+
+  // ══════════════════════════════════════
+  // Projectile Visual
+  // ══════════════════════════════════════
+
+  /// Projectile max life time (seconds).
+  static const double projectileMaxLifeTime = 3.0;
+
+  /// Projectile visual scale base at Lv1.
+  static const double projectileVisualScaleBase = 1.2;
+
+  /// Projectile visual scale per level.
+  static const double projectileVisualScalePerLevel = 0.3;
+
+  /// Projectile visual scale bonus for evolved.
+  static const double projectileVisualScaleEvolved = 0.5;
+
+  /// Projectile visual scale bonus for hybrid.
+  static const double projectileVisualScaleHybrid = 0.3;
+
+  /// Projectile trail base length.
+  static const int projectileTrailBase = 10;
+
+  /// Projectile trail length per level.
+  static const int projectileTrailPerLevel = 2;
+
+  /// Projectile trail length bonus for evolved.
+  static const int projectileTrailEvolved = 4;
+
+  /// Projectile trail min length.
+  static const int projectileTrailMin = 10;
+
+  /// Projectile trail max length.
+  static const int projectileTrailMax = 24;
+
+  /// Split shot speed multiplier.
+  static const double splitShotSpeedMult = 0.7;
+
+  /// Split shot damage multiplier.
+  static const double splitShotDamageMult = 0.5;
+
+  /// Splash damage falloff multiplier.
+  static const double splashDamageFalloffMult = 0.5;
+
+  // ══════════════════════════════════════
+  // Elemental Effects
+  // ══════════════════════════════════════
+
+  /// Fire DoT: percent of damage per second.
+  static const double elementalFireDotPercent = 0.30;
+
+  /// Fire DoT duration (seconds).
+  static const double elementalFireDuration = 3.0;
+
+  /// Ice slow intensity.
+  static const double elementalIceSlowPercent = 0.40;
+
+  /// Ice slow duration (seconds).
+  static const double elementalIceDuration = 2.0;
+
+  /// Poison DoT: percent of damage per second.
+  static const double elementalPoisonDotPercent = 0.15;
+
+  /// Poison DoT duration (seconds).
+  static const double elementalPoisonDuration = 5.0;
+
+  // ══════════════════════════════════════
+  // Enemy Behavior
+  // ══════════════════════════════════════
+
+  /// Distance at which enemy considers itself at the wall.
+  static const double enemyWallProximity = 35.0;
+
+  /// Hit flash duration (seconds).
+  static const double enemyHitFlashDuration = 0.1;
+
+  /// Death animation duration (seconds).
+  static const double enemyDeathAnimDuration = 0.3;
+
+  /// Healer: heal radius around healer enemy.
+  static const double healerRadius = 50.0;
+
+  /// Healer: heal percent of ally max HP per tick.
+  static const double healerHealPercent = 0.10;
+
+  /// Healer: heal interval (seconds).
+  static const double healerInterval = 3.0;
+
+  /// DoT tick interval (seconds).
+  static const double dotTickInterval = 0.5;
+
+  /// Ice wall skill: enemy speed multiplier.
+  static const double iceWallSpeedMult = 0.3;
+
+  /// Shielded enemy: frontal damage reduction.
+  static const double shieldedDamageReduction = 0.5;
+
+  /// Knockback distance on hit.
+  static const double enemyKnockbackDistance = 3.0;
+
+  /// Boss size multiplier.
+  static const double bossSizeMultiplier = 1.5;
+
+  /// Big hit threshold (% of max HP).
+  static const double bigHitThreshold = 0.15;
+
+  // ══════════════════════════════════════
+  // Field Drop Physics
+  // ══════════════════════════════════════
+
+  /// Gravity for field drops.
+  static const double fieldDropGravity = 120.0;
+
+  /// Ground delay before homing starts (seconds).
+  static const double fieldDropGroundDelay = 0.8;
+
+  /// Homing acceleration.
+  static const double fieldDropHomeAccel = 800.0;
+
+  /// Homing max speed.
+  static const double fieldDropHomeMaxSpeed = 500.0;
+
+  /// Max active field drops.
+  static const int fieldDropMaxDrops = 150;
+
+  /// Pickup/absorb radius.
+  static const double fieldDropPickupRadius = 10.0;
+
+  // ══════════════════════════════════════
+  // Damage Number Visual
+  // ══════════════════════════════════════
+
+  /// Damage number lifetime (seconds).
+  static const double damageNumberLifetime = 1.2;
+
+  /// Damage number float speed (px/s).
+  static const double damageNumberFloatSpeed = 50.0;
+
+  /// Damage number pop animation duration (seconds).
+  static const double damageNumberPopDuration = 0.15;
+
+  // ══════════════════════════════════════
+  // Upgrade Scaling
+  // ══════════════════════════════════════
+
+  /// Upgrade cost exponential scale per level.
+  static const double upgradeCostScale = 1.12;
+
+  /// Wall HP upgrade: +% per level.
+  static const double upgradeWallHpPerLevel = 0.05;
+
+  /// Wall regen upgrade: HP/s per level.
+  static const double upgradeWallRegenPerLevel = 0.5;
+
+  /// Wall defense upgrade: -% damage per level.
+  static const double upgradeWallDefensePerLevel = 0.02;
+
+  /// Wall defense minimum multiplier (always takes at least this % damage).
+  static const double upgradeWallDefenseMin = 0.4;
+
+  /// Unit ATK upgrade: +% per level.
+  static const double upgradeUnitAtkPerLevel = 0.03;
+
+  /// Unit ATK speed upgrade: +% per level.
+  static const double upgradeUnitAtkSpeedPerLevel = 0.02;
+
+  /// Gold gain upgrade: +% per level.
+  static const double upgradeGoldGainPerLevel = 0.05;
+
+  /// Unit discount upgrade: -% cost per level.
+  static const double upgradeUnitDiscountPerLevel = 0.02;
+
+  /// Unit discount minimum multiplier.
+  static const double upgradeUnitDiscountMin = 0.4;
+
+  /// Star bonus upgrade: +% per level.
+  static const double upgradeStarBonusPerLevel = 0.05;
+
+  /// Base unit slots before expansion.
+  static const int upgradeBaseSlots = 8;
+
+  /// Relic chance upgrade: +% per level.
+  static const double upgradeRelicChancePerLevel = 0.05;
+
+  /// Start gold upgrade: gold per level.
+  static const int upgradeStartGoldPerLevel = 20;
+
+  /// Relic quality upgrade: +% higher tier per level.
+  static const double upgradeRelicQualityPerLevel = 0.03;
+
+  /// Combo duration upgrade: +seconds per level.
+  static const double upgradeComboDurationPerLevel = 0.3;
+
+  /// Hybrid bonus upgrade: +% ATK per level.
+  static const double upgradeHybridBonusPerLevel = 0.05;
+
+  /// Crit chance upgrade: +% per level.
+  static const double upgradeCritChancePerLevel = 0.02;
+
+  // ══════════════════════════════════════
+  // Wall Visual
+  // ══════════════════════════════════════
+
+  /// Wall damage flash duration (seconds).
+  static const double wallDamageFlashDuration = 0.15;
+
+  /// Phoenix relic: revive HP percent.
+  static const double wallPhoenixRevivePercent = 0.5;
+
+  // ══════════════════════════════════════
+  // Unit Behavior
+  // ══════════════════════════════════════
+
+  /// Target search throttle interval (seconds).
+  static const double unitTargetSearchInterval = 0.15;
+
+  /// Evolved unit ATK speed bonus multiplier.
+  static const double unitEvolvedAtkSpeedMult = 1.2;
+
+  /// Evolved unit range bonus multiplier.
+  static const double unitEvolvedRangeMult = 1.2;
+
+  /// War cry skill: ATK multiplier while active.
+  static const double unitWarCryAtkMult = 1.5;
+
+  /// Attack recoil animation duration (seconds).
+  static const double unitRecoilDuration = 0.15;
+
+  /// Attack beam visibility duration (seconds).
+  static const double unitBeamDuration = 0.25;
+
+  // ══════════════════════════════════════
+  // Hybrid Unit Special Stats
+  // ══════════════════════════════════════
+
+  /// Hybrid flame hunter crit chance.
+  static const double hybridFlameHunterCrit = 0.20;
+
+  /// Hybrid shadow sage crit chance.
+  static const double hybridShadowSageCrit = 0.30;
+
+  /// Hybrid wolf blade crit chance.
+  static const double hybridWolfBladeCrit = 0.25;
+
+  /// Hybrid wise bear slow intensity.
+  static const double hybridWiseBearSlowIntensity = 0.40;
+
+  /// Hybrid mystic sage heal fraction.
+  static const double hybridMysticSageHealFraction = 0.03;
+
+  // ══════════════════════════════════════
+  // Game Feel Timing
+  // ══════════════════════════════════════
+
+  /// Auto-merge check interval (seconds).
+  static const double autoMergeInterval = 1.5;
+
+  /// Auto-place check interval (seconds).
+  static const double autoPlaceInterval = 3.0;
+
+  /// Enemy kill: hit stop duration.
+  static const double feelEnemyKillHitStop = 0.015;
+
+  /// Enemy kill: combo threshold for screen flash.
+  static const int feelEnemyKillComboThreshold = 3;
+
+  /// Enemy kill: flash color at high combo.
+  static const int feelEnemyKillFlashColor = 0x44FFFFFF;
+
+  /// Enemy kill: flash duration at high combo.
+  static const double feelEnemyKillFlashDuration = 0.08;
+
+  /// Boss hit: hit stop duration.
+  static const double feelBossHitHitStop = 0.04;
+
+  /// Boss kill: hit stop duration.
+  static const double feelBossKillHitStop = 0.25;
+
+  /// Boss kill: slow motion scale.
+  static const double feelBossKillSlowScale = 0.2;
+
+  /// Boss kill: slow motion duration.
+  static const double feelBossKillSlowDuration = 1.0;
+
+  /// Boss kill: zoom punch target.
+  static const double feelBossKillZoom = 1.08;
+
+  /// Boss kill: zoom punch duration.
+  static const double feelBossKillZoomDuration = 0.5;
+
+  /// Boss kill: flash color.
+  static const int feelBossKillFlashColor = 0xFFFFAA00;
+
+  /// Boss kill: flash duration.
+  static const double feelBossKillFlashDuration = 0.3;
+
+  /// Wall hit (heavy): flash color.
+  static const int feelWallHitFlashColor = 0xFFFF4444;
+
+  /// Wall hit (heavy): flash duration.
+  static const double feelWallHitFlashDuration = 0.2;
+
+  /// Wall critical: flash color.
+  static const int feelWallCriticalFlashColor = 0xFFFF0000;
+
+  /// Wall critical: flash duration.
+  static const double feelWallCriticalFlashDuration = 0.4;
+
+  /// Merge: zoom punch base.
+  static const double feelMergeZoomBase = 1.02;
+
+  /// Merge: zoom punch per level.
+  static const double feelMergeZoomPerLevel = 0.01;
+
+  /// Merge: zoom punch duration.
+  static const double feelMergeZoomDuration = 0.2;
+
+  /// Evolve: hit stop duration.
+  static const double feelEvolveHitStop = 0.15;
+
+  /// Evolve: slow motion scale.
+  static const double feelEvolveSlowScale = 0.3;
+
+  /// Evolve: slow motion duration.
+  static const double feelEvolveSlowDuration = 0.8;
+
+  /// Evolve: zoom punch target.
+  static const double feelEvolveZoom = 1.06;
+
+  /// Evolve: zoom punch duration.
+  static const double feelEvolveZoomDuration = 0.4;
+
+  /// Evolve: flash color.
+  static const int feelEvolveFlashColor = 0xFFFFD700;
+
+  /// Evolve: flash duration.
+  static const double feelEvolveFlashDuration = 0.3;
+
+  /// Hybrid merge: hit stop duration.
+  static const double feelHybridHitStop = 0.1;
+
+  /// Hybrid merge: slow motion scale.
+  static const double feelHybridSlowScale = 0.4;
+
+  /// Hybrid merge: slow motion duration.
+  static const double feelHybridSlowDuration = 0.6;
+
+  /// Hybrid merge: zoom punch target.
+  static const double feelHybridZoom = 1.05;
+
+  /// Hybrid merge: zoom punch duration.
+  static const double feelHybridZoomDuration = 0.3;
+
+  /// Hybrid merge: flash color.
+  static const int feelHybridFlashColor = 0xFFE040FB;
+
+  /// Hybrid merge: flash duration.
+  static const double feelHybridFlashDuration = 0.25;
+
+  /// Ascension: slow motion scale.
+  static const double feelAscensionSlowScale = 0.2;
+
+  /// Ascension: slow motion duration.
+  static const double feelAscensionSlowDuration = 1.5;
+
+  /// Ascension: flash color.
+  static const int feelAscensionFlashColor = 0xFFFFFFFF;
+
+  /// Ascension: flash duration.
+  static const double feelAscensionFlashDuration = 0.5;
+
+  /// Perfect wave: zoom punch target.
+  static const double feelPerfectWaveZoom = 1.03;
+
+  /// Perfect wave: zoom punch duration.
+  static const double feelPerfectWaveZoomDuration = 0.3;
+
+  /// Perfect wave: flash color.
+  static const int feelPerfectWaveFlashColor = 0xFF4CAF50;
+
+  /// Perfect wave: flash duration.
+  static const double feelPerfectWaveFlashDuration = 0.2;
+
+  /// Skill activation: hit stop duration.
+  static const double feelSkillHitStop = 0.08;
+
+  /// Skill activation: slow motion scale.
+  static const double feelSkillSlowScale = 0.3;
+
+  /// Skill activation: slow motion duration.
+  static const double feelSkillSlowDuration = 0.5;
+
+  /// Skill activation: zoom punch target.
+  static const double feelSkillZoom = 1.04;
+
+  /// Skill activation: zoom punch duration.
+  static const double feelSkillZoomDuration = 0.3;
+
+  /// Combo tier change: hit stop duration.
+  static const double feelComboTierHitStop = 0.06;
+
+  /// Combo tier change: flash duration.
+  static const double feelComboTierFlashDuration = 0.3;
+
+  /// Relic acquired: zoom punch target.
+  static const double feelRelicZoom = 1.03;
+
+  /// Relic acquired: zoom punch duration.
+  static const double feelRelicZoomDuration = 0.2;
+
+  /// Relic acquired: flash color.
+  static const int feelRelicFlashColor = 0xFFE040FB;
+
+  /// Relic acquired: flash duration.
+  static const double feelRelicFlashDuration = 0.2;
 }

@@ -18,7 +18,7 @@ class SkillEffectOverlay extends PositionComponent
 
   // Pre-allocated particle pools per effect type
   final List<_SkillParticle> _particles = [];
-  static const int _maxParticles = 60;
+  static int get _maxParticles => BalanceConfig.skillMaxParticles;
 
   // Cached Paint objects to avoid per-frame allocation
   final Paint _particlePaint = Paint()..isAntiAlias = false;

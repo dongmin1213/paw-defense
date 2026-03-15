@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart' show Color;
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 
 /// Type of damage number for visual differentiation.
@@ -30,8 +31,8 @@ class DamageNumber extends PositionComponent
   double _elapsed = 0.0;
   double _scale = 1.0;
 
-  static const double _lifetime = 1.2;
-  static const double _floatSpeed = 50.0;
+  static double get _lifetime => BalanceConfig.damageNumberLifetime;
+  static double get _floatSpeed => BalanceConfig.damageNumberFloatSpeed;
 
   static final Random _rng = Random();
 
@@ -90,8 +91,8 @@ class DamageNumber extends PositionComponent
     position.y -= speed * dt;
 
     // Scale pop: quickly shrink to 1.0 in the first 0.15s
-    if (_elapsed < 0.15) {
-      final t = _elapsed / 0.15;
+    if (_elapsed < BalanceConfig.damageNumberPopDuration) {
+      final t = _elapsed / BalanceConfig.damageNumberPopDuration;
       _scale = 1.0 + (isCritical ? 0.8 : 0.3) * (1.0 - t);
     } else {
       _scale = 1.0;

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flame/components.dart';
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 
 /// Game feel system for castle defense.
@@ -35,10 +36,10 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   bool autoPlaceEnabled = false;
 
   /// Auto-merge check interval in seconds.
-  static const double autoMergeInterval = 1.5;
+  static double get autoMergeInterval => BalanceConfig.autoMergeInterval;
 
   /// Auto-place check interval in seconds.
-  static const double autoPlaceInterval = 3.0;
+  static double get autoPlaceInterval => BalanceConfig.autoPlaceInterval;
 
   @override
   void update(double dt) {
@@ -134,94 +135,92 @@ class DefenseGameFeel extends Component with HasGameReference<DefenseGame> {
   /// Feedback when a normal enemy is killed.
   /// [comboTier] is the current combo tier index (0=none, 3=amazing, 5=godlike).
   void onEnemyKill({int comboTier = 0}) {
-    // Every kill: micro hit stop (1 frame ≈ 0.015s)
-    hitStop(duration: 0.015);
+    hitStop(duration: BalanceConfig.feelEnemyKillHitStop);
 
-    // Amazing (25+ combo) and above: subtle screen flash
-    if (comboTier >= 3) {
-      screenFlash(color: 0x44FFFFFF, duration: 0.08);
+    if (comboTier >= BalanceConfig.feelEnemyKillComboThreshold) {
+      screenFlash(color: BalanceConfig.feelEnemyKillFlashColor, duration: BalanceConfig.feelEnemyKillFlashDuration);
     }
   }
 
 
   /// Feedback when a boss takes a hit.
   void onBossHit() {
-    hitStop(duration: 0.04);
+    hitStop(duration: BalanceConfig.feelBossHitHitStop);
   }
 
   /// Dramatic feedback when a boss is killed.
   void onBossKill() {
-    hitStop(duration: 0.25);
-    slowMotion(scale: 0.2, duration: 1.0);
-    zoomPunch(targetZoom: 1.08, duration: 0.5);
-    screenFlash(color: 0xFFFFAA00, duration: 0.3);
+    hitStop(duration: BalanceConfig.feelBossKillHitStop);
+    slowMotion(scale: BalanceConfig.feelBossKillSlowScale, duration: BalanceConfig.feelBossKillSlowDuration);
+    zoomPunch(targetZoom: BalanceConfig.feelBossKillZoom, duration: BalanceConfig.feelBossKillZoomDuration);
+    screenFlash(color: BalanceConfig.feelBossKillFlashColor, duration: BalanceConfig.feelBossKillFlashDuration);
   }
 
   /// Feedback when the wall takes a hit.
   void onWallHit({bool isHeavy = false}) {
     if (isHeavy) {
-      screenFlash(color: 0xFFFF4444, duration: 0.2);
+      screenFlash(color: BalanceConfig.feelWallHitFlashColor, duration: BalanceConfig.feelWallHitFlashDuration);
     }
   }
 
   /// Feedback when the wall HP drops below critical threshold.
   void onWallCritical() {
-    screenFlash(color: 0xFFFF0000, duration: 0.4);
+    screenFlash(color: BalanceConfig.feelWallCriticalFlashColor, duration: BalanceConfig.feelWallCriticalFlashDuration);
   }
 
   /// Feedback when units are merged. Scales with resulting level.
   void onMerge(int newLevel) {
     zoomPunch(
-      targetZoom: 1.02 + newLevel * 0.01,
-      duration: 0.2,
+      targetZoom: BalanceConfig.feelMergeZoomBase + newLevel * BalanceConfig.feelMergeZoomPerLevel,
+      duration: BalanceConfig.feelMergeZoomDuration,
     );
   }
 
   /// Dramatic feedback when a unit evolves (Lv5 + relic).
   void onEvolve() {
-    hitStop(duration: 0.15);
-    slowMotion(scale: 0.3, duration: 0.8);
-    zoomPunch(targetZoom: 1.06, duration: 0.4);
-    screenFlash(color: 0xFFFFD700, duration: 0.3);
+    hitStop(duration: BalanceConfig.feelEvolveHitStop);
+    slowMotion(scale: BalanceConfig.feelEvolveSlowScale, duration: BalanceConfig.feelEvolveSlowDuration);
+    zoomPunch(targetZoom: BalanceConfig.feelEvolveZoom, duration: BalanceConfig.feelEvolveZoomDuration);
+    screenFlash(color: BalanceConfig.feelEvolveFlashColor, duration: BalanceConfig.feelEvolveFlashDuration);
   }
 
   /// Feedback when a hybrid unit is created.
   void onHybridMerge() {
-    hitStop(duration: 0.1);
-    slowMotion(scale: 0.4, duration: 0.6);
-    zoomPunch(targetZoom: 1.05, duration: 0.3);
-    screenFlash(color: 0xFFE040FB, duration: 0.25);
+    hitStop(duration: BalanceConfig.feelHybridHitStop);
+    slowMotion(scale: BalanceConfig.feelHybridSlowScale, duration: BalanceConfig.feelHybridSlowDuration);
+    zoomPunch(targetZoom: BalanceConfig.feelHybridZoom, duration: BalanceConfig.feelHybridZoomDuration);
+    screenFlash(color: BalanceConfig.feelHybridFlashColor, duration: BalanceConfig.feelHybridFlashDuration);
   }
 
   /// Feedback for ascension (prestige reset).
   void onAscension() {
-    slowMotion(scale: 0.2, duration: 1.5);
-    screenFlash(color: 0xFFFFFFFF, duration: 0.5);
+    slowMotion(scale: BalanceConfig.feelAscensionSlowScale, duration: BalanceConfig.feelAscensionSlowDuration);
+    screenFlash(color: BalanceConfig.feelAscensionFlashColor, duration: BalanceConfig.feelAscensionFlashDuration);
   }
 
   /// Feedback for completing a wave without wall damage.
   void onPerfectWave() {
-    zoomPunch(targetZoom: 1.03, duration: 0.3);
-    screenFlash(color: 0xFF4CAF50, duration: 0.2);
+    zoomPunch(targetZoom: BalanceConfig.feelPerfectWaveZoom, duration: BalanceConfig.feelPerfectWaveZoomDuration);
+    screenFlash(color: BalanceConfig.feelPerfectWaveFlashColor, duration: BalanceConfig.feelPerfectWaveFlashDuration);
   }
 
   /// Feedback for skill activation.
   void onSkillActivation() {
-    hitStop(duration: 0.08);
-    slowMotion(scale: 0.3, duration: 0.5);
-    zoomPunch(targetZoom: 1.04, duration: 0.3);
+    hitStop(duration: BalanceConfig.feelSkillHitStop);
+    slowMotion(scale: BalanceConfig.feelSkillSlowScale, duration: BalanceConfig.feelSkillSlowDuration);
+    zoomPunch(targetZoom: BalanceConfig.feelSkillZoom, duration: BalanceConfig.feelSkillZoomDuration);
   }
 
   /// Feedback for combo tier change.
   void onComboTierChange(int tierColor) {
-    screenFlash(color: tierColor, duration: 0.3);
-    hitStop(duration: 0.06);
+    screenFlash(color: tierColor, duration: BalanceConfig.feelComboTierFlashDuration);
+    hitStop(duration: BalanceConfig.feelComboTierHitStop);
   }
 
   /// Feedback for relic acquisition.
   void onRelicAcquired() {
-    zoomPunch(targetZoom: 1.03, duration: 0.2);
-    screenFlash(color: 0xFFE040FB, duration: 0.2);
+    zoomPunch(targetZoom: BalanceConfig.feelRelicZoom, duration: BalanceConfig.feelRelicZoomDuration);
+    screenFlash(color: BalanceConfig.feelRelicFlashColor, duration: BalanceConfig.feelRelicFlashDuration);
   }
 
   // ══════════════════════════════════════

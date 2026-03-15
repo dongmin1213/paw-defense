@@ -1,4 +1,5 @@
 import 'package:flame/components.dart';
+import '../data/balance_config.dart';
 
 /// Manages active skill system.
 /// Player charges skill gauge by killing enemies, then taps to activate.
@@ -17,12 +18,12 @@ class SkillManager extends Component {
   };
 
   int _currentCharge = 0;
-  int _maxCharge = 20;
+  int _maxCharge = BalanceConfig.skillDefaultMaxCharge;
   String _activeUnitType = 'cat_archer';
   bool _isReady = false;
   double _cooldownTimer = 0;
   double _effectTimer = 0;
-  double _effectMaxDuration = 5.0;
+  double _effectMaxDuration = BalanceConfig.skillEffectDuration;
   String? _activeEffect; // currently active effect ID
 
   // Getters for HUD
@@ -72,10 +73,10 @@ class SkillManager extends Component {
 
     _currentCharge = 0;
     _isReady = false;
-    _cooldownTimer = 1.0; // 1 second cooldown after use
+    _cooldownTimer = BalanceConfig.skillCooldown;
     _activeEffect = skill.effectId;
-    _effectTimer = 5.0; // Most effects last 5 seconds
-    _effectMaxDuration = 5.0;
+    _effectTimer = BalanceConfig.skillEffectDuration;
+    _effectMaxDuration = BalanceConfig.skillEffectDuration;
 
     return skill.effectId;
   }
@@ -94,7 +95,7 @@ class SkillManager extends Component {
     _effectTimer = 0;
     _activeEffect = null;
     _activeUnitType = 'cat_archer';
-    _maxCharge = 20;
+    _maxCharge = BalanceConfig.skillDefaultMaxCharge;
   }
 
   @override
