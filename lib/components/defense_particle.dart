@@ -609,22 +609,15 @@ class DefenseParticle extends PositionComponent
   void renderGroundMarks(Canvas canvas) {
     for (final m in _groundMarks) {
       final alpha = m.life < 2.0 ? (m.life / 2.0).clamp(0.0, 0.4) : 0.4;
-      _groundMarkPaint.color = m.color.withValues(alpha: alpha);
+      _groundMarkPaint.color = Color.from(
+        alpha: alpha, red: m.color.r, green: m.color.g, blue: m.color.b,
+      );
+      final hw = m.size / 2;
+      final hh = m.size * 0.25;
       canvas.drawRect(
-        Rect.fromCenter(center: Offset(m.x, m.y), width: m.size, height: m.size * 0.5),
+        Rect.fromLTWH(m.x - hw, m.y - hh, m.size, m.size * 0.5),
         _groundMarkPaint,
       );
-      if (m.size > 4) {
-        _groundMarkPaint.color = m.color.withValues(alpha: alpha * 0.6);
-        canvas.drawRect(
-          Rect.fromLTWH(m.x + m.size * 0.4, m.y - m.size * 0.2, 2, 2),
-          _groundMarkPaint,
-        );
-        canvas.drawRect(
-          Rect.fromLTWH(m.x - m.size * 0.5, m.y + m.size * 0.1, 1.5, 1.5),
-          _groundMarkPaint,
-        );
-      }
     }
   }
 
@@ -635,23 +628,29 @@ class DefenseParticle extends PositionComponent
     for (final p in _particles) {
       final alpha = (p.life * 2.5).clamp(0.0, 1.0);
       if (alpha < 0.05) continue; // Skip nearly-invisible particles
-      paint.color = p.color.withValues(alpha: alpha * p.color.a);
+      paint.color = Color.from(
+        alpha: alpha * p.color.a,
+        red: p.color.r,
+        green: p.color.g,
+        blue: p.color.b,
+      );
       final s = p.size * alpha;
+      final hs = s / 2;
       if (p.isHoming) {
         // Gold gem: cross (+) shape for visual distinction
-        final hs = s / 3; // cross arm thickness
+        final ts = s / 6; // cross arm half-thickness
         canvas.drawRect(
-          Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: hs),
+          Rect.fromLTWH(p.x - hs, p.y - ts, s, ts * 2),
           paint,
         );
         canvas.drawRect(
-          Rect.fromCenter(center: Offset(p.x, p.y), width: hs, height: s),
+          Rect.fromLTWH(p.x - ts, p.y - hs, ts * 2, s),
           paint,
         );
       } else {
         // Pixel art style: square particles
         canvas.drawRect(
-          Rect.fromCenter(center: Offset(p.x, p.y), width: s, height: s),
+          Rect.fromLTWH(p.x - hs, p.y - hs, s, s),
           paint,
         );
       }

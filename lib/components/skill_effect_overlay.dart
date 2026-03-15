@@ -296,7 +296,10 @@ class SkillEffectOverlay extends PositionComponent
     for (final p in _particles) {
       final alpha = _particleAlpha(p, progress);
       if (alpha <= 0) continue;
-      _particlePaint.color = _particleColor(p.type).withValues(alpha: alpha);
+      final baseColor = _particleColor(p.type);
+      _particlePaint.color = Color.from(
+        alpha: alpha, red: baseColor.r, green: baseColor.g, blue: baseColor.b,
+      );
       _renderParticle(canvas, p, _particlePaint, alpha);
     }
 
@@ -336,7 +339,9 @@ class SkillEffectOverlay extends PositionComponent
       default:
         return;
     }
-    _ambientPaint.color = ambientColor.withValues(alpha: fadeAlpha);
+    _ambientPaint.color = Color.from(
+      alpha: fadeAlpha, red: ambientColor.r, green: ambientColor.g, blue: ambientColor.b,
+    );
     canvas.drawRect(_fullScreenRect, _ambientPaint);
   }
 
@@ -375,7 +380,7 @@ class SkillEffectOverlay extends PositionComponent
         canvas.drawRect(
             Rect.fromLTWH(p.x, p.y, p.size * 0.5, p.size * 2), paint);
         // Arrow tip
-        _tipPaint.color = const Color(0xFFFFFFFF).withValues(alpha: alpha * 0.71);
+        _tipPaint.color = Color.from(alpha: alpha * 0.71, red: 1.0, green: 1.0, blue: 1.0);
         canvas.drawRect(
             Rect.fromLTWH(p.x - p.size * 0.25, p.y, p.size, p.size * 0.6),
             _tipPaint);
@@ -384,18 +389,14 @@ class SkillEffectOverlay extends PositionComponent
         // Flickering square
         final flicker = sin(p.life * 12) * 0.3 + 0.7;
         final size = p.size * flicker;
+        final hs = size / 2;
         canvas.drawRect(
-            Rect.fromCenter(
-                center: Offset(p.x, p.y), width: size, height: size),
-            paint);
+            Rect.fromLTWH(p.x - hs, p.y - hs, size, size), paint);
         // Hot core
-        _corePaint.color = const Color(0xFFFFFF00).withValues(alpha: alpha * 0.57);
+        _corePaint.color = Color.from(alpha: alpha * 0.57, red: 1.0, green: 1.0, blue: 0.0);
+        final cs = size * 0.2;
         canvas.drawRect(
-            Rect.fromCenter(
-                center: Offset(p.x, p.y),
-                width: size * 0.4,
-                height: size * 0.4),
-            _corePaint);
+            Rect.fromLTWH(p.x - cs, p.y - cs, cs * 2, cs * 2), _corePaint);
         break;
       case _ParticleType.frost:
         // + shaped crystal
@@ -443,26 +444,12 @@ class SkillEffectOverlay extends PositionComponent
         break;
       case _ParticleType.heal:
         // + shaped heal
+        final hw = p.size / 2;
+        final ht = p.size * 0.2;
         canvas.drawRect(
-            Rect.fromCenter(
-                center: Offset(p.x, p.y),
-                width: p.size,
-                height: p.size * 0.4),
-            paint);
+            Rect.fromLTWH(p.x - hw, p.y - ht, p.size, p.size * 0.4), paint);
         canvas.drawRect(
-            Rect.fromCenter(
-                center: Offset(p.x, p.y),
-                width: p.size * 0.4,
-                height: p.size),
-            paint);
-        // White sparkle
-        _sparklePaint.color = const Color(0xFFFFFFFF).withValues(alpha: alpha * 0.43);
-        canvas.drawRect(
-            Rect.fromCenter(
-                center: Offset(p.x, p.y),
-                width: p.size * 0.2,
-                height: p.size * 0.2),
-            _sparklePaint);
+            Rect.fromLTWH(p.x - ht, p.y - hw, p.size * 0.4, p.size), paint);
         break;
       case _ParticleType.arcane:
         // Star shape (cross + diagonal)
@@ -480,7 +467,7 @@ class SkillEffectOverlay extends PositionComponent
             paint);
         // Diagonal arms (approximated with small squares)
         final half = p.size * 0.35;
-        _smallPaint.color = paint.color.withValues(alpha: alpha * 0.71);
+        _smallPaint.color = Color.from(alpha: alpha * 0.71, red: paint.color.r, green: paint.color.g, blue: paint.color.b);
         canvas.drawRect(Rect.fromLTWH(p.x - half, p.y - half, 2, 2), _smallPaint);
         canvas.drawRect(Rect.fromLTWH(p.x + half - 2, p.y - half, 2, 2), _smallPaint);
         canvas.drawRect(Rect.fromLTWH(p.x - half, p.y + half - 2, 2, 2), _smallPaint);
@@ -516,7 +503,7 @@ class SkillEffectOverlay extends PositionComponent
   void _renderFrostBorder(Canvas canvas, double progress) {
     final thickness = 12.0 * (1.0 - progress);
     final alpha = (1.0 - progress) * 0.15;
-    _specialPaint.color = const Color(0xFF42A5F5).withValues(alpha: alpha);
+    _specialPaint.color = Color.from(alpha: alpha, red: 0.259, green: 0.647, blue: 0.961);
     _specialPaint.shader = null;
     _specialPaint.style = PaintingStyle.fill;
     // Top
@@ -537,49 +524,29 @@ class SkillEffectOverlay extends PositionComponent
         _specialPaint);
   }
 
-  /// Meteor: radial glow at center.
+  /// Meteor: simple tinted overlay at center.
   void _renderMeteorGlow(Canvas canvas, double progress) {
-    if (progress > 0.5) return; // Only first half
+    if (progress > 0.5) return;
     final intensity = (0.5 - progress) * 2.0;
-    final radius = 60 + progress * 100;
-    final cx = BalanceConfig.gameWidth / 2;
-    final cy = BalanceConfig.gameHeight / 2 - 40;
-    _specialPaint.color = const Color(0x00000000); // reset color
+    _specialPaint.shader = null;
     _specialPaint.style = PaintingStyle.fill;
-    _specialPaint.shader = Gradient.radial(
-      Offset(cx, cy),
-      radius,
-      [
-        const Color(0xFFFF3D00).withValues(alpha: intensity * 0.15),
-        const Color(0xFFFF3D00).withValues(alpha: 0.0),
-      ],
+    _specialPaint.color = Color.from(
+      alpha: intensity * 0.08, red: 1.0, green: 0.24, blue: 0.0,
     );
     canvas.drawRect(_fullScreenRect, _specialPaint);
-    _specialPaint.shader = null;
   }
 
-  /// Mana burst: expanding purple ring.
+  /// Mana burst: simple purple overlay.
   void _renderArcaneRing(Canvas canvas, double progress) {
     if (progress > 0.6) return;
     final ringProgress = progress / 0.6;
-    final radius = 30 + ringProgress * 200;
-    final alpha = (1.0 - ringProgress) * 0.12;
-    final cx = BalanceConfig.gameWidth / 2;
-    final cy = BalanceConfig.gameHeight / 2 - 40;
-    _specialPaint.color = const Color(0x00000000);
+    final alpha = (1.0 - ringProgress) * 0.08;
+    _specialPaint.shader = null;
     _specialPaint.style = PaintingStyle.fill;
-    _specialPaint.shader = Gradient.radial(
-      Offset(cx, cy),
-      radius,
-      [
-        const Color(0xFF651FFF).withValues(alpha: 0.0),
-        const Color(0xFF651FFF).withValues(alpha: alpha),
-        const Color(0xFF651FFF).withValues(alpha: 0.0),
-      ],
-      [0.7, 0.85, 1.0],
+    _specialPaint.color = Color.from(
+      alpha: alpha, red: 0.396, green: 0.122, blue: 1.0,
     );
     canvas.drawRect(_fullScreenRect, _specialPaint);
-    _specialPaint.shader = null;
   }
 
   /// Assassin mark: pulsing purple aura.
@@ -588,7 +555,7 @@ class SkillEffectOverlay extends PositionComponent
     final alpha = (1.0 - progress) * pulse * 0.08;
     _specialPaint.shader = null;
     _specialPaint.style = PaintingStyle.fill;
-    _specialPaint.color = const Color(0xFFE040FB).withValues(alpha: alpha);
+    _specialPaint.color = Color.from(alpha: alpha, red: 0.878, green: 0.251, blue: 0.984);
     canvas.drawRect(_fullScreenRect, _specialPaint);
   }
 
@@ -600,7 +567,7 @@ class SkillEffectOverlay extends PositionComponent
       final alpha = (1.0 - progress) * 0.08;
       _specialPaint.shader = null;
       _specialPaint.style = PaintingStyle.fill;
-      _specialPaint.color = const Color(0xFFFFFFFF).withValues(alpha: alpha);
+      _specialPaint.color = Color.from(alpha: alpha, red: 1.0, green: 1.0, blue: 1.0);
       canvas.drawRect(_fullScreenRect, _specialPaint);
     }
   }

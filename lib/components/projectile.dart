@@ -194,6 +194,10 @@ class Projectile extends PositionComponent
     ..isAntiAlias = false
     ..color = const Color(0x88FFFFFF);
 
+  // Pre-allocated Rect/Offset to avoid per-frame allocation
+  static final Rect _tmpRect = Rect.zero;
+  static final Offset _tmpOffset = Offset.zero;
+
   /// Elemental: apply random fire/ice/poison effect.
   void _applyElementalEffect(DefenseEnemy enemy) {
     final roll = _rng.nextInt(3);
@@ -312,26 +316,30 @@ class Projectile extends PositionComponent
     final s = _visualScale;
 
     // ── Draw trail from ring buffer (scaled by level) ──
-    // Render every other segment to halve draw calls while keeping visual quality
+    // Always skip every other segment to halve draw calls
     if (_trailCount > 0) {
       final len = _trailCount;
       final start = (_trailHead - _trailCount + _trailLength) % _trailLength;
-      final step = len > 8 ? 2 : 1;
-      for (int i = 0; i < len; i += step) {
+      final halfSx = size.x / 2;
+      final halfSy = size.y / 2;
+      final posX = position.x;
+      final posY = position.y;
+      final trailR = profile.trailColor.r;
+      final trailG = profile.trailColor.g;
+      final trailB = profile.trailColor.b;
+      final invLen = 1.0 / len;
+      for (int i = 0; i < len; i += 2) {
         final idx = (start + i) % _trailLength;
-        final t = i / len; // 0.0 = oldest, ~1.0 = newest
-        final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
-        if (alpha < 0.05) continue; // skip invisible segments
+        final t = i * invLen;
+        final alpha = t * profile.trailAlpha;
+        if (alpha < 0.05) continue;
         final trailSize = (2.0 + t * 4.0) * s;
-        final dx = _trailX[idx] - position.x;
-        final dy = _trailY[idx] - position.y;
-        _trailPaint.color = profile.trailColor.withValues(alpha: alpha);
+        final cx = _trailX[idx] - posX + halfSx;
+        final cy = _trailY[idx] - posY + halfSy;
+        final halfTs = trailSize / 2;
+        _trailPaint.color = Color.from(alpha: alpha, red: trailR, green: trailG, blue: trailB);
         canvas.drawRect(
-          Rect.fromCenter(
-            center: Offset(dx + size.x / 2, dy + size.y / 2),
-            width: trailSize,
-            height: trailSize,
-          ),
+          Rect.fromLTWH(cx - halfTs, cy - halfTs, trailSize, trailSize),
           _trailPaint,
         );
       }

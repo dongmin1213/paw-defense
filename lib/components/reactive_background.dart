@@ -21,6 +21,9 @@ class ReactiveBackground extends PositionComponent
   double _pulseDuration = 0;
   Color _pulseColor = const Color(0x00000000);
 
+  // Cached intensity to avoid recomputing in both update() and render()
+  double _cachedIntensity = 0.0;
+
   // Cached Paint objects to avoid per-frame allocation
   final Paint _bgPaint = Paint();
   final Paint _starPaint = Paint()..isAntiAlias = false;
@@ -73,10 +76,13 @@ class ReactiveBackground extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
+    // Cache intensity once per frame for use in both update and render
+    _cachedIntensity = _intensity;
+
     // Drift stars downward — accelerate with intensity
-    final intensity = _intensity;
+    final speedMul = (1.0 + _cachedIntensity * 2.0) * dt;
     for (final star in _stars) {
-      star.y += star.speed * (1.0 + intensity * 2.0) * dt;
+      star.y += star.speed * speedMul;
       if (star.y > BalanceConfig.gameHeight + 2) {
         star.y = -2;
         star.x = _rng.nextDouble() * BalanceConfig.gameWidth;
@@ -92,7 +98,7 @@ class ReactiveBackground extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    final intensity = _intensity;
+    final intensity = _cachedIntensity;
 
     // ── Background color shift ──
     // Calm: deep navy (12,12,36) → Intense: deep crimson (80,8,8)
@@ -103,9 +109,9 @@ class ReactiveBackground extends PositionComponent
     canvas.drawRect(_fullScreenRect, _bgPaint);
 
     // ── Ambient stars ──
+    final intensityAlpha = intensity * 0.5;
     for (final star in _stars) {
-      // Stars get much brighter with intensity
-      final a = (star.alpha + intensity * 0.5).clamp(0.0, 0.95);
+      final a = (star.alpha + intensityAlpha).clamp(0.0, 0.95);
       _starPaint.color = Color.fromARGB(
         (a * 255).toInt(), 255, 255, 255,
       );
@@ -115,20 +121,16 @@ class ReactiveBackground extends PositionComponent
       );
     }
 
-    // ── Radial pulse ──
+    // ── Radial pulse (use simple rect overlay instead of Gradient.radial) ──
     if (_pulseTimer > 0 && _pulseDuration > 0) {
       final progress = 1.0 - (_pulseTimer / _pulseDuration);
-      final pulseAlpha = (1.0 - progress) * 0.3;
-      final pulseRadius = 80 + progress * 400;
-      final wallX = game.wall.position.x;
-      final wallY = game.wall.position.y;
-      _pulsePaint.shader = Gradient.radial(
-        Offset(wallX, wallY),
-        pulseRadius,
-        [
-          _pulseColor.withValues(alpha: pulseAlpha),
-          _pulseColor.withValues(alpha: 0.0),
-        ],
+      final pulseAlpha = (1.0 - progress) * 0.12;
+      _pulsePaint.shader = null;
+      _pulsePaint.color = Color.from(
+        alpha: pulseAlpha,
+        red: _pulseColor.r,
+        green: _pulseColor.g,
+        blue: _pulseColor.b,
       );
       canvas.drawRect(_fullScreenRect, _pulsePaint);
     }

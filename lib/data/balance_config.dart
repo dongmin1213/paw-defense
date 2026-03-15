@@ -33,8 +33,8 @@ class BalanceConfig {
   /// Pause between waves in seconds.
   static const double betweenWavePause = 3.0;
 
-  /// Min spawn interval (max spawn rate) — very fast for swarm density.
-  static const double minSpawnInterval = 0.03;
+  /// Min spawn interval (max spawn rate).
+  static const double minSpawnInterval = 0.08;
 
   /// Max spawn interval (min spawn rate).
   static const double maxSpawnInterval = 1.5;
@@ -48,15 +48,15 @@ class BalanceConfig {
   /// Base enemy count per wave tier: [maxWave, count].
   /// Massive density from wave 1 for screen-filling spectacle — compensated by swarmHpMultiplier.
   static const List<List<int>> baseEnemyCountTiers = [
-    [3, 40],
-    [5, 55],
-    [10, 70],
-    [20, 90],
-    [30, 120],
+    [3, 25],
+    [5, 35],
+    [10, 45],
+    [20, 55],
+    [30, 70],
   ];
 
   /// Default base enemy count for waves beyond all tiers.
-  static const int baseEnemyCountDefault = 150;
+  static const int baseEnemyCountDefault = 80;
 
   /// Enemy count scales with wave: base + wave * this.
   static const double enemyCountWaveScale = 1.2;
@@ -65,11 +65,11 @@ class BalanceConfig {
   static const double enemyCountUnitScale = 0.04;
 
   /// Max enemies per wave (hard cap).
-  static const int maxEnemiesPerWave = 300;
+  static const int maxEnemiesPerWave = 150;
 
   /// HP multiplier for swarm mode — lower HP per enemy, same total wave HP.
   /// Balanced so wave 1 enemies take 2-4 hits (not 1-shot).
-  static const double swarmHpMultiplier = 0.30;
+  static const double swarmHpMultiplier = 0.55;
 
   // ══════════════════════════════════════
   // Unit Stats & Scaling
@@ -329,16 +329,16 @@ class BalanceConfig {
   // ══════════════════════════════════════
 
   /// Enemy death burst particle count.
-  static const int particleEnemyDeath = 25;
+  static const int particleEnemyDeath = 10;
 
   /// Bomber death burst particle count.
-  static const int particleBomberDeath = 40;
+  static const int particleBomberDeath = 18;
 
   /// Enemy death — white core flash count.
   static const int particleDeathCoreFlash = 2;
 
   /// Boss explosion particle count.
-  static const int particleBossExplosion = 60;
+  static const int particleBossExplosion = 25;
 
   /// Merge effect base count (+ level * mergePerLevel).
   static const int particleMergeBase = 10;
@@ -365,13 +365,13 @@ class BalanceConfig {
   static const int particleHybridMerge = 25;
 
   /// Combo milestone flash burst count.
-  static const int particleComboFlash = 80;
+  static const int particleComboFlash = 25;
 
   /// Projectile hit impact burst.
   static const int particleProjectileHit = 8;
 
   /// Skill activation radial burst.
-  static const int particleSkillActivation = 70;
+  static const int particleSkillActivation = 25;
 
   /// Heal sparkle effect.
   static const int particleHealEffect = 10;
@@ -380,10 +380,10 @@ class BalanceConfig {
   static const int particleWallDamage = 10;
 
   /// Evolution golden spiral burst.
-  static const int particleEvolution = 30;
+  static const int particleEvolution = 15;
 
   /// Skill ring burst.
-  static const int particleSkillRing = 40;
+  static const int particleSkillRing = 20;
 
   /// Scaled death base count (multiplied by combo scale).
   static const int particleScaledDeathBase = 25;
@@ -392,10 +392,10 @@ class BalanceConfig {
   static const int particleScaledDeathMin = 12;
 
   /// Scaled death clamp max.
-  static const int particleScaledDeathMax = 80;
+  static const int particleScaledDeathMax = 30;
 
   /// Shockwave ring count.
-  static const int particleShockwaveRing = 48;
+  static const int particleShockwaveRing = 20;
 
   /// Muzzle flash base count (+ level * 2).
   static const int particleMuzzleFlashBase = 2;
@@ -410,22 +410,22 @@ class BalanceConfig {
   static const int particleGoldScatterMin = 5;
 
   /// Gold scatter max count.
-  static const int particleGoldScatterMax = 20;
+  static const int particleGoldScatterMax = 8;
 
   /// Skill activation radial burst (duplicate for skill_manager usage).
-  static const int particleSkillRingCount = 40;
+  static const int particleSkillRingCount = 20;
 
   /// Global particle hard cap.
-  static const int particleHardCap = 2000;
+  static const int particleHardCap = 500;
 
   /// Ground mark cap.
-  static const int groundMarkCap = 150;
+  static const int groundMarkCap = 60;
 
   /// Ground mark keep count after trim.
-  static const int groundMarkKeep = 120;
+  static const int groundMarkKeep = 40;
 
   /// Background ambient star count.
-  static const int backgroundStarCount = 120;
+  static const int backgroundStarCount = 40;
 
   // ══════════════════════════════════════
   // Combo System
@@ -457,7 +457,7 @@ class BalanceConfig {
   static const double skillCooldown = 1.0;
 
   /// Skill effect overlay max particles.
-  static const int skillMaxParticles = 60;
+  static const int skillMaxParticles = 25;
 
   // ══════════════════════════════════════
   // Wave Modifiers
@@ -510,19 +510,19 @@ class BalanceConfig {
   static const double projectileVisualScaleHybrid = 0.3;
 
   /// Projectile trail base length.
-  static const int projectileTrailBase = 10;
+  static const int projectileTrailBase = 5;
 
   /// Projectile trail length per level.
-  static const int projectileTrailPerLevel = 2;
+  static const int projectileTrailPerLevel = 1;
 
   /// Projectile trail length bonus for evolved.
-  static const int projectileTrailEvolved = 4;
+  static const int projectileTrailEvolved = 2;
 
   /// Projectile trail min length.
-  static const int projectileTrailMin = 10;
+  static const int projectileTrailMin = 4;
 
   /// Projectile trail max length.
-  static const int projectileTrailMax = 24;
+  static const int projectileTrailMax = 10;
 
   /// Split shot speed multiplier.
   static const double splitShotSpeedMult = 0.7;
@@ -612,7 +612,7 @@ class BalanceConfig {
   static const double fieldDropHomeMaxSpeed = 500.0;
 
   /// Max active field drops.
-  static const int fieldDropMaxDrops = 150;
+  static const int fieldDropMaxDrops = 60;
 
   /// Pickup/absorb radius.
   static const double fieldDropPickupRadius = 10.0;
