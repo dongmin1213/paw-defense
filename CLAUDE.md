@@ -12,14 +12,20 @@
 - **테스트**: `flutter test` (16개 파일, 274+ 케이스)
 - **빌드**: `flutter pub get && flutter build apk --release` (CI로만 검증)
 
-## 문서 구조
+## 문서 구조 (주제별 독립 문서)
+
+각 문서는 **자기 완결적** — 해당 문서만 읽으면 그 영역의 작업을 독립적으로 수행할 수 있습니다.
+
 - `CLAUDE.md` — 프로젝트 개요 (이 파일)
-- `PLAN.md` — 차별화 개선 4단계 계획 (✅ 전체 완료)
-- `docs/GDD_CASTLE_DEFENSE.md` — 게임 설계 문서
-- `docs/UNITS.md` — 유닛 8종 + 진화 8종 + 하이브리드 12종
-- `docs/ENEMIES.md` — 적 10종 + 보스 스탯/특수행동
-- `docs/BALANCE.md` — 밸런스 수치 총정리 (balance_config.dart 기반)
-- `docs/ARCHITECTURE.md` — 코드 구조, 패턴, 확장 가이드
+- `docs/units.md` — 유닛 8종 + 진화 8종 (스탯, 스케일링, 특수 메카닉)
+- `docs/hybrids.md` — 하이브리드 28종 (레시피, 스탯, 특수 능력)
+- `docs/enemies.md` — 적 16종 (스탯, 해금, 스케일링, 특수 행동)
+- `docs/relics.md` — 유물 58개 (5티어 희귀도, 효과, 드롭 가중치)
+- `docs/stages.md` — 웨이브/스테이지 (적 수, 보스, 변형 10종, 보상)
+- `docs/skills.md` — 액티브 스킬 8종 + 콤보 6단계 + 시너지
+- `docs/upgrades.md` — 영구 업그레이드 16종 + 경제 시스템
+- `docs/systems.md` — 게임필/파티클/업적/일일/도감/사운드
+- `docs/architecture.md` — 코드 구조, 패턴, 콘텐츠 추가 가이드
 
 ## 프로젝트 구조
 
