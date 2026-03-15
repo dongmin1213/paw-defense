@@ -323,4 +323,107 @@ class BalanceConfig {
 
   /// Waves at which story events trigger.
   static const List<int> storyMilestoneWaves = [5, 10, 15, 20, 30, 40, 50];
+
+  // ══════════════════════════════════════
+  // Particle Counts
+  // ══════════════════════════════════════
+
+  /// Enemy death burst particle count.
+  static const int particleEnemyDeath = 25;
+
+  /// Bomber death burst particle count.
+  static const int particleBomberDeath = 40;
+
+  /// Enemy death — white core flash count.
+  static const int particleDeathCoreFlash = 2;
+
+  /// Boss explosion particle count.
+  static const int particleBossExplosion = 60;
+
+  /// Merge effect base count (+ level * mergePerLevel).
+  static const int particleMergeBase = 10;
+
+  /// Merge effect per-level bonus.
+  static const int particleMergePerLevel = 5;
+
+  /// Merge evolution (Lv5) extra gold burst count.
+  static const int particleMergeEvolution = 12;
+
+  /// Wall hit impact sparks.
+  static const int particleWallHit = 6;
+
+  /// Wave start celebration burst.
+  static const int particleWaveStart = 12;
+
+  /// Critical hit base count (scaled by combo).
+  static const int particleCriticalHit = 12;
+
+  /// Chain kill lightning arc steps.
+  static const int particleChainKill = 8;
+
+  /// Hybrid merge two-color swirl count.
+  static const int particleHybridMerge = 25;
+
+  /// Combo milestone flash burst count.
+  static const int particleComboFlash = 80;
+
+  /// Projectile hit impact burst.
+  static const int particleProjectileHit = 8;
+
+  /// Skill activation radial burst.
+  static const int particleSkillActivation = 70;
+
+  /// Heal sparkle effect.
+  static const int particleHealEffect = 10;
+
+  /// Wall damage directional sparks.
+  static const int particleWallDamage = 10;
+
+  /// Evolution golden spiral burst.
+  static const int particleEvolution = 30;
+
+  /// Skill ring burst.
+  static const int particleSkillRing = 40;
+
+  /// Scaled death base count (multiplied by combo scale).
+  static const int particleScaledDeathBase = 25;
+
+  /// Scaled death clamp min.
+  static const int particleScaledDeathMin = 12;
+
+  /// Scaled death clamp max.
+  static const int particleScaledDeathMax = 80;
+
+  /// Shockwave ring count.
+  static const int particleShockwaveRing = 48;
+
+  /// Muzzle flash base count (+ level * 2).
+  static const int particleMuzzleFlashBase = 2;
+
+  /// Muzzle flash per-level bonus.
+  static const int particleMuzzleFlashPerLevel = 2;
+
+  /// Gold collect burst.
+  static const int particleGoldCollect = 8;
+
+  /// Gold scatter min count.
+  static const int particleGoldScatterMin = 5;
+
+  /// Gold scatter max count.
+  static const int particleGoldScatterMax = 20;
+
+  /// Skill activation radial burst (duplicate for skill_manager usage).
+  static const int particleSkillRingCount = 40;
+
+  /// Global particle hard cap.
+  static const int particleHardCap = 2000;
+
+  /// Ground mark cap.
+  static const int groundMarkCap = 150;
+
+  /// Ground mark keep count after trim.
+  static const int groundMarkKeep = 120;
+
+  /// Background ambient star count.
+  static const int backgroundStarCount = 120;
 }
