@@ -97,6 +97,7 @@ class DamageNumber extends PositionComponent
     _alpha = (1.0 - _elapsed / _lifetime).clamp(0.0, 1.0);
 
     if (_alpha <= 0) {
+      game.onDamageNumberRemoved();
       removeFromParent();
     }
   }

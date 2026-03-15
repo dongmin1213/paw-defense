@@ -311,19 +311,6 @@ class BalanceConfig {
   static const double ascensionStarMultiplier = 0.15;
 
   // ══════════════════════════════════════
-  // Battle Pass
-  // ══════════════════════════════════════
-
-  /// Battle pass season length in days.
-  static const int battlePassSeasonDays = 30;
-
-  /// Number of tiers in the battle pass.
-  static const int battlePassTiers = 30;
-
-  /// XP required per battle pass tier.
-  static const int battlePassXpPerTier = 100;
-
-  // ══════════════════════════════════════
   // Leaderboard
   // ══════════════════════════════════════
 

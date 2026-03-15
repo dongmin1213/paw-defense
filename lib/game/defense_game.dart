@@ -24,7 +24,6 @@ import '../systems/achievement_manager.dart';
 import '../systems/daily_manager.dart';
 import '../systems/codex_manager.dart';
 import '../systems/synergy_manager.dart';
-import '../systems/battle_pass_manager.dart';
 import '../systems/new_game_plus_manager.dart';
 import '../systems/story_manager.dart';
 import '../systems/leaderboard_manager.dart';
@@ -71,7 +70,6 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   late DailyManager dailyManager;
   late CodexManager codexManager;
   late SynergyManager synergyManager;
-  late BattlePassManager battlePassManager;
   late NewGamePlusManager newGamePlusManager;
   late StoryManager storyManager;
   late LeaderboardManager leaderboardManager;
@@ -96,12 +94,13 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   void markUnitSlotsDirty() {
     _unitSlotsDirty = true;
   }
+  // Direct enemy tracking — avoids O(world.children) scans
+  final Set<DefenseEnemy> _enemySet = {};
+
   List<DefenseEnemy> get livingEnemies {
     if (_livingEnemiesDirty) {
-      _livingEnemiesCache = world.children
-          .whereType<DefenseEnemy>()
-          .where((e) => !e.isDead)
-          .toList();
+      _livingEnemiesCache =
+          _enemySet.where((e) => !e.isDead).toList();
       _livingEnemiesDirty = false;
     }
     return _livingEnemiesCache;
@@ -110,6 +109,18 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   /// Call when enemies are spawned or killed to refresh cache.
   void markEnemiesDirty() {
     _livingEnemiesDirty = true;
+  }
+
+  /// Register enemy for fast lookup (called on spawn).
+  void registerEnemy(DefenseEnemy enemy) {
+    _enemySet.add(enemy);
+    markEnemiesDirty();
+  }
+
+  /// Unregister enemy (called on removal).
+  void unregisterEnemy(DefenseEnemy enemy) {
+    _enemySet.remove(enemy);
+    markEnemiesDirty();
   }
 
   // ── Game State ──
@@ -313,9 +324,6 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     // Initialize new systems
     final prefs = await SharedPreferences.getInstance();
 
-    battlePassManager = BattlePassManager();
-    await battlePassManager.init(prefs);
-
     newGamePlusManager = NewGamePlusManager();
     await newGamePlusManager.init(prefs);
 
@@ -404,6 +412,8 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
     _runGoldEarned = 0;
     _unitsBought = 0;
     _activeFieldDrops = 0;
+    _activeDamageNumbers = 0;
+    _enemySet.clear();
     isPlaying = true;
     _isPaused = false;
     gameSpeed = 1.0;
@@ -879,7 +889,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       isFlying: isFlying,
     );
     world.add(enemy);
-    markEnemiesDirty();
+    registerEnemy(enemy);
 
     // Codex: discover this enemy type
     codexManager.discoverEnemy(typeId);
@@ -920,7 +930,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Called when an enemy is killed.
   void onEnemyKilled(DefenseEnemy enemy) {
-    markEnemiesDirty();
+    unregisterEnemy(enemy);
     _runKills++;
     totalKills++;
     waveManager.onEnemyKilled();
@@ -1700,13 +1710,12 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
 
   /// Show a floating damage/gold number at the given position.
   /// [damageAmount] scales the font size — bigger hits get bigger numbers.
+  int _activeDamageNumbers = 0;
+
   void showDamageNumber(Vector2 pos, String text, Color color,
       {bool isCritical = false, double damageAmount = 0}) {
-    // Cap visible damage numbers — generous limit for visual spectacle
-    final existing = world.children.whereType<DamageNumber>();
-    if (existing.length > 150) return;
+    if (_activeDamageNumbers > 150) return;
 
-    // Scale fontSize by damage amount — bigger hits get much bigger numbers
     double fontSize = 12;
     if (damageAmount >= 1000) {
       fontSize = 20;
@@ -1716,6 +1725,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       fontSize = 14;
     }
 
+    _activeDamageNumbers++;
     world.add(DamageNumber(
       position: pos,
       text: text,
@@ -1723,6 +1733,10 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       fontSize: fontSize,
       isCritical: isCritical,
     ));
+  }
+
+  void onDamageNumberRemoved() {
+    _activeDamageNumbers = (_activeDamageNumbers - 1).clamp(0, 999);
   }
 
   /// Generate relic choices from relicManager and show the overlay.
@@ -1861,6 +1875,7 @@ class DefenseGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         .whereType<DamageNumber>()
         .toList()
         .forEach((c) => c.removeFromParent());
+    _activeDamageNumbers = 0;
   }
 
   void _clearParticles() {
