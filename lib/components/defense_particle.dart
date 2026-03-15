@@ -22,8 +22,8 @@ class DefenseParticle extends PositionComponent
     _groundMarks.clear();
   }
 
-  // Cached Random for ground marks (avoid per-call allocation)
-  static final Random _groundRng = Random();
+  // Cached Random for all particle methods (avoid per-call allocation)
+  static final Random _rng = Random();
 
   // Cached Paint for ground mark rendering (avoid per-frame allocation)
   static final Paint _groundMarkPaint = Paint()..isAntiAlias = false;
@@ -35,15 +35,15 @@ class DefenseParticle extends PositionComponent
       _groundMarks.removeRange(0, _groundMarks.length - 120);
     }
     final colors = _deathColorsForEnemy(enemyId);
-    final color = colors[_groundRng.nextInt(colors.length)];
+    final color = colors[_rng.nextInt(colors.length)];
     // 1-3 splat marks per death for variety
-    final count = 1 + _groundRng.nextInt(3);
+    final count = 1 + _rng.nextInt(3);
     for (int i = 0; i < count; i++) {
       _groundMarks.add(_GroundMark(
-        x: x + (_groundRng.nextDouble() - 0.5) * 16,
-        y: y + (_groundRng.nextDouble() - 0.5) * 12,
-        size: 3.0 + _groundRng.nextDouble() * 5.0,
-        life: 4.0 + _groundRng.nextDouble() * 3.0, // persist 4-7 seconds
+        x: x + (_rng.nextDouble() - 0.5) * 16,
+        y: y + (_rng.nextDouble() - 0.5) * 12,
+        size: 3.0 + _rng.nextDouble() * 5.0,
+        life: 4.0 + _rng.nextDouble() * 3.0, // persist 4-7 seconds
         color: color,
       ));
     }
@@ -51,7 +51,7 @@ class DefenseParticle extends PositionComponent
 
   /// Gold coin collect burst at a world position.
   void spawnGoldCollect(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 8; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 40 + rng.nextDouble() * 60;
@@ -103,7 +103,7 @@ class DefenseParticle extends PositionComponent
 
   /// Enemy death burst — type-specific colors with enhanced particles.
   void spawnEnemyDeath(double wx, double wy, {String enemyId = ''}) {
-    final rng = Random();
+    final rng = _rng;
     final colors = _deathColorsForEnemy(enemyId);
     final isBomber = enemyId.contains('bomber');
     final count = isBomber ? 40 : 25;
@@ -139,7 +139,7 @@ class DefenseParticle extends PositionComponent
 
   /// Boss explosion — large burst with mixed fire colors.
   void spawnBossExplosion(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 60; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 50 + rng.nextDouble() * 120;
@@ -163,7 +163,7 @@ class DefenseParticle extends PositionComponent
 
   /// Unit merge effect — rainbow sparkle burst, scales with resulting level.
   void spawnMerge(double wx, double wy, {int level = 1}) {
-    final rng = Random();
+    final rng = _rng;
     final count = 10 + level * 5; // Lv2=15, Lv3=20, Lv4=25, Lv5=30
     final sizeScale = 1.0 + (level - 1) * 0.2;
     final speedScale = 1.0 + (level - 1) * 0.15;
@@ -201,7 +201,7 @@ class DefenseParticle extends PositionComponent
 
   /// Wall hit impact — sparks from the wall.
   void spawnWallHit(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 6; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 30 + rng.nextDouble() * 40;
@@ -224,7 +224,7 @@ class DefenseParticle extends PositionComponent
 
   /// Wave start celebration — upward burst.
   void spawnWaveStart(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 12; i++) {
       final angle = -pi / 2 + (rng.nextDouble() - 0.5) * pi * 0.6;
       final speed = 60 + rng.nextDouble() * 80;
@@ -243,7 +243,7 @@ class DefenseParticle extends PositionComponent
 
   /// Critical hit effect — star-shaped burst with white/yellow.
   void spawnCriticalHit(double wx, double wy, {double scale = 1.0}) {
-    final rng = Random();
+    final rng = _rng;
     final count = (12 * scale).toInt();
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -267,7 +267,7 @@ class DefenseParticle extends PositionComponent
 
   /// Chain kill effect — lightning arc between two points.
   void spawnChainKill(double x1, double y1, double x2, double y2) {
-    final rng = Random();
+    final rng = _rng;
     const steps = 8;
     for (var i = 0; i < steps; i++) {
       final t = i / steps;
@@ -287,7 +287,7 @@ class DefenseParticle extends PositionComponent
 
   /// Hybrid merge effect — two-color swirl.
   void spawnHybridMerge(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     const colorsA = [Color(0xFFFF6D00), Color(0xFFFFAB00)];
     const colorsB = [Color(0xFF2979FF), Color(0xFF00B0FF)];
     for (var i = 0; i < 25; i++) {
@@ -309,7 +309,7 @@ class DefenseParticle extends PositionComponent
 
   /// Combo milestone effect — screen-wide flash burst.
   void spawnComboFlash(double centerX, double centerY, int comboColor) {
-    final rng = Random();
+    final rng = _rng;
     final color = Color(comboColor);
     for (var i = 0; i < 80; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -328,7 +328,7 @@ class DefenseParticle extends PositionComponent
 
   /// Projectile hit impact — burst at hit point.
   void spawnProjectileHit(double wx, double wy, Color color) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 8; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 20 + rng.nextDouble() * 30;
@@ -346,7 +346,7 @@ class DefenseParticle extends PositionComponent
 
   /// Skill activation — large radial burst with skill color.
   void spawnSkillActivation(double wx, double wy, Color color) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 70; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 60 + rng.nextDouble() * 120;
@@ -364,7 +364,7 @@ class DefenseParticle extends PositionComponent
 
   /// Heal sparkle effect — green/white particles rising up.
   void spawnHealEffect(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 10; i++) {
       final angle = -pi / 2 + (rng.nextDouble() - 0.5) * pi * 0.4;
       final speed = 30 + rng.nextDouble() * 50;
@@ -388,7 +388,7 @@ class DefenseParticle extends PositionComponent
 
   /// Wall damage impact — directional sparks + debris.
   void spawnWallDamage(double wx, double wy, double fromX, double fromY) {
-    final rng = Random();
+    final rng = _rng;
     final hitAngle = atan2(wy - fromY, wx - fromX);
     for (var i = 0; i < 10; i++) {
       final angle = hitAngle + pi + (rng.nextDouble() - 0.5) * pi * 0.6;
@@ -413,7 +413,7 @@ class DefenseParticle extends PositionComponent
 
   /// Evolution transformation — golden spiral burst.
   void spawnEvolution(double wx, double wy) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 30; i++) {
       final angle = i / 30 * 2 * pi;
       final speed = 40 + rng.nextDouble() * 80;
@@ -437,7 +437,7 @@ class DefenseParticle extends PositionComponent
 
   /// Skill activation — ring burst expanding outward.
   void spawnSkillRing(double wx, double wy, Color color) {
-    final rng = Random();
+    final rng = _rng;
     for (var i = 0; i < 40; i++) {
       final angle = i / 40 * 2 * pi;
       final speed = 80 + rng.nextDouble() * 40;
@@ -456,7 +456,7 @@ class DefenseParticle extends PositionComponent
   /// Scaled enemy death effect — size proportional to combo, type-specific colors.
   void spawnEnemyDeathScaled(double wx, double wy, double scale,
       {String enemyId = ''}) {
-    final rng = Random();
+    final rng = _rng;
     final count = (25 * scale).clamp(12, 80).toInt();
     final colors = _deathColorsForEnemy(enemyId);
     for (var i = 0; i < count; i++) {
@@ -508,7 +508,7 @@ class DefenseParticle extends PositionComponent
   /// Muzzle flash on attack — burst of color at unit position.
   /// Scales with level: Lv1=4 particles, Lv5=12 particles.
   void spawnMuzzleFlash(double wx, double wy, Color color, {int level = 1}) {
-    final rng = Random();
+    final rng = _rng;
     final count = 2 + level * 2; // Lv1=4, Lv3=8, Lv5=12
     final isEvolved = level >= 5;
     for (var i = 0; i < count; i++) {
@@ -530,7 +530,7 @@ class DefenseParticle extends PositionComponent
   /// Enhanced: more particles, initial white flash, bigger size.
   void spawnGoldScatter(double wx, double wy, int amount,
       double wallX, double wallY) {
-    final rng = Random();
+    final rng = _rng;
     final count = (amount * 2 + 3).clamp(5, 20);
 
     // Initial white flash at death position (brief, eye-catching)

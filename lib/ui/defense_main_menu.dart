@@ -208,31 +208,6 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
                 ),
               ),
             ],
-            // Battle pass tier
-            if (widget.game.battlePassManager.tier > 0) ...[
-              const SizedBox(height: 6),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '시즌 패스 Tier ${widget.game.battlePassManager.tier}',
-                    style: GameTheme.pixel(
-                      fontSize: 6,
-                      color: GameTheme.accentOrange,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 60,
-                    child: GameTheme.pixelProgressBar(
-                      value: widget.game.battlePassManager.tierProgress,
-                      height: 4,
-                      fillColor: GameTheme.accentOrange,
-                    ),
-                  ),
-                ],
-              ),
-            ],
             // Progression milestone indicator
             if (widget.game.highestWave > 0) ...[
               const SizedBox(height: 8),
@@ -461,16 +436,6 @@ class _DefenseMainMenuState extends State<DefenseMainMenu>
               ),
               const SizedBox(width: 8),
             ],
-            Expanded(
-              child: _secondaryButton(
-                label: '시즌 패스',
-                icon: Icons.card_giftcard,
-                color: GameTheme.accentOrange,
-                onTap: () {
-                  // Battle pass screen - shows current tier/progress
-                },
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 8),

@@ -72,12 +72,6 @@ void main() {
       expect(BalanceConfig.catchUpWaveThreshold, greaterThan(0));
     });
 
-    test('battle pass constants exist', () {
-      expect(BalanceConfig.battlePassSeasonDays, 30);
-      expect(BalanceConfig.battlePassTiers, 30);
-      expect(BalanceConfig.battlePassXpPerTier, greaterThan(0));
-    });
-
     test('leaderboard max entries is reasonable', () {
       expect(BalanceConfig.maxLeaderboardEntries, greaterThanOrEqualTo(20));
     });
