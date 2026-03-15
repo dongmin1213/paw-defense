@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 import '../data/hybrid_unit_data.dart';
 import 'defense_enemy.dart';
@@ -38,7 +39,6 @@ class Projectile extends PositionComponent
   final bool _isSplit; // true if this is a child split projectile (prevents recursion)
 
   double _lifeTime = 0;
-  static const double maxLifeTime = 3.0;
 
   /// Track already-hit enemies to avoid double damage on piercing projectiles.
   final Set<DefenseEnemy> _hitEnemies = {};
@@ -52,6 +52,9 @@ class Projectile extends PositionComponent
 
   /// Visual scale factor based on level/evolved/hybrid status.
   late final double _visualScale;
+
+  /// Cached profile to avoid per-frame HybridDatabase lookups.
+  late final _ProjProfile _cachedProfile;
 
   Projectile({
     required Vector2 spawnPosition,
@@ -72,18 +75,18 @@ class Projectile extends PositionComponent
           anchor: Anchor.center,
           priority: 14,
         ) {
-    // Scale visuals by level: Lv1=1.2, Lv3=1.8, Lv5=2.4, evolved=+0.5
-    _visualScale = 1.2 +
-        (level - 1) * 0.3 +
-        (isEvolved ? 0.5 : 0.0) +
-        (isHybrid ? 0.3 : 0.0);
-    // Trail length: 10 at Lv1, up to 24 at Lv5+evolved
-    _trailLength = (10 + level * 2 + (isEvolved ? 4 : 0)).clamp(10, 24);
+    _visualScale = BalanceConfig.projectileVisualScaleBase +
+        (level - 1) * BalanceConfig.projectileVisualScalePerLevel +
+        (isEvolved ? BalanceConfig.projectileVisualScaleEvolved : 0.0) +
+        (isHybrid ? BalanceConfig.projectileVisualScaleHybrid : 0.0);
+    _trailLength = (BalanceConfig.projectileTrailBase + level * BalanceConfig.projectileTrailPerLevel + (isEvolved ? BalanceConfig.projectileTrailEvolved : 0)).clamp(BalanceConfig.projectileTrailMin, BalanceConfig.projectileTrailMax);
     // Pre-allocate ring buffer for trail
     _trailX = List<double>.filled(_trailLength, 0);
     _trailY = List<double>.filled(_trailLength, 0);
     // Update component size for hitbox
     size = Vector2(6 * _visualScale, 6 * _visualScale);
+    // Cache profile at construction time
+    _cachedProfile = _computeProfile();
   }
 
   @override
@@ -108,7 +111,7 @@ class Projectile extends PositionComponent
     _lifeTime += dt;
 
     // Remove if off screen or exceeded lifetime
-    if (_lifeTime >= maxLifeTime ||
+    if (_lifeTime >= BalanceConfig.projectileMaxLifeTime ||
         position.x < -20 ||
         position.x > 420 ||
         position.y < -20 ||
@@ -153,7 +156,7 @@ class Projectile extends PositionComponent
 
   /// Split shot: spawn 2 child projectiles at ±45 degrees.
   void _spawnSplitProjectiles(Vector2 impactPos) {
-    final speed = velocity.length * 0.7;
+    final speed = velocity.length * BalanceConfig.splitShotSpeedMult;
     final baseAngle = velocity.screenAngle();
     const splitAngle = pi / 4; // 45 degrees
 
@@ -163,7 +166,7 @@ class Projectile extends PositionComponent
       game.world.add(Projectile(
         spawnPosition: impactPos.clone(),
         velocity: dir * speed,
-        damage: damage * 0.5,
+        damage: damage * BalanceConfig.splitShotDamageMult,
         isPiercing: false,
         isSplash: false,
         ownerTypeId: ownerTypeId,
@@ -195,14 +198,14 @@ class Projectile extends PositionComponent
   void _applyElementalEffect(DefenseEnemy enemy) {
     final roll = _rng.nextInt(3);
     switch (roll) {
-      case 0: // Fire: 30% DoT for 3 seconds
-        enemy.applyDot(damage * 0.30, 3.0, 'fire');
+      case 0: // Fire DoT
+        enemy.applyDot(damage * BalanceConfig.elementalFireDotPercent, BalanceConfig.elementalFireDuration, 'fire');
         break;
-      case 1: // Ice: 40% slow for 2 seconds
-        enemy.applySlow(0.40, 2.0);
+      case 1: // Ice slow
+        enemy.applySlow(BalanceConfig.elementalIceSlowPercent, BalanceConfig.elementalIceDuration);
         break;
-      case 2: // Poison: 15% DoT for 5 seconds
-        enemy.applyDot(damage * 0.15, 5.0, 'poison');
+      case 2: // Poison DoT
+        enemy.applyDot(damage * BalanceConfig.elementalPoisonDotPercent, BalanceConfig.elementalPoisonDuration, 'poison');
         break;
     }
   }
@@ -215,7 +218,7 @@ class Projectile extends PositionComponent
       if (dist <= splashRadius) {
         // Damage falls off with distance
         final falloff = 1.0 - (dist / splashRadius);
-        final splashDmg = damage * 0.5 * falloff;
+        final splashDmg = damage * BalanceConfig.splashDamageFalloffMult * falloff;
         enemy.takeDamage(splashDmg, sourcePosition: impactPos);
         _hitEnemies.add(enemy);
       }
@@ -245,7 +248,9 @@ class Projectile extends PositionComponent
         color: Color(0xFF651FFF), trailColor: Color(0xFFB388FF)),
   };
 
-  _ProjProfile get _profile {
+  _ProjProfile get _profile => _cachedProfile;
+
+  _ProjProfile _computeProfile() {
     // Piercing/splash override color but keep trail
     if (isPiercing && !isHybrid && !isEvolved) {
       return const _ProjProfile(
@@ -307,14 +312,16 @@ class Projectile extends PositionComponent
     final s = _visualScale;
 
     // ── Draw trail from ring buffer (scaled by level) ──
+    // Render every other segment to halve draw calls while keeping visual quality
     if (_trailCount > 0) {
       final len = _trailCount;
-      // Oldest entry is at (_trailHead - _trailCount + _trailLength) % _trailLength
       final start = (_trailHead - _trailCount + _trailLength) % _trailLength;
-      for (int i = 0; i < len; i++) {
+      final step = len > 8 ? 2 : 1;
+      for (int i = 0; i < len; i += step) {
         final idx = (start + i) % _trailLength;
         final t = i / len; // 0.0 = oldest, ~1.0 = newest
         final alpha = (t * profile.trailAlpha).clamp(0.0, 1.0);
+        if (alpha < 0.05) continue; // skip invisible segments
         final trailSize = (2.0 + t * 4.0) * s;
         final dx = _trailX[idx] - position.x;
         final dy = _trailY[idx] - position.y;

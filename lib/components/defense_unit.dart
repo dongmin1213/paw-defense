@@ -25,7 +25,7 @@ class DefenseUnit extends PositionComponent
   double _animTimer = 0;
   DefenseEnemy? _target;
   double _targetSearchTimer = 0;
-  static const double _targetSearchInterval = 0.15; // search every 150ms instead of every frame
+  static final double _targetSearchInterval = BalanceConfig.unitTargetSearchInterval;
 
   // Stats from UnitData
   final double baseAtk;
@@ -138,7 +138,7 @@ class DefenseUnit extends PositionComponent
     }
     final wallHpPct = game.wall.hpPercent;
     // Skill: war_cry gives +50% ATK while active
-    final skillAtkMult = game.skillManager.isEffectActive('war_cry') ? 1.5 : 1.0;
+    final skillAtkMult = game.skillManager.isEffectActive('war_cry') ? BalanceConfig.unitWarCryAtkMult : 1.0;
     return base *
         game.rewardAtkMultiplier *
         game.relicManager.atkMultiplier *
@@ -154,7 +154,7 @@ class DefenseUnit extends PositionComponent
   double get atkSpeed {
     double base = baseAtkSpeed *
         (1.0 + (level - 1) * BalanceConfig.unitAtkSpeedPerLevel);
-    if (isEvolved && !isHybrid) base *= 1.2;
+    if (isEvolved && !isHybrid) base *= BalanceConfig.unitEvolvedAtkSpeedMult;
     return base *
         game.rewardAtkSpeedMultiplier *
         game.relicManager.atkSpeedMultiplier *
@@ -165,7 +165,7 @@ class DefenseUnit extends PositionComponent
   /// Evolved units get +20% range bonus.
   double get range {
     double base = baseRange + (level - 1) * BalanceConfig.unitRangePerLevel;
-    if (isEvolved && !isHybrid) base *= 1.2;
+    if (isEvolved && !isHybrid) base *= BalanceConfig.unitEvolvedRangeMult;
     return base * game.rewardRangeMultiplier * game.relicManager.rangeMultiplier;
   }
 
@@ -234,9 +234,9 @@ class DefenseUnit extends PositionComponent
     double dmg = atk;
     double baseCritChance = 0.0;
     if (unitTypeId == 'fox_assassin') baseCritChance = BalanceConfig.foxCritChance;
-    if (unitTypeId == 'hybrid_flame_hunter') baseCritChance = 0.20;
-    if (unitTypeId == 'hybrid_shadow_sage') baseCritChance = 0.30;
-    if (unitTypeId == 'hybrid_wolf_blade') baseCritChance = 0.25;
+    if (unitTypeId == 'hybrid_flame_hunter') baseCritChance = BalanceConfig.hybridFlameHunterCrit;
+    if (unitTypeId == 'hybrid_shadow_sage') baseCritChance = BalanceConfig.hybridShadowSageCrit;
+    if (unitTypeId == 'hybrid_wolf_blade') baseCritChance = BalanceConfig.hybridWolfBladeCrit;
 
     // Active skill: assassin_mark forces 100% crit
     final assassinMark = game.skillManager.isEffectActive('assassin_mark');
@@ -255,7 +255,7 @@ class DefenseUnit extends PositionComponent
         unitTypeId == 'hybrid_mystic_sage' ||
         unitTypeId == 'hybrid_mountain_guard') &&
         !game.wall.isDestroyed) {
-      final healFrac = unitTypeId == 'hybrid_mystic_sage' ? 0.03 : BalanceConfig.turtleHealerHealFraction;
+      final healFrac = unitTypeId == 'hybrid_mystic_sage' ? BalanceConfig.hybridMysticSageHealFraction : BalanceConfig.turtleHealerHealFraction;
       game.wall.heal(dmg * healFrac);
     }
 
@@ -274,7 +274,7 @@ class DefenseUnit extends PositionComponent
               unitTypeId == 'hybrid_iron_warrior' ||
               unitTypeId == 'hybrid_mountain_guard' ||
               unitTypeId == 'hybrid_wise_bear') {
-            final slowIntensity = unitTypeId == 'hybrid_wise_bear' ? 0.40 : BalanceConfig.bearSlowIntensity;
+            final slowIntensity = unitTypeId == 'hybrid_wise_bear' ? BalanceConfig.hybridWiseBearSlowIntensity : BalanceConfig.bearSlowIntensity;
             enemy.applySlow(
               slowIntensity,
               BalanceConfig.bearSlowDuration,
@@ -351,11 +351,11 @@ class DefenseUnit extends PositionComponent
 
   // Attack recoil animation
   double _recoilTimer = 0;
-  static const double _recoilDuration = 0.15;
+  static final double _recoilDuration = BalanceConfig.unitRecoilDuration;
 
   // Beam visibility timer (longer than recoil for visual clarity)
   double _beamTimer = 0;
-  static const double _beamDuration = 0.25;
+  static final double _beamDuration = BalanceConfig.unitBeamDuration;
 
   // Cached Paint objects for render()
   static final Paint _glowPaint = Paint();

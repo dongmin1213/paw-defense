@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../data/balance_config.dart';
+
 /// Permanent upgrade IDs for castle defense (bought with stars between runs).
 enum DefenseUpgradeId {
   wallHp,
@@ -44,7 +46,7 @@ class DefenseUpgradeData {
   /// Cost at a given level: baseCost * pow(1.12, level), rounded up.
   int costAt(int level) {
     if (level >= maxLevel) return 0;
-    return (baseCost * pow(1.12, level)).ceil();
+    return (baseCost * pow(BalanceConfig.upgradeCostScale, level)).ceil();
   }
 }
 
@@ -253,67 +255,67 @@ class DefenseUpgradeManager {
   // === Multiplier getters ===
 
   /// Wall max HP multiplier. +5% per level.
-  double get wallHpMultiplier => 1.0 + getLevel(DefenseUpgradeId.wallHp) * 0.05;
+  double get wallHpMultiplier => 1.0 + getLevel(DefenseUpgradeId.wallHp) * BalanceConfig.upgradeWallHpPerLevel;
 
   /// Wall HP regeneration per second.
-  double get wallRegenPerSec => getLevel(DefenseUpgradeId.wallRegen) * 0.5;
+  double get wallRegenPerSec => getLevel(DefenseUpgradeId.wallRegen) * BalanceConfig.upgradeWallRegenPerLevel;
 
   /// Wall damage reduction multiplier (lower = less damage taken).
   /// Clamped so wall always takes at least 40% damage.
   double get wallDefenseMultiplier =>
-      (1.0 - getLevel(DefenseUpgradeId.wallDefense) * 0.02).clamp(0.4, 1.0);
+      (1.0 - getLevel(DefenseUpgradeId.wallDefense) * BalanceConfig.upgradeWallDefensePerLevel).clamp(BalanceConfig.upgradeWallDefenseMin, 1.0);
 
   /// Unit ATK multiplier. +3% per level.
   double get unitAtkMultiplier =>
-      1.0 + getLevel(DefenseUpgradeId.unitAtk) * 0.03;
+      1.0 + getLevel(DefenseUpgradeId.unitAtk) * BalanceConfig.upgradeUnitAtkPerLevel;
 
   /// Unit attack speed multiplier. +2% per level.
   double get unitAtkSpeedMultiplier =>
-      1.0 + getLevel(DefenseUpgradeId.unitAtkSpeed) * 0.02;
+      1.0 + getLevel(DefenseUpgradeId.unitAtkSpeed) * BalanceConfig.upgradeUnitAtkSpeedPerLevel;
 
   /// Number of free units at run start.
   int get startUnitCount => getLevel(DefenseUpgradeId.startUnits);
 
   /// Gold gain multiplier. +5% per level.
   double get goldGainMultiplier =>
-      1.0 + getLevel(DefenseUpgradeId.goldGain) * 0.05;
+      1.0 + getLevel(DefenseUpgradeId.goldGain) * BalanceConfig.upgradeGoldGainPerLevel;
 
   /// Unit purchase cost discount multiplier (lower = cheaper).
   /// Clamped so units always cost at least 40% of base price.
   double get unitCostDiscount =>
-      (1.0 - getLevel(DefenseUpgradeId.unitDiscount) * 0.02).clamp(0.4, 1.0);
+      (1.0 - getLevel(DefenseUpgradeId.unitDiscount) * BalanceConfig.upgradeUnitDiscountPerLevel).clamp(BalanceConfig.upgradeUnitDiscountMin, 1.0);
 
   /// Star gain multiplier at run end. +5% per level.
   double get starBonusMultiplier =>
-      1.0 + getLevel(DefenseUpgradeId.starBonus) * 0.05;
+      1.0 + getLevel(DefenseUpgradeId.starBonus) * BalanceConfig.upgradeStarBonusPerLevel;
 
   /// Total available unit slots. Base 8 + expansion levels.
-  int get totalSlots => 8 + getLevel(DefenseUpgradeId.slotExpansion);
+  int get totalSlots => BalanceConfig.upgradeBaseSlots + getLevel(DefenseUpgradeId.slotExpansion);
 
   /// Bonus relic choice chance. +5% per level.
   double get relicChanceBonus =>
-      getLevel(DefenseUpgradeId.relicChance) * 0.05;
+      getLevel(DefenseUpgradeId.relicChance) * BalanceConfig.upgradeRelicChancePerLevel;
 
   // === Phase 4: New upgrade getters ===
 
   /// Bonus start gold. +20 per level.
-  int get startGoldBonus => getLevel(DefenseUpgradeId.startGold) * 20;
+  int get startGoldBonus => getLevel(DefenseUpgradeId.startGold) * BalanceConfig.upgradeStartGoldPerLevel;
 
   /// Relic quality bonus. +3% higher tier chance per level.
   double get relicQualityBonus =>
-      getLevel(DefenseUpgradeId.relicQuality) * 0.03;
+      getLevel(DefenseUpgradeId.relicQuality) * BalanceConfig.upgradeRelicQualityPerLevel;
 
   /// Combo duration bonus in seconds. +0.3s per level.
   double get comboDurationBonus =>
-      getLevel(DefenseUpgradeId.comboDuration) * 0.3;
+      getLevel(DefenseUpgradeId.comboDuration) * BalanceConfig.upgradeComboDurationPerLevel;
 
   /// Hybrid unit ATK multiplier. +5% per level.
   double get hybridAtkMultiplier =>
-      1.0 + getLevel(DefenseUpgradeId.hybridBonus) * 0.05;
+      1.0 + getLevel(DefenseUpgradeId.hybridBonus) * BalanceConfig.upgradeHybridBonusPerLevel;
 
   /// Base crit chance bonus. +2% per level.
   double get baseCritChance =>
-      getLevel(DefenseUpgradeId.critChance) * 0.02;
+      getLevel(DefenseUpgradeId.critChance) * BalanceConfig.upgradeCritChancePerLevel;
 
   /// Reset all upgrades to level 0.
   void resetAll() {

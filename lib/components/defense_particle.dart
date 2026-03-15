@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart' show HSVColor;
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 
 /// Particle effects for the defense game.
@@ -25,14 +26,15 @@ class DefenseParticle extends PositionComponent
   // Cached Random for all particle methods (avoid per-call allocation)
   static final Random _rng = Random();
 
-  // Cached Paint for ground mark rendering (avoid per-frame allocation)
+  // Cached Paint objects (avoid per-frame allocation)
   static final Paint _groundMarkPaint = Paint()..isAntiAlias = false;
+  static final Paint _renderPaint = Paint()..isAntiAlias = false;
 
   /// Spawn a ground impact mark at the given position (enemy death splat).
   void spawnGroundMark(double x, double y, {String enemyId = ''}) {
     // Cap ground marks for performance — generous for high-density waves
-    if (_groundMarks.length > 150) {
-      _groundMarks.removeRange(0, _groundMarks.length - 120);
+    if (_groundMarks.length > BalanceConfig.groundMarkCap) {
+      _groundMarks.removeRange(0, _groundMarks.length - BalanceConfig.groundMarkKeep);
     }
     final colors = _deathColorsForEnemy(enemyId);
     final color = colors[_rng.nextInt(colors.length)];
@@ -52,7 +54,7 @@ class DefenseParticle extends PositionComponent
   /// Gold coin collect burst at a world position.
   void spawnGoldCollect(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < BalanceConfig.particleGoldCollect; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 40 + rng.nextDouble() * 60;
       const colors = [
@@ -106,7 +108,9 @@ class DefenseParticle extends PositionComponent
     final rng = _rng;
     final colors = _deathColorsForEnemy(enemyId);
     final isBomber = enemyId.contains('bomber');
-    final count = isBomber ? 40 : 25;
+    final count = isBomber
+        ? BalanceConfig.particleBomberDeath
+        : BalanceConfig.particleEnemyDeath;
 
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -123,7 +127,7 @@ class DefenseParticle extends PositionComponent
     }
 
     // White core flash — fast expanding, short lived
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < BalanceConfig.particleDeathCoreFlash; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       _particles.add(_FxParticle(
         x: wx,
@@ -140,7 +144,7 @@ class DefenseParticle extends PositionComponent
   /// Boss explosion — large burst with mixed fire colors.
   void spawnBossExplosion(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 60; i++) {
+    for (var i = 0; i < BalanceConfig.particleBossExplosion; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 50 + rng.nextDouble() * 120;
       const colors = [
@@ -164,7 +168,7 @@ class DefenseParticle extends PositionComponent
   /// Unit merge effect — rainbow sparkle burst, scales with resulting level.
   void spawnMerge(double wx, double wy, {int level = 1}) {
     final rng = _rng;
-    final count = 10 + level * 5; // Lv2=15, Lv3=20, Lv4=25, Lv5=30
+    final count = BalanceConfig.particleMergeBase + level * BalanceConfig.particleMergePerLevel;
     final sizeScale = 1.0 + (level - 1) * 0.2;
     final speedScale = 1.0 + (level - 1) * 0.15;
     for (var i = 0; i < count; i++) {
@@ -183,7 +187,7 @@ class DefenseParticle extends PositionComponent
     }
     // Lv5 (evolution): extra gold burst
     if (level >= 5) {
-      for (var i = 0; i < 12; i++) {
+      for (var i = 0; i < BalanceConfig.particleMergeEvolution; i++) {
         final angle = rng.nextDouble() * 2 * pi;
         final speed = 50 + rng.nextDouble() * 80;
         _particles.add(_FxParticle(
@@ -202,7 +206,7 @@ class DefenseParticle extends PositionComponent
   /// Wall hit impact — sparks from the wall.
   void spawnWallHit(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < BalanceConfig.particleWallHit; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 30 + rng.nextDouble() * 40;
       const colors = [
@@ -225,10 +229,10 @@ class DefenseParticle extends PositionComponent
   /// Wave start celebration — upward burst.
   void spawnWaveStart(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 12; i++) {
+    for (var i = 0; i < BalanceConfig.particleWaveStart; i++) {
       final angle = -pi / 2 + (rng.nextDouble() - 0.5) * pi * 0.6;
       final speed = 60 + rng.nextDouble() * 80;
-      final hue = (i / 12 * 120 + 30).toDouble(); // yellow-green range
+      final hue = (i / BalanceConfig.particleWaveStart * 120 + 30).toDouble();
       _particles.add(_FxParticle(
         x: wx + rng.nextDouble() * 40 - 20,
         y: wy,
@@ -244,7 +248,7 @@ class DefenseParticle extends PositionComponent
   /// Critical hit effect — star-shaped burst with white/yellow.
   void spawnCriticalHit(double wx, double wy, {double scale = 1.0}) {
     final rng = _rng;
-    final count = (12 * scale).toInt();
+    final count = (BalanceConfig.particleCriticalHit * scale).toInt();
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = (50 + rng.nextDouble() * 80) * scale;
@@ -268,7 +272,7 @@ class DefenseParticle extends PositionComponent
   /// Chain kill effect — lightning arc between two points.
   void spawnChainKill(double x1, double y1, double x2, double y2) {
     final rng = _rng;
-    const steps = 8;
+    final steps = BalanceConfig.particleChainKill;
     for (var i = 0; i < steps; i++) {
       final t = i / steps;
       final px = x1 + (x2 - x1) * t + (rng.nextDouble() - 0.5) * 10;
@@ -290,7 +294,7 @@ class DefenseParticle extends PositionComponent
     final rng = _rng;
     const colorsA = [Color(0xFFFF6D00), Color(0xFFFFAB00)];
     const colorsB = [Color(0xFF2979FF), Color(0xFF00B0FF)];
-    for (var i = 0; i < 25; i++) {
+    for (var i = 0; i < BalanceConfig.particleHybridMerge; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 40 + rng.nextDouble() * 60;
       final isA = i % 2 == 0;
@@ -311,7 +315,7 @@ class DefenseParticle extends PositionComponent
   void spawnComboFlash(double centerX, double centerY, int comboColor) {
     final rng = _rng;
     final color = Color(comboColor);
-    for (var i = 0; i < 80; i++) {
+    for (var i = 0; i < BalanceConfig.particleComboFlash; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 80 + rng.nextDouble() * 150;
       _particles.add(_FxParticle(
@@ -329,7 +333,7 @@ class DefenseParticle extends PositionComponent
   /// Projectile hit impact — burst at hit point.
   void spawnProjectileHit(double wx, double wy, Color color) {
     final rng = _rng;
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < BalanceConfig.particleProjectileHit; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 20 + rng.nextDouble() * 30;
       _particles.add(_FxParticle(
@@ -347,7 +351,7 @@ class DefenseParticle extends PositionComponent
   /// Skill activation — large radial burst with skill color.
   void spawnSkillActivation(double wx, double wy, Color color) {
     final rng = _rng;
-    for (var i = 0; i < 70; i++) {
+    for (var i = 0; i < BalanceConfig.particleSkillActivation; i++) {
       final angle = rng.nextDouble() * 2 * pi;
       final speed = 60 + rng.nextDouble() * 120;
       _particles.add(_FxParticle(
@@ -365,7 +369,7 @@ class DefenseParticle extends PositionComponent
   /// Heal sparkle effect — green/white particles rising up.
   void spawnHealEffect(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < BalanceConfig.particleHealEffect; i++) {
       final angle = -pi / 2 + (rng.nextDouble() - 0.5) * pi * 0.4;
       final speed = 30 + rng.nextDouble() * 50;
       const colors = [
@@ -390,7 +394,7 @@ class DefenseParticle extends PositionComponent
   void spawnWallDamage(double wx, double wy, double fromX, double fromY) {
     final rng = _rng;
     final hitAngle = atan2(wy - fromY, wx - fromX);
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < BalanceConfig.particleWallDamage; i++) {
       final angle = hitAngle + pi + (rng.nextDouble() - 0.5) * pi * 0.6;
       final speed = 40 + rng.nextDouble() * 60;
       const colors = [
@@ -414,8 +418,8 @@ class DefenseParticle extends PositionComponent
   /// Evolution transformation — golden spiral burst.
   void spawnEvolution(double wx, double wy) {
     final rng = _rng;
-    for (var i = 0; i < 30; i++) {
-      final angle = i / 30 * 2 * pi;
+    for (var i = 0; i < BalanceConfig.particleEvolution; i++) {
+      final angle = i / BalanceConfig.particleEvolution * 2 * pi;
       final speed = 40 + rng.nextDouble() * 80;
       const colors = [
         Color(0xFFFFD700),
@@ -438,8 +442,8 @@ class DefenseParticle extends PositionComponent
   /// Skill activation — ring burst expanding outward.
   void spawnSkillRing(double wx, double wy, Color color) {
     final rng = _rng;
-    for (var i = 0; i < 40; i++) {
-      final angle = i / 40 * 2 * pi;
+    for (var i = 0; i < BalanceConfig.particleSkillRing; i++) {
+      final angle = i / BalanceConfig.particleSkillRing * 2 * pi;
       final speed = 80 + rng.nextDouble() * 40;
       _particles.add(_FxParticle(
         x: wx,
@@ -457,7 +461,9 @@ class DefenseParticle extends PositionComponent
   void spawnEnemyDeathScaled(double wx, double wy, double scale,
       {String enemyId = ''}) {
     final rng = _rng;
-    final count = (25 * scale).clamp(12, 80).toInt();
+    final count = (BalanceConfig.particleScaledDeathBase * scale)
+        .clamp(BalanceConfig.particleScaledDeathMin, BalanceConfig.particleScaledDeathMax)
+        .toInt();
     final colors = _deathColorsForEnemy(enemyId);
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -491,8 +497,8 @@ class DefenseParticle extends PositionComponent
 
   /// Shockwave ring — expanding ring of particles (boss kill, big combos).
   void spawnShockwaveRing(double wx, double wy, Color color) {
-    for (int i = 0; i < 48; i++) {
-      final angle = i / 48 * 2 * pi;
+    for (int i = 0; i < BalanceConfig.particleShockwaveRing; i++) {
+      final angle = i / BalanceConfig.particleShockwaveRing * 2 * pi;
       _particles.add(_FxParticle(
         x: wx,
         y: wy,
@@ -509,7 +515,7 @@ class DefenseParticle extends PositionComponent
   /// Scales with level: Lv1=4 particles, Lv5=12 particles.
   void spawnMuzzleFlash(double wx, double wy, Color color, {int level = 1}) {
     final rng = _rng;
-    final count = 2 + level * 2; // Lv1=4, Lv3=8, Lv5=12
+    final count = BalanceConfig.particleMuzzleFlashBase + level * BalanceConfig.particleMuzzleFlashPerLevel;
     final isEvolved = level >= 5;
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDouble() * 2 * pi;
@@ -531,7 +537,7 @@ class DefenseParticle extends PositionComponent
   void spawnGoldScatter(double wx, double wy, int amount,
       double wallX, double wallY) {
     final rng = _rng;
-    final count = (amount * 2 + 3).clamp(5, 20);
+    final count = (amount * 2 + 3).clamp(BalanceConfig.particleGoldScatterMin, BalanceConfig.particleGoldScatterMax);
 
     // Initial white flash at death position (brief, eye-catching)
     _particles.add(_FxParticle(
@@ -588,8 +594,8 @@ class DefenseParticle extends PositionComponent
     _particles.removeWhere((p) => p.life <= 0);
 
     // Hard cap — generous for visual spectacle
-    if (_particles.length > 2000) {
-      _particles.removeRange(0, _particles.length - 2000);
+    if (_particles.length > BalanceConfig.particleHardCap) {
+      _particles.removeRange(0, _particles.length - BalanceConfig.particleHardCap);
     }
 
     // Age ground marks
@@ -625,7 +631,7 @@ class DefenseParticle extends PositionComponent
   @override
   void render(Canvas canvas) {
     // No camera offset — fixed viewport for defense game
-    final paint = Paint()..isAntiAlias = false;
+    final paint = _renderPaint;
     for (final p in _particles) {
       final alpha = (p.life * 2.5).clamp(0.0, 1.0);
       if (alpha < 0.05) continue; // Skip nearly-invisible particles

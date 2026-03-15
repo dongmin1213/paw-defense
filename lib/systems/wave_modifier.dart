@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../data/balance_config.dart';
 
 /// Wave modifier system — adds variety to each run.
 /// Starting from wave 10, every 5 waves gets a random modifier.
@@ -25,7 +26,7 @@ class WaveModifier {
   /// Rules: wave >= 10, every 5 waves, NOT on boss waves (multiples of 10).
   ModifierDef? rollModifier(int wave) {
     // No modifiers before wave 10
-    if (wave < 10) {
+    if (wave < BalanceConfig.waveModifierStartWave) {
       currentModifier = null;
       return null;
     }
@@ -48,8 +49,8 @@ class WaveModifier {
   double get enemyCountMultiplier {
     if (currentModifier == null) return 1.0;
     switch (currentModifier!.id) {
-      case 'elite': return 0.5;
-      case 'swarm': return 3.0;
+      case 'elite': return BalanceConfig.modifierEliteCountMult;
+      case 'swarm': return BalanceConfig.modifierSwarmCountMult;
       default: return 1.0;
     }
   }
@@ -58,8 +59,8 @@ class WaveModifier {
   double get enemyHpMultiplier {
     if (currentModifier == null) return 1.0;
     switch (currentModifier!.id) {
-      case 'elite': return 3.0;
-      case 'swarm': return 0.5;
+      case 'elite': return BalanceConfig.modifierEliteHpMult;
+      case 'swarm': return BalanceConfig.modifierSwarmHpMult;
       default: return 1.0;
     }
   }
@@ -68,7 +69,7 @@ class WaveModifier {
   double get enemySpeedMultiplier {
     if (currentModifier == null) return 1.0;
     switch (currentModifier!.id) {
-      case 'speed_run': return 2.0;
+      case 'speed_run': return BalanceConfig.modifierSpeedRunSpeedMult;
       default: return 1.0;
     }
   }
@@ -77,8 +78,8 @@ class WaveModifier {
   double get goldMultiplier {
     if (currentModifier == null) return 1.0;
     switch (currentModifier!.id) {
-      case 'golden': return 3.0;
-      case 'speed_run': return 1.5;
+      case 'golden': return BalanceConfig.modifierGoldenGoldMult;
+      case 'speed_run': return BalanceConfig.modifierSpeedRunGoldMult;
       default: return 1.0;
     }
   }
@@ -87,7 +88,7 @@ class WaveModifier {
   double get unitRangeMultiplier {
     if (currentModifier == null) return 1.0;
     switch (currentModifier!.id) {
-      case 'fog': return 0.6;
+      case 'fog': return BalanceConfig.modifierFogRangeMult;
       default: return 1.0;
     }
   }

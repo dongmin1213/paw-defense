@@ -12,8 +12,7 @@ import '../data/balance_config.dart';
 /// - Radial pulse on wave start / boss kill
 class ReactiveBackground extends PositionComponent
     with HasGameReference<DefenseGame> {
-  // Pre-allocated ambient stars — dense for visual depth
-  static const int _starCount = 120;
+  static final int _starCount = BalanceConfig.backgroundStarCount;
   final List<_BgStar> _stars = [];
   final Random _rng = Random();
 

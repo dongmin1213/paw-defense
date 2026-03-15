@@ -1,4 +1,5 @@
 import 'package:flame/components.dart';
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 
 /// Combo tier definitions.
@@ -37,13 +38,7 @@ class ComboManager extends Component with HasGameReference<DefenseGame> {
   /// Base time window to maintain combo (seconds).
   /// Extended by comboDurationBonus from permanent upgrades.
   double get comboWindow =>
-      2.0 + game.upgradeManager.comboDurationBonus;
-
-  /// Bonus gold every N combos.
-  static const int goldBonusInterval = 10;
-
-  /// Gold bonus multiplier at combo intervals.
-  static const double goldBonusMultiplier = 2.0;
+      BalanceConfig.comboWindowBase + game.upgradeManager.comboDurationBonus;
 
   // ── Public getters ──
   int get comboCount => _comboCount;
@@ -66,12 +61,12 @@ class ComboManager extends Component with HasGameReference<DefenseGame> {
     if (newTier != _currentTier) {
       _currentTier = newTier;
       _tierJustChanged = true;
-      _tierChangeTimer = 1.5;
+      _tierChangeTimer = BalanceConfig.comboTierChangeDisplayTime;
     }
 
     // Gold bonus at combo intervals
-    if (_comboCount > 0 && _comboCount % goldBonusInterval == 0) {
-      final bonusGold = (_comboCount ~/ goldBonusInterval) * 5;
+    if (_comboCount > 0 && _comboCount % BalanceConfig.comboGoldBonusInterval == 0) {
+      final bonusGold = (_comboCount ~/ BalanceConfig.comboGoldBonusInterval) * BalanceConfig.comboGoldPerInterval;
       game.addGold(bonusGold, popupPos: game.wall.position);
     }
   }

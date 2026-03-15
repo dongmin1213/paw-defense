@@ -23,7 +23,7 @@ class FieldDrop extends PositionComponent
 
   // Physics state
   double _vx, _vy;
-  final double _gravity = 120.0;
+  final double _gravity = BalanceConfig.fieldDropGravity;
   final double _groundY;
   bool _grounded = false;
   double _groundTimer = 0;
@@ -37,14 +37,12 @@ class FieldDrop extends PositionComponent
   static final Paint _paint = Paint()..isAntiAlias = false;
   static final Paint _glowPaint = Paint()..isAntiAlias = false;
 
-  // Time on ground before auto-homing starts
-  static const double _groundDelay = 0.8;
-  // Homing speed (accelerates)
-  static const double _homeAccel = 800.0;
-  static const double _homeMaxSpeed = 500.0;
+  static double get _groundDelay => BalanceConfig.fieldDropGroundDelay;
+  static double get _homeAccel => BalanceConfig.fieldDropHomeAccel;
+  static double get _homeMaxSpeed => BalanceConfig.fieldDropHomeMaxSpeed;
 
   /// Max active field drops to prevent performance issues.
-  static const int maxDrops = 150;
+  static int get maxDrops => BalanceConfig.fieldDropMaxDrops;
 
   FieldDrop({
     required Vector2 spawnPosition,
@@ -114,7 +112,7 @@ class FieldDrop extends PositionComponent
       final dy = wallPos.y - position.y;
       final dist = sqrt(dx * dx + dy * dy);
 
-      if (dist < 10) {
+      if (dist < BalanceConfig.fieldDropPickupRadius) {
         _onAbsorbed();
         _remove();
         return;

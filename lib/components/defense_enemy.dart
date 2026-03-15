@@ -38,7 +38,7 @@ class DefenseEnemy extends PositionComponent
 
   // Death animation
   double _deathTimer = 0;
-  static const double _deathDuration = 0.3;
+  static final double _deathDuration = BalanceConfig.enemyDeathAnimDuration;
   bool _deathAnimating = false;
 
   // Special behavior timers
@@ -54,7 +54,23 @@ class DefenseEnemy extends PositionComponent
   double _dotTickTimer = 0; // time until next tick
   String _dotType = ''; // 'fire', 'poison' for visual feedback
 
-  static const double wallProximity = 35.0;
+  static double get wallProximity => BalanceConfig.enemyWallProximity;
+
+  // Cached Paint objects to avoid per-frame allocation
+  static final Paint _glowPaint = Paint();
+  static final Paint _dotPaint = Paint()..isAntiAlias = false;
+  static final Paint _slowPaint = Paint()
+    ..isAntiAlias = false
+    ..color = const Color(0x2040A0FF);
+  static final Paint _hpBgPaint = Paint()
+    ..color = const Color(0xFF333333)
+    ..isAntiAlias = false;
+  static final Paint _hpFillPaint = Paint()..isAntiAlias = false;
+  static final Paint _hpBorderPaint = Paint()
+    ..color = const Color(0x88FFFFFF)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.5
+    ..isAntiAlias = false;
 
   // Special type detection helpers
   bool get _isHealer => enemyId.contains('healer');
@@ -102,23 +118,21 @@ class DefenseEnemy extends PositionComponent
 
     double finalAmount = amount;
 
-    // Shielded: 50% reduced damage from the front
+    // Shielded: reduced damage from the front
     if (_isShielded && sourcePosition != null) {
       final toSource = (sourcePosition - position).normalized();
-      // Front = same direction as movement direction
-      // dot > 0 means source is in front of the enemy (enemy facing toward wall)
       final dot = direction.dot(toSource);
       if (dot > 0) {
-        finalAmount *= 0.5;
+        finalAmount *= BalanceConfig.shieldedDamageReduction;
       }
     }
 
     hp -= finalAmount;
     _isHit = true;
-    _hitFlashTimer = 0.1;
+    _hitFlashTimer = BalanceConfig.enemyHitFlashDuration;
 
     // Show damage number on enemy (scales fontSize with damage amount)
-    final isBigHit = finalAmount > maxHp * 0.15;
+    final isBigHit = finalAmount > maxHp * BalanceConfig.bigHitThreshold;
     game.showDamageNumber(
       position,
       finalAmount.toInt().toString(),
@@ -134,7 +148,7 @@ class DefenseEnemy extends PositionComponent
     }
 
     // Knockback away from wall
-    position.add(direction * -3);
+    position.add(direction * -BalanceConfig.enemyKnockbackDistance);
 
     if (hp <= 0) {
       hp = 0;
@@ -195,7 +209,7 @@ class DefenseEnemy extends PositionComponent
     }
     // Active skill: ice_wall — all enemies speed -70%
     if (game.skillManager.isEffectActive('ice_wall')) {
-      s *= 0.3;
+      s *= BalanceConfig.iceWallSpeedMult;
     }
     return s;
   }
@@ -205,8 +219,8 @@ class DefenseEnemy extends PositionComponent
     for (final ally in game.livingEnemies) {
       if (identical(ally, this)) continue;
       final dist = position.distanceTo(ally.position);
-      if (dist <= 50.0) {
-        final healAmount = ally.maxHp * 0.10;
+      if (dist <= BalanceConfig.healerRadius) {
+        final healAmount = ally.maxHp * BalanceConfig.healerHealPercent;
         ally.hp = (ally.hp + healAmount).clamp(0.0, ally.maxHp);
       }
     }
@@ -273,10 +287,9 @@ class DefenseEnemy extends PositionComponent
     if (_dotDuration > 0) {
       _dotDuration -= dt;
       _dotTickTimer += dt;
-      if (_dotTickTimer >= 0.5) {
-        _dotTickTimer -= 0.5;
-        // Apply half-second tick of damage
-        final tickDmg = _dotDamage * 0.5;
+      if (_dotTickTimer >= BalanceConfig.dotTickInterval) {
+        _dotTickTimer -= BalanceConfig.dotTickInterval;
+        final tickDmg = _dotDamage * BalanceConfig.dotTickInterval;
         hp -= tickDmg;
         _isHit = true;
         _hitFlashTimer = 0.05;
@@ -295,8 +308,8 @@ class DefenseEnemy extends PositionComponent
     // Healer: heal allies every 3 seconds
     if (_isHealer) {
       _healTimer += dt;
-      if (_healTimer >= 3.0) {
-        _healTimer -= 3.0;
+      if (_healTimer >= BalanceConfig.healerInterval) {
+        _healTimer -= BalanceConfig.healerInterval;
         _healNearbyAllies();
       }
     }
@@ -384,16 +397,14 @@ class DefenseEnemy extends PositionComponent
   void render(Canvas canvas) {
     // Boss: red glow effect
     if (_isBoss) {
-      final glowPaint = Paint()
-        ..color = Color.fromARGB(
-          (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
-          255, 0, 0,
-        )
-        ;
+      _glowPaint.color = Color.fromARGB(
+        (40 + 20 * _sin(_animTimer * 3).abs()).toInt(),
+        255, 0, 0,
+      );
       canvas.drawCircle(
         Offset(size.x / 2, size.y / 2),
         size.x * 0.6,
-        glowPaint,
+        _glowPaint,
       );
     }
 
@@ -410,23 +421,19 @@ class DefenseEnemy extends PositionComponent
 
     // DoT visual feedback — colored overlay
     if (_dotDuration > 0 && _dotType.isNotEmpty) {
-      final dotPaint = Paint()..isAntiAlias = false;
       if (_dotType == 'fire') {
         final pulse = 0.15 + 0.1 * _sin(_animTimer * 8).abs();
-        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 255, 100, 0);
+        _dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 255, 100, 0);
       } else if (_dotType == 'poison') {
         final pulse = 0.12 + 0.08 * _sin(_animTimer * 6).abs();
-        dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 0, 200, 50);
+        _dotPaint.color = Color.fromARGB((pulse * 255).toInt(), 0, 200, 50);
       }
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), dotPaint);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _dotPaint);
     }
 
     // Slow visual feedback — blue tint
     if (_slowTimer > 0) {
-      final slowPaint = Paint()
-        ..isAntiAlias = false
-        ..color = const Color(0x2040A0FF);
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), slowPaint);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _slowPaint);
     }
 
     // HP bar above enemy
@@ -442,38 +449,27 @@ class DefenseEnemy extends PositionComponent
     final barY = _isBoss ? -7.0 : -5.0;
 
     // Background
-    final bgPaint = Paint()
-      ..color = const Color(0xFF333333)
-      ..isAntiAlias = false;
     canvas.drawRect(
       Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
-      bgPaint,
+      _hpBgPaint,
     );
 
     // Fill
-    final fillColor = hpPercent > 0.5
+    _hpFillPaint.color = hpPercent > 0.5
         ? const Color(0xFF4CAF50)
         : hpPercent > 0.25
             ? const Color(0xFFFF9800)
             : const Color(0xFFF44336);
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..isAntiAlias = false;
     canvas.drawRect(
       Rect.fromLTWH(barX, barY, barWidth * hpPercent, barHeight),
-      fillPaint,
+      _hpFillPaint,
     );
 
     // Boss: white border for visibility
     if (_isBoss) {
-      final borderPaint = Paint()
-        ..color = const Color(0x88FFFFFF)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.5
-        ..isAntiAlias = false;
       canvas.drawRect(
         Rect.fromLTWH(barX - 0.5, barY - 0.5, barWidth + 1, barHeight + 1),
-        borderPaint,
+        _hpBorderPaint,
       );
     }
   }

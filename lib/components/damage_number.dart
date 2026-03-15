@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart' show Color;
 
+import '../data/balance_config.dart';
 import '../game/defense_game.dart';
 
 /// Type of damage number for visual differentiation.
@@ -30,8 +31,8 @@ class DamageNumber extends PositionComponent
   double _elapsed = 0.0;
   double _scale = 1.0;
 
-  static const double _lifetime = 1.2;
-  static const double _floatSpeed = 50.0;
+  static double get _lifetime => BalanceConfig.damageNumberLifetime;
+  static double get _floatSpeed => BalanceConfig.damageNumberFloatSpeed;
 
   static final Random _rng = Random();
 
@@ -42,6 +43,10 @@ class DamageNumber extends PositionComponent
   );
   static const ui.ParagraphConstraints _constraints =
       ui.ParagraphConstraints(width: 100);
+
+  // Per-instance paragraph cache — rebuild only when alpha changes significantly
+  ui.Paragraph? _cachedParagraph;
+  int _cachedAlphaBucket = -1;
 
   DamageNumber({
     required Vector2 position,
@@ -86,8 +91,8 @@ class DamageNumber extends PositionComponent
     position.y -= speed * dt;
 
     // Scale pop: quickly shrink to 1.0 in the first 0.15s
-    if (_elapsed < 0.15) {
-      final t = _elapsed / 0.15;
+    if (_elapsed < BalanceConfig.damageNumberPopDuration) {
+      final t = _elapsed / BalanceConfig.damageNumberPopDuration;
       _scale = 1.0 + (isCritical ? 0.8 : 0.3) * (1.0 - t);
     } else {
       _scale = 1.0;
@@ -109,75 +114,81 @@ class DamageNumber extends PositionComponent
 
     final actualFontSize = isCritical ? fontSize * 1.3 : fontSize;
 
-    // Shadow/outline based on type
-    final shadows = <ui.Shadow>[];
-    if (type == DamageNumberType.critical || isCritical) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF000000).withValues(alpha: _alpha * 0.9),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-      shadows.add(ui.Shadow(
-        color: const Color(0xFFFF0000).withValues(alpha: _alpha * 0.4),
-        offset: const ui.Offset(0, 0),
-        blurRadius: 4,
-      ));
-    } else if (type == DamageNumberType.heal) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF004D00).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-    } else if (type == DamageNumberType.gold) {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF5D4037).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
-    } else {
-      shadows.add(ui.Shadow(
-        color: const Color(0xFF000000).withValues(alpha: _alpha * 0.6),
-        offset: const ui.Offset(1, 1),
-        blurRadius: 0,
-      ));
+    // Quantize alpha to reduce paragraph rebuilds (~10 buckets)
+    final alphaBucket = (_alpha * 10).round();
+    if (_cachedParagraph == null || alphaBucket != _cachedAlphaBucket) {
+      _cachedAlphaBucket = alphaBucket;
+
+      // Shadow/outline based on type
+      final shadows = <ui.Shadow>[];
+      if (type == DamageNumberType.critical || isCritical) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF000000).withValues(alpha: _alpha * 0.9),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+        shadows.add(ui.Shadow(
+          color: const Color(0xFFFF0000).withValues(alpha: _alpha * 0.4),
+          offset: const ui.Offset(0, 0),
+          blurRadius: 4,
+        ));
+      } else if (type == DamageNumberType.heal) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF004D00).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      } else if (type == DamageNumberType.gold) {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF5D4037).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      } else {
+        shadows.add(ui.Shadow(
+          color: const Color(0xFF000000).withValues(alpha: _alpha * 0.6),
+          offset: const ui.Offset(1, 1),
+          blurRadius: 0,
+        ));
+      }
+
+      final textStyle = ui.TextStyle(
+        color: color.withValues(alpha: _alpha),
+        fontSize: actualFontSize,
+        fontWeight: ui.FontWeight.w900,
+        shadows: shadows,
+      );
+
+      // Format display text based on type
+      String displayText;
+      switch (type) {
+        case DamageNumberType.critical:
+          displayText = '$text!';
+          break;
+        case DamageNumberType.heal:
+          displayText = '+$text';
+          break;
+        case DamageNumberType.gold:
+          displayText = '+$text';
+          break;
+        case DamageNumberType.shield:
+          displayText = text;
+          break;
+        default:
+          displayText = isCritical ? '$text!' : text;
+      }
+
+      final builder = ui.ParagraphBuilder(_paragraphStyle)
+        ..pushStyle(textStyle)
+        ..addText(displayText);
+
+      _cachedParagraph = builder.build();
+      _cachedParagraph!.layout(_constraints);
     }
-
-    final textStyle = ui.TextStyle(
-      color: color.withValues(alpha: _alpha),
-      fontSize: actualFontSize,
-      fontWeight: ui.FontWeight.w900,
-      shadows: shadows,
-    );
-
-    // Format display text based on type
-    String displayText;
-    switch (type) {
-      case DamageNumberType.critical:
-        displayText = '$text!';
-        break;
-      case DamageNumberType.heal:
-        displayText = '+$text';
-        break;
-      case DamageNumberType.gold:
-        displayText = '+$text';
-        break;
-      case DamageNumberType.shield:
-        displayText = text;
-        break;
-      default:
-        displayText = isCritical ? '$text!' : text;
-    }
-
-    final builder = ui.ParagraphBuilder(_paragraphStyle)
-      ..pushStyle(textStyle)
-      ..addText(displayText);
-
-    final paragraph = builder.build();
-    paragraph.layout(_constraints);
 
     // Center the text horizontally
     canvas.drawParagraph(
-      paragraph,
+      _cachedParagraph!,
       ui.Offset(-50, -actualFontSize / 2),
     );
 
